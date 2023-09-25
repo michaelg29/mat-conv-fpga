@@ -1,0 +1,4 @@
+../../hdl/mac
+../../hdl/fifo
+../../hdl/core
+../../hdl/tb_core

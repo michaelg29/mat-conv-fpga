@@ -1,0 +1,9 @@
+
+fifo_pkg.vhd
+fifo_sync_ea.vhd
+fifo_sync_multw_ea.vhd
+fifo_sync_if.sv
+fifo_async_ea.vhd
+fifo_async_multw_ea.vhd
+fifo_async_if.sv
+

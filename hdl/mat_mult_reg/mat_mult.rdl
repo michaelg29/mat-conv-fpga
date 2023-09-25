@@ -1,0 +1,75 @@
+addrmap {
+
+  default accesswidth = 32;
+  default regwidth = 32;
+  
+  name = "Matrix multiplier";
+  desc = "Module to convolve a matrix with a square kernel matrix (max 5)."
+  
+  reg {
+    name = "Command register";
+    
+    default sw = rw;
+    default hw = r;
+    
+    field {
+      desc = "Command for the module";
+    } cmd[3:0];
+  } cmd_reg;
+  
+  reg {
+    name = "Input matrix configuration";
+    
+    default sw = rw;
+    default hw = r;
+    
+    regwidth = 128;
+    
+    field {
+      desc = "Start address of the matrix";
+    } addr[63:0];
+    
+    field {
+      desc = "Number of rows in the matrix";
+    } rows[74:64];
+    
+    field {
+      desc = "Number of columns in the matrix";
+    } cols[85:75];
+  } matrix_conf;
+
+  reg {
+    name = "Kernel matrix configuration";
+    
+    default sw = rw;
+    default hw = r;
+    
+    regwidth = 128;
+    
+    field {
+      desc = "Start address of the kernel";
+    } addr[63:0];
+    
+    field {
+      desc = "Dimension of the kernel, must be an odd number.";
+    } dim[67:64]
+  } kernel_conf;
+  
+  reg {
+    field {
+      desc = "Start address of the matrix"
+    } addr[63:0];
+  } out_conf;
+  
+  reg {
+    name = "Status register";
+    desc = "Status of the module to be read";
+  
+    default sw = r;
+    default hw = rw;
+    field {
+      desc = "Whether the module is currently computing a result";
+    } multiplying = 0;
+  } status_reg;
+  
+} mat_mult;

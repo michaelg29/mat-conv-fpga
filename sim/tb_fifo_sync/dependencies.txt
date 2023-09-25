@@ -1,0 +1,2 @@
+../../hdl/fifo
+../../hdl/tb_fifo_sync
