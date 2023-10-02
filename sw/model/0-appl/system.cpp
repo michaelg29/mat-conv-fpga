@@ -16,7 +16,7 @@ SC_MODULE(mmModule) {
     }
     
     unsigned char convolve(int r, int c) {
-        if (r == 0 || c == 0 || r == MAT_ROWS-1 || c == MAT_COLS-1) {
+        if (r < hf_kernelsize || c < hf_kernelsize || r >= MAT_ROWS-hf_kernelsize || c >= MAT_COLS-hf_kernelsize) {
             return 0;
         }
         
