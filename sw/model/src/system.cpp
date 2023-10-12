@@ -89,13 +89,13 @@ void printMat(unsigned char *mem, int mat_n_cols, int base_addr, int r, int c, i
 #undef ADDR
 }
 
-void memoryPrint(unsigned char *mem, int kernelsize) {
+void memoryPrint(unsigned char *mem, int kernel_size) {
     std::cout << std::endl << "==========" << std::endl;
     std::cout << "Input matrix:" << std::endl;
     printMat(mem, MAT_COLS, MAT_ADDR, 0, 0, 10, 10);
     
     std::cout << "Kernel:" << std::endl;
-    printMat(mem, kernelsize, KERN_ADDR, 0, 0, kernelsize, kernelsize);
+    printMat(mem, kernel_size, KERN_ADDR, 0, 0, kernel_size, kernel_size);
     
     std::cout << "Output matrix:" << std::endl;
     printMat(mem, MAT_COLS, OUT_ADDR, 0, 0, 10, 10);

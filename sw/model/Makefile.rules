@@ -3,7 +3,7 @@
 ##### Variables #####
 #####################
 MEM_FILE     ?= ../mem_init
-KERNEL_SIZE  ?= 3
+KERNEL_SIZE  ?= 5
 DO_RANDOM    ?= 0
 EXE          ?= system
 
@@ -13,7 +13,6 @@ EXE          ?= system
 
 # programs
 CXX              ?=g++
-TIME_EXEC        ?=/usr/bin/time
 TARGET_ARCH      ?= linux64
 ifneq (,$(strip $(TARGET_ARCH)))
 ARCH_SUFFIX      ?= -$(TARGET_ARCH)

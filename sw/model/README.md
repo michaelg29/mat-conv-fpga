@@ -9,9 +9,11 @@ The folders contain code to simulate the matrix multiplier across different abst
 
 ### src - Common source files defining common functions
 
-### `00-appl`: The Golden Model
+### `00-appl`: The golden model
 
-This model is considered the "Golden Model" as it is implemented completely through software. There are no simulated delays, and is used as a reference for the rest of the models.
+This model is considered the "Golden Model" as it is implemented completely through software instructions. There are no simulated delays, and is used as a reference for the rest of the models. This model processes the data by loading in the entire matrix via the command payload then convolving it with the loaded kernel.
+
+### `01-task`: The task-level model
 
 ## Running instructions
 
