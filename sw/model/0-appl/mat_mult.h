@@ -16,7 +16,7 @@ enum mat_mult_state_t {
     PROCESSING          // processing
 };
 
-class mat_mult : public mat_mult_if {
+class mat_mult : public sc_module, public mat_mult_if {
     
     public:
     
@@ -42,6 +42,9 @@ class mat_mult : public mat_mult_if {
         
         bool transmit64bitPacket(uint64_t addr, uint64_t packet);
         void protected_reset();
+        
+        void wait_to_calculate();
+        void calculate();
 
 };
 

@@ -18,15 +18,15 @@ class memory_mod : public sc_module, public mem_if {
         memory_mod(sc_module_name name, uint8_t *memory, unsigned int mem_size) : sc_module(name), memory(memory), mem_size(mem_size) {}
         
         bool write(uint64_t addr, uint64_t data) {
-            align_addr(addr);
             if (!check_addr(addr)) return false;
+            align_addr(addr);
             ((uint64_t*)memory)[addr] = data;
             return true;
         }
         
         bool read(uint64_t addr, uint64_t& data) {
-            align_addr(addr);
             if (!check_addr(addr)) return false;
+            align_addr(addr);
             data = ((uint64_t*)memory)[addr];
             return true;
         }
@@ -58,36 +58,11 @@ SC_MODULE(mm_cmd) {
         SC_THREAD(do_mat_mult);
     }
     
-    unsigned char convolve(int r, int c) {
-        if (r < hf_kernel_size || c < hf_kernel_size || r >= MAT_ROWS-hf_kernel_size || c >= MAT_COLS-hf_kernel_size) {
-            return 0;
-        }
-        
-        int res = 0;
-        
-        int kerneli = 0;
-        for (int i = -hf_kernel_size; i <= hf_kernel_size; i++) {
-            for (int j = -hf_kernel_size; j <= hf_kernel_size; j++) {
-                res += (int)(unsigned int)memory[BUILD_MAT_ADDR(r+i, c+j)] // matrix value is unsigned byte
-                     * (int)(char)memory[BUILD_KERN_ADDR(kerneli)];        // kernel value is signed byte
-                kerneli++;
-            }
-        }
-        
-        return (unsigned char)res;
-    }
-    
     void do_mat_mult() {
-        // for (int r = 0; r < MAT_ROWS; r++) {
-            // for (int c = 0; c < MAT_COLS; c++) {
-                // memory[BUILD_OUT_ADDR(r, c)] = convolve(r, c);
-            // }
-        // }
-        
+        std::cout << "Starting" << std::endl;
         mmIf->reset();
         std::cout << "Done reset" << std::endl;
         
-        //mmIf->loadKernelCmd(kernel_size, UNUSED_ADDR);
         mmIf->sendCmd(MM_CMD_KERN, kernel_size, kernel_size, UNUSED_ADDR, 0);
         std::cout << "Done kernel cmd" << std::endl;
         
@@ -138,8 +113,8 @@ int sc_main(int argc, char* argv[]) {
     cout << "Simulated for " << (stopTime - startTime) << endl;
     
     // final state
-    //memoryWrite(argv, memory);
-    //memoryPrint(memory, kernel_size);
+    memoryWrite(argv, memory);
+    memoryPrint(memory, kernel_size);
     
     return 0;
 }

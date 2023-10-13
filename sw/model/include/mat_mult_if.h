@@ -64,6 +64,8 @@ struct mat_mult_ack_t {
 
 #define N_PACKETS_IN_CMD sizeof(mat_mult_cmd_t) / sizeof(uint64_t)
 
+#define CMP_CMD_ACK(cmd, ack) ((cmd.s_key == ack.s_key) && (cmd.command == ack.command) && (cmd.size == ack.size) && (cmd.tx_addr == ack.tx_addr) && (cmd.trans_id == ack.trans_id) && (cmd.e_key == ack.e_key))
+
 // ================================
 // ===== REGISTER DEFINITIONS =====
 // ================================
@@ -85,28 +87,16 @@ struct mat_mult_reg_t {
 /**
  * Interface with the matrix multiplier module to issue commands.
  */
-class mat_mult_if : public sc_module, virtual public sc_interface {
+class mat_mult_if : virtual public sc_interface {
 
     public:
 
         // constructor
-        mat_mult_if(sc_module_name name, uint8_t *ext_mem);
+        mat_mult_if(uint8_t *ext_mem);
         
         int sendCmd(unsigned int cmd_type, unsigned int rows, unsigned int cols, unsigned int tx_addr, unsigned int out_addr);
         
         int sendPayload(unsigned int start_addr, unsigned int rows, unsigned int cols);
-
-        /** Command to load kernel. */
-        int loadKernelCmd(unsigned int kern_size, unsigned int tx_addr);
-        
-        /** Load kernel in payload. */
-        int loadKernelPayload(unsigned int start_addr, unsigned int kern_size);
-
-        /** Command to load subject. */
-        int loadSubjectCmd(unsigned int subj_rows, unsigned int subj_cols, unsigned int tx_addr, unsigned int out_addr);
-        
-        /** Load subject in payload. */
-        int loadSubjectPayload(unsigned int start_addr, unsigned int subj_rows, unsigned int subj_cols);
 
         /** Total reset. */
         void reset();
