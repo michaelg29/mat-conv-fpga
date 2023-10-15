@@ -58,8 +58,8 @@ uint32_t calculateChecksum(header_t h){
   * @retval None
   */
 void moduleConfig(apb_ctrl_registers_t regs){
-
-  (*MODULE_APB_ADDR_REGSTATUS) = regs;
+  apb_ctrl_registers_t* ctrl_regs = MODULE_APB_ADDR_REGCTRL
+  (*ctrl_regs) = regs;
 }
 
 
@@ -73,10 +73,8 @@ void moduleConfig(apb_ctrl_registers_t regs){
   *	    value of the status registers.
   */
 apb_state_registers_t moduleGetState(void){
-
-  apb_state_registers_t state_regs;
-  memcpy(&state_regs, MODULE_APB_ADDR_STATUS, sizeof(apb_state_registers_t));
-  return state_regs;
+  apb_state_registers_t* state_regs = MODULE_APB_ADDR_STATUS;
+  return *state_regs;
 }
 
 
@@ -93,6 +91,10 @@ apb_state_registers_t moduleGetState(void){
   */
 int32_t sendKernel(uint32_t addr, uint32_t dimension){
 
+  if(dimension > MAX_KERNEL_SIZE){
+    return ERR_SIZE;
+  }
+
   header_t header, ACK;
   header.S_KEY = S_KEY_DEFAULT;
   header.COMMAND = LOAD_KERNEL;
@@ -107,7 +109,7 @@ int32_t sendKernel(uint32_t addr, uint32_t dimension){
   //writeTO(MODULE_AXI_SLV_ADDR, addr, dimension*dimension);
 
   //todo more robust error checks
-  uint8_t error;
+  int8_t error;
   if(ACK.CHKSUM != calculateChecksum(ACK)){
     error = ERR_CHKSM;
   }
@@ -130,7 +132,11 @@ int32_t sendKernel(uint32_t addr, uint32_t dimension){
   *  
   * @retval The function returns an error code (if 0 -> no error. if > 0 -> error). TODO specify more error codes
   */
-uint32_t sendKernelAsync(uint32_t addr, uint32_t dimension) {
+int32_t sendKernelAsync(uint32_t addr, uint32_t dimension) {
+
+  if(dimension > MAX_KERNEL_SIZE){
+    return ERR_SIZE;
+  }
 
   header_t header, ACK;
   header.S_KEY = S_KEY_DEFAULT;
@@ -165,7 +171,7 @@ uint32_t sendKernelAsync(uint32_t addr, uint32_t dimension) {
 
 
   //todo more robust error checks
-  uint32_t error;
+  int32_t error;
   if(ACK.CHKSUM != calculateChecksum(ACK)){
     error = ERR_CHKSM;
   }
@@ -188,7 +194,7 @@ uint32_t sendKernelAsync(uint32_t addr, uint32_t dimension) {
   *  
   * @retval The function returns an error code (if 0 -> no error. if > 0 -> error). TODO specify more error codes
   */
-uint32_t sendImage(uint32_t addr, uint32_t rows, uint32_t cols, uint32_t outAddr) {
+int32_t sendImage(uint32_t addr, uint32_t rows, uint32_t cols, uint32_t outAddr) {
 
   header_t header, ACK;
   header.S_KEY = S_KEY_DEFAULT;
@@ -204,7 +210,7 @@ uint32_t sendImage(uint32_t addr, uint32_t rows, uint32_t cols, uint32_t outAddr
   //writeTO(MODULE_AXI_SLV_ADDR, addr, rows*cols);
 
   //todo more robust error checks
-  uint32_t error;
+  int32_t error;
   if(ACK.CHKSUM != calculateChecksum(ACK)){
     error = ERR_CHKSM;
   }
@@ -226,7 +232,7 @@ uint32_t sendImage(uint32_t addr, uint32_t rows, uint32_t cols, uint32_t outAddr
   *  
   * @retval The function returns an error code (if 0 -> no error. if > 0 -> error). TODO specify more error codes
   */
-uint32_t sendImageAsync(uint32_t addr, uint32_t rows, uint32_t cols, uint32_t outAddr){
+int32_t sendImageAsync(uint32_t addr, uint32_t rows, uint32_t cols, uint32_t outAddr){
 
 
   header_t header, ACK;
@@ -262,7 +268,7 @@ uint32_t sendImageAsync(uint32_t addr, uint32_t rows, uint32_t cols, uint32_t ou
 
 
   //todo more robust error checks
-  uint32_t error;
+  int32_t error;
   if(ACK.CHKSUM != calculateChecksum(ACK)){
     error = ERR_CHKSM;
   }
