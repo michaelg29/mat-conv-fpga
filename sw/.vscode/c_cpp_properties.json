@@ -5,7 +5,8 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}\\model\\include"
+                "${workspaceFolder}\\model\\include",
+                "C:\\Program Files\\SystemC\\include"
             ],
             "browse": {
                 "path": [
