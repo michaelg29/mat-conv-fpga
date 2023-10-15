@@ -5,15 +5,15 @@
 
 // generate command field
 #define GEN_COMMAND(type, out_addr) \
-    ((type & 0b1) << 30) | (out_addr & 0xffffffff) >> 2)
+    (((type & 0b1) << 30) | (out_addr & 0xffffffff) >> 2)
 
 // generate size field
 #define GEN_SIZE(rows, cols) \
-    ((rows & 0xffff) << 16) | (cols & 0xffff)
+    (((rows & 0xffff) << 16) | (cols & 0xffff))
 
 // calculate the checksum of a command packet
 #define CALC_CHKSUM(cmd) \
-    cmd.s_key ^ cmd.command ^ cmd.size ^ cmd.tx_addr ^ cmd.trans_id ^ cmd.res ^ cmd.e_key
+    cmd.s_key ^ cmd.command ^ cmd.size ^ cmd.tx_addr ^ cmd.trans_id ^ cmd.reserved ^ cmd.e_key
 
 mat_mult_if::mat_mult_if(sc_module_name name) : sc_module(name) {
 
@@ -41,6 +41,7 @@ int mat_mult_if::loadKernel(unsigned char *mem, unsigned int start_addr, unsigne
     for (int i = 0, n = kern_size * kern_size; i < n; i += 8) {
         transmit64bitPacket(packets[i]);
     }
+    return 0;
 }
 
 int mat_mult_if::loadSubject(unsigned char *mem, unsigned int start_addr, unsigned int subj_rows, unsigned int subj_cols, unsigned int tx_addr, unsigned int out_addr) {
@@ -65,4 +66,5 @@ int mat_mult_if::loadSubject(unsigned char *mem, unsigned int start_addr, unsign
     for (int i = 0, n = subj_rows * subj_cols; i < n; i += 8) {
         transmit64bitPacket(packets[i]);
     }
+    return 0;
 }

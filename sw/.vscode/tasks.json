@@ -1,0 +1,40 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-std=c++11",
+                "-o",
+                "${fileDirname}\\build\\${fileBasenameNoExtension}.exe",
+                "-g",
+
+                //Source files
+                "${fileDirname}\\${fileBasename}",
+
+                //"$(find", "${workspaceFolder}\\model\\src\\", "-type", "f", "-iregex", "'.*\\.cpp')",
+                //"C:\\Users\\Jacoby\\Desktop\\Github\\systemc\\src\\*.cpp",
+                //"${workspaceFolder}\\model\\src\\*.cpp", //Recursive search of source files
+                "${workspaceFolder}\\model\\src\\m_fifo.cpp",
+                "${workspaceFolder}\\model\\src\\mat_mult_if.cpp",
+                "${workspaceFolder}\\model\\src\\system.cpp",
+
+
+                //Libraries
+                "-LC:\\Program Files\\SystemC\\lib",
+                "-lsystemc",
+                "-lpthread",// https://stackoverflow.com/questions/14191566/c-mutex-in-namespace-std-does-not-name-a-type
+
+                //Include paths
+                "-I${workspaceFolder}\\model\\include",
+                "-IC:\\Program Files\\SystemC\\include"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}

@@ -15,8 +15,8 @@
 #define MM_CMD_KERN 0x0
 #define MM_CMD_SUBJ 0x1
 
-typedef uint32 unsigned int;
-typedef uint64 unsigned long long;
+typedef unsigned int uint32;
+typedef unsigned long long uint64;
 
 typedef struct {
     uint32 s_key;
