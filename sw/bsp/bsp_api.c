@@ -37,12 +37,12 @@ uint32_t getNextTransID(){
  * @retval Checksum of the header.
 */
 uint32_t calculateChecksum(header_t h){
-  return  h.S_KEY +
-          h.COMMAND +
-          h.SIZE +
-          h.TX_ADDR + 
-          h.TRANS_ID +
-          h.STATUS + 
+  return  h.S_KEY ^
+          h.COMMAND ^
+          h.SIZE ^
+          h.TX_ADDR ^ 
+          h.TRANS_ID ^
+          h.STATUS ^ 
           h.COMMAND;
 }
 
@@ -109,7 +109,7 @@ int32_t sendKernel(uint32_t addr, uint32_t dimension){
   //todo more robust error checks
   uint8_t error;
   if(ACK.CHKSUM != calculateChecksum(ACK)){
-    error = ERR_CHECKSUM;
+    error = ERR_CHKSM;
   }
   else {
     error = ACK.STATUS;
@@ -167,7 +167,7 @@ uint32_t sendKernelAsync(uint32_t addr, uint32_t dimension) {
   //todo more robust error checks
   uint32_t error;
   if(ACK.CHKSUM != calculateChecksum(ACK)){
-    error = ERR_CHECKSUM;
+    error = ERR_CHKSM;
   }
   else {
     error = ACK.STATUS;
@@ -192,7 +192,7 @@ uint32_t sendImage(uint32_t addr, uint32_t rows, uint32_t cols, uint32_t outAddr
 
   header_t header, ACK;
   header.S_KEY = S_KEY_DEFAULT;
-  header.COMMAND = (LOAD_MATRIX << 30) | (0x3fffffff & outAddr);
+  header.COMMAND = (LOAD_MATRIX << 30) | (outAddr >> 2);
   header.SIZE = (rows<<16) | (0xFFFF & cols);
   header.TX_ADDR = &ACK;
   header.TRANS_ID = getNextTransID();
@@ -206,7 +206,7 @@ uint32_t sendImage(uint32_t addr, uint32_t rows, uint32_t cols, uint32_t outAddr
   //todo more robust error checks
   uint32_t error;
   if(ACK.CHKSUM != calculateChecksum(ACK)){
-    error = ERR_CHECKSUM;
+    error = ERR_CHKSM;
   }
   else {
     error = ACK.STATUS;
@@ -264,7 +264,7 @@ uint32_t sendImageAsync(uint32_t addr, uint32_t rows, uint32_t cols, uint32_t ou
   //todo more robust error checks
   uint32_t error;
   if(ACK.CHKSUM != calculateChecksum(ACK)){
-    error = ERR_CHECKSUM;
+    error = ERR_CHKSM;
   }
   else {
     error = ACK.STATUS;

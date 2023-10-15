@@ -47,16 +47,13 @@ typedef enum{
 }commands_e;
 
 typedef enum{
-	OK 					= 0x0,
-	ERR 				= 0x1,
-	ERR_SIZE_INVALID 	= 0x2,
-	ERR_NO_KERNEL 		= 0x4,
-	//0x8,
-	//0x10,
-	//0x20,
-	//0x40,
-	//0x80,
-	ERR_CHECKSUM = 0x80000000;
+	OK 					= 0x00000000,
+	ERR_OTHER			= 0x00000001,
+	ERR_REQ 			= 0x00000002,
+	ERR_KEY		 		= 0x00000004,
+	ERR_ORD		 		= 0x00000008,
+	ERR_SIZE	 		= 0x00000010,
+	ERR_CHKSM		 	= 0x00000020
 } status_e;
 
 typedef struct{
