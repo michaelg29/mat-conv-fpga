@@ -15,6 +15,6 @@ This model is considered the "Golden Model" as it is implemented completely thro
 
 ## Running instructions
 
-`./system <MEMORY_FILE> <KERNEL_SIZE>`
+`./main <INPUT_FILE> <OUTPUT_FILE> <KERNEL_FILE> <KERNEL_SIZE> [<DO_RANDOMIZE>]`
 
-The program loads in a matrix of size 1920x1080, starting at `0`, and a kernel of size `KERNEL_SIZE`x`KERNEL_SIZE`, starting at `1920x1080`, both from `MEMORY_FILE`. It then convolves the two, and writes the output to `MEMORY_FILE`.
+The program loads in a matrix of size 1920x1080 from `INPUT_FILE`, and a kernel of size `KERNEL_SIZE`x`KERNEL_SIZE` from `KERNEL_FILE`. It then convolves the two, and writes the output to `OUTPUT_FILE`.

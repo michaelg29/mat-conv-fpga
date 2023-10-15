@@ -11,8 +11,11 @@
             "program": "${fileDirname}\\build\\${fileBasenameNoExtension}.exe",
             "preLaunchTask": "build",
             "args": [
-                "",
-                "5"
+                "${workspaceFolder}\\input",
+                "${workspaceFolder}\\output",
+                "${workspaceFolder}\\kernel",
+                "7",
+                "0"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
