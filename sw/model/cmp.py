@@ -26,10 +26,6 @@ def build_kern_addr(i):
 def build_out_addr(r, c):
     return OUT_ADDR + r * MAT_COLS + c
 
-def exit_usage():
-    print(f"USAGE: {argv[0]} mem_file kern_size step_size")
-    exit()
-
 def twos_complement_8bit(raw_val):
     val = raw_val & 0x7f
     if raw_val & 0x80 > 0:
@@ -37,7 +33,8 @@ def twos_complement_8bit(raw_val):
     return val
 
 if len(argv) < 2:
-    exit_usage()
+    print(f"USAGE: {argv[0]} mem_file kern_size step_size")
+    exit()
 
 mem_file = argv[1]
 kern_rows = int(argv[2])

@@ -77,7 +77,7 @@ bool memoryWrite(char **argv, unsigned char *mem) {
 }
 
 void printMat(unsigned char *mem, int mat_n_cols, int base_addr, int r, int c, int n_r, int n_c) {
-#define ADDR(row, col) base_addr + row * mat_n_cols + col
+#define ADDR(row, col) base_addr + (row) * mat_n_cols + (col)
 
     for (int i = 0; i < n_r; i++) {
         for (int j = 0; j < n_c; j++) {

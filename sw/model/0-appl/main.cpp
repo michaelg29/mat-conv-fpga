@@ -15,7 +15,7 @@ class memory_mod : public sc_module, public mem_if {
     
     public:
     
-        memory_mod(sc_module_name name, uint8_t *memory, unsigned int mem_size) : sc_module(name), memory(memory), mem_size(mem_size) {}
+        memory_mod(sc_module_name name, uint8_t *memory, uint64_t mem_size) : sc_module(name), memory(memory), mem_size(mem_size) {}
         
         bool write(uint64_t addr, uint64_t data) {
             if (!check_addr(addr)) return false;
@@ -34,7 +34,7 @@ class memory_mod : public sc_module, public mem_if {
     private:
     
         uint8_t *memory;
-        unsigned int mem_size;
+        uint64_t mem_size;
     
         // align address to count by data width (64b/8B)
         void align_addr(uint64_t& addr) {
@@ -76,7 +76,7 @@ SC_MODULE(mm_cmd) {
         std::cout << "Done subject payload" << std::endl;
     }
     
-}; // SC_MODULE(sadModule)
+}; // SC_MODULE(mm_cmd)
 
 int sc_main(int argc, char* argv[]) {
     if (!parseCmdLine(argc, argv, memory, &kernel_size)) {
