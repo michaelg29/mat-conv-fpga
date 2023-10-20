@@ -13,7 +13,13 @@ The folders contain code to simulate the matrix multiplier across different abst
 
 This model is considered the "Golden Model" as it is implemented completely through software instructions. There are no simulated delays, and is used as a reference for the rest of the models. This model processes the data by loading in the entire matrix via the command payload then convolving it with the loaded kernel.
 
-### `01-golden-alg`: The golden model for the algorithm
+### `0-1-golden-alg`: The golden model for the algorithm
+
+This golden model is a proof for the algorithm to be implemented in the module.
+
+### `0-2-golden-wait`: The golden model for the wait method
+
+This golden model implements the method of waiting for all the data to compute a single kernel result.
 
 ### `1-task`: The task-level model
 
