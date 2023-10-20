@@ -84,6 +84,12 @@ struct mat_mult_reg_t {
 // ===== INTERFACE DEFINITION =====
 // ================================
 
+#define ADDR_MASK      0x3F
+#define OFFSET_COMMAND 0x00
+#define OFFSET_PAYLOAD 0x20
+#define SIZE_COMMAND   0x20
+#define SIZE_PAYLOAD   0x20 // wrapped size
+
 /**
  * Interface with the matrix multiplier module to issue commands.
  */
@@ -106,8 +112,8 @@ class mat_mult_if : virtual public sc_interface {
         /** Register collection. */
         mat_mult_reg_t regs;
 
-        /** Transmit a 64-bit packet to the module. */
-        virtual bool transmit64bitPacket(uint64_t addr, uint64_t packet) = 0;
+        /** Receive a 64-bit packet on the module. */
+        virtual bool receive64bitPacket(uint64_t addr, uint64_t packet) = 0;
 
         /** Subclass resets. */
         virtual void protected_reset() = 0;

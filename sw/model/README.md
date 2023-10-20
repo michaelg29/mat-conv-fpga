@@ -9,19 +9,21 @@ The folders contain code to simulate the matrix multiplier across different abst
 
 ### src - Common source files defining common functions
 
-### `00-appl`: The golden model
+### `0-appl`: The golden model
 
 This model is considered the "Golden Model" as it is implemented completely through software instructions. There are no simulated delays, and is used as a reference for the rest of the models. This model processes the data by loading in the entire matrix via the command payload then convolving it with the loaded kernel.
 
-### `01-task`: The task-level model
+### `01-golden-alg`: The golden model for the algorithm
+
+### `1-task`: The task-level model
 
 This model builds on the previous by dividing the processing into multiple tasks. This models how each core behaves autonomously and with feedback and commands from the state machines.
 
 ## Running instructions
 
-`./system <MEMORY_FILE> <KERNEL_SIZE>`
+`make run [MEM_FILE=<MEM_FILE>] [KERNEL_SIZE=<KERNEL_SIZE>] [DO_RANDOM=<0|1>]`
 
-The program loads in a matrix of size 1920x1080, starting at `0`, and a kernel of size `KERNEL_SIZE`x`KERNEL_SIZE`, starting at `1920x1080`, both from `MEMORY_FILE`. It then convolves the two, and writes the output to `MEMORY_FILE`.
+The program loads in a matrix of size 1920x1080, starting at `0`, and a kernel of size `KERNEL_SIZE`x`KERNEL_SIZE`, starting at `1920x1080`, both from `MEMORY_FILE`. It then convolves the two, and writes the output to `MEMORY_FILE`. To randomize the memory file (needed on the initial run), specify `DO_RANDOM=1`.
 
 ### Validation
 

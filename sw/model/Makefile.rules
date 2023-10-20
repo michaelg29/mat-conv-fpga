@@ -41,8 +41,15 @@ endif
 CFLAGS ?= -g3
 IFLAGS ?= -I../include -isystem $(SYSTEMC_INC_DIR)
 LFLAGS ?= -lsystemc -lm -L$(SYSTEMC_LIB_DIR)
+
+# file lists
 DEPS   = $(wildcard *.h) $(wildcard ../include/*.h)
 SRCS   = $(wildcard *.cpp) $(wildcard ../src/*.cpp)
+
+ifneq (,$(EXTRA_SRC_FILES))
+  SRCS += $(EXTRA_SRC_FILES)
+endif
+
 OBJS   = $(SRCS:.cpp=.o)
 
 ##########################################

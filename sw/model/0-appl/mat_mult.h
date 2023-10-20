@@ -23,6 +23,11 @@ class mat_mult : public sc_module, public mat_mult_if {
         sc_port<mem_if> memIf;
 
         mat_mult(sc_module_name name, uint8_t *ext_mem);
+    
+    protected:
+    
+        bool receive64bitPacket(uint64_t addr, uint64_t packet);
+        void protected_reset();
 
     private:
     
@@ -40,10 +45,6 @@ class mat_mult : public sc_module, public mat_mult_if {
         uint8_t kern_mem[KERN_SIZE_ROUNDED];
         uint8_t subj_mem[MAT_SIZE];
         
-        bool transmit64bitPacket(uint64_t addr, uint64_t packet);
-        void protected_reset();
-        
-        void wait_to_calculate();
         void calculate();
 
 };

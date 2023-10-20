@@ -26,6 +26,19 @@ addrmap mat_mult {
     } minor[15:0] = 0;
 
   } module_id;
+  
+  reg {
+    name = "Kernel configuration";
+    desc = "Description of how the kernel data is formatted.";
+  
+    default sw = rw;
+    default hw = r;
+  
+    field {
+      desc = "Where the point is in Q-format.";
+    } q_pt[3:0] = 6;
+  
+  } kernel_conf;
 
   reg {
     name = "Status register";

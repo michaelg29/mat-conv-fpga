@@ -14,7 +14,7 @@ mat_mult::mat_mult(sc_module_name name, uint8_t *ext_mem)
  * Receive a 64-bit packet. If there is an error in the current packet,
  * latch the status in the acknowledge packet.
  */
-bool mat_mult::transmit64bitPacket(uint64_t addr, uint64_t packet) {
+bool mat_mult::receive64bitPacket(uint64_t addr, uint64_t packet) {
     if (_cur_state == PROCESSING) {
         return false;
     }
@@ -184,16 +184,6 @@ bool mat_mult::transmit64bitPacket(uint64_t addr, uint64_t packet) {
 
 void mat_mult::protected_reset() {
     _cur_ptr = (uint64_t*)&_cur_cmd.s_key;
-}
-
-void mat_mult::wait_to_calculate() {
-    while (true) {
-        if (_cur_state == PROCESSING) {
-            
-            calculate();
-            _cur_state = WAIT_CMD_KERN_SKEY;
-        }
-    }
 }
 
 void mat_mult::calculate() {
