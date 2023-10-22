@@ -13,7 +13,7 @@ core::core(sc_module_name name) : sc_module(name) {
 int32_t core::calculate_row_result(uint8_t *kern_row, uint8_t *group) {
     _res = 0;
     
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < MAX_KERN_ROWS; ++i) {
         _res += kern_row[i] * group[i];
     }
     

@@ -96,7 +96,7 @@ int sc_main(int argc, char* argv[]) {
     memory_mod *mem = new memory_mod("mem", memory, MEM_SIZE);
     
     // matrix multiplier
-    mat_mult *matrix_multiplier = new mat_mult("matrix_multiplier", memory);
+    mat_mult_ga *matrix_multiplier = new mat_mult_ga("matrix_multiplier", memory);
     matrix_multiplier->memIf(*mem);
     
     // command issuer

@@ -156,17 +156,12 @@ bool mat_mult::receive64bitPacket(uint64_t addr, uint64_t packet) {
             
             // advance state if all elements loaded
             if (_loaded_el >= _expected_el) {
-                if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {
-                    _cur_state = WAIT_CMD_SUBJ_SKEY;
-                    _cur_ptr = (uint64_t*)&_cur_cmd;
-                }
-                else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
+                if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
                     _cur_state = PROCESSING;
-                    _cur_ptr = (uint64_t*)&_cur_cmd;
-                    
                     calculate();
-                    _cur_state = WAIT_CMD_KERN_SKEY;
                 }
+                
+                complete_payload();
             }
             
             //std::cout << "WAIT_DATA " << _cur_ack.status << std::endl;
@@ -184,6 +179,16 @@ bool mat_mult::receive64bitPacket(uint64_t addr, uint64_t packet) {
 
 void mat_mult::protected_reset() {
     _cur_ptr = (uint64_t*)&_cur_cmd.s_key;
+}
+
+void mat_mult::complete_payload() {
+    _cur_ptr = (uint64_t*)&_cur_cmd;
+    if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {
+        _cur_state = WAIT_CMD_SUBJ_SKEY;
+    }
+    else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
+        _cur_state = WAIT_CMD_KERN_SKEY;
+    }
 }
 
 void mat_mult::calculate() {

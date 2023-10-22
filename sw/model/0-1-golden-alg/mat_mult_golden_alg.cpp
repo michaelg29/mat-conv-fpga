@@ -3,7 +3,6 @@
 #include "system.h"
 #include "systemc.h"
 
-
 #include <iostream>
 #include <string>
 
@@ -30,12 +29,34 @@ bool mat_mult_ga::receive64bitPacket(uint64_t addr, uint64_t packet) {
     // dispatch data to clusters
     for (int i = 0; i < _n_clusters; ++i) {
         dispatchCluster(i, addr, packet);
-        //sc_spawn(sc_bind(&mat_mult_ga::dispatchCluster, this, i, addr, packet));
     }
     
-    if ((addr & ADDR_MASK) > (OFFSET_COMMAND + SIZE_COMMAND)) return false;
+    // address check
+    if ((addr & ADDR_MASK) >= (OFFSET_PAYLOAD)) {
+        _loaded_el += 8;
+        if (_loaded_el >= _expected_el) {
+            complete_payload();
+            for (int i = 0; i < _n_clusters; ++i) {
+                _clusters[i]->reset();
+            }
+        }
+        return true;
+    }
     
-    return mat_mult::receive64bitPacket(addr, packet);
+    // internal FSM
+    if (!mat_mult::receive64bitPacket(addr, packet)) return false;
+    
+    // activate clusters if necessary
+    if (_cur_state == WAIT_DATA) {
+        for (int i = 0; i < _n_clusters; ++i) {
+            _clusters[i]->activate(GET_CMD_TYPE(_cur_cmd), GET_CMD_SIZE_ROWS(_cur_cmd), GET_CMD_SIZE_COLS(_cur_cmd));
+        }
+        _loaded_el = 0;
+        _cur_state = PROCESSING;
+        sc_stop();
+    }
+    
+    return true;
 }
 
 void mat_mult_ga::dispatchCluster(int i, uint64_t addr, uint64_t packet) {

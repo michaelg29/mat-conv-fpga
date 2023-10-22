@@ -14,14 +14,16 @@ class cluster : public sc_module {
 
     public:
 
+        /** Constructor. */
         cluster(sc_module_name name, uint32_t *k, uint32_t n_k, uint32_t n_cores);
 
-        // once the command header has been received, configure the cluster
-        void configure(uint32_t command_type, uint32_t r, uint32_t c);
+        /** Once the command header has been received, activate the cluster. */
+        void activate(uint32_t command_type, uint32_t r, uint32_t c);
 
-        // receive a 64 bit packet
+        /** Receive a 64 bit packet. */
         void receive64bitPacket(uint64_t addr, uint64_t packet);
         
+        /** Reset the cluster. */
         void reset();
 
     private:
@@ -31,6 +33,7 @@ class cluster : public sc_module {
         core *_cores[MAX_N_CORES];
 
         // internal memories
+        uint8_t _kernel_mem[KERN_SIZE_ROUNDED];
         uint8_t _subres_mem[INTERNAL_MEMORY_SIZE];
         uint8_t _packet_buf[12];
 
@@ -40,9 +43,10 @@ class cluster : public sc_module {
 
         // per-image configuration
         bool     _enabled;
+        uint32_t _command_type;
         uint32_t _max_r;
         uint32_t _max_c;
-
+        
         // FSM
         uint32_t _counter;
 

@@ -22,14 +22,19 @@ class mat_mult : public sc_module, public mat_mult_if {
     
         sc_port<mem_if> memIf;
 
+        /** Constructor. */
         mat_mult(sc_module_name name, uint8_t *ext_mem);
     
     protected:
     
+        /** Receive a 64-bit packet. */
         bool receive64bitPacket(uint64_t addr, uint64_t packet);
+        
+        /** Reset function to be overridden and called by subclasses. */
         void protected_reset();
-
-    private:
+        
+        /** Reset state to receive another command. */
+        void complete_payload();
     
         // state variables
         mat_mult_state_t _cur_state;
@@ -40,6 +45,8 @@ class mat_mult : public sc_module, public mat_mult_if {
         // command and ack buffers
         mat_mult_cmd_t _cur_cmd;
         mat_mult_ack_t _cur_ack;
+        
+    private:
         
         // internal memories
         uint8_t kern_mem[KERN_SIZE_ROUNDED];
