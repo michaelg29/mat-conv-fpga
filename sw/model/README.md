@@ -25,6 +25,12 @@ This golden model implements the method of waiting for all the data to compute a
 
 This model builds on the previous by dividing the processing into multiple tasks. This models how each core behaves autonomously and with feedback and commands from the state machines.
 
+### `2-tlm`: The transaction-level model
+
+### `3-bfm`: The bus functional model
+
+### `4-casim`: The cycle-accurate simulator
+
 ## Running instructions
 
 `make run [MEM_FILE=<MEM_FILE>] [KERNEL_SIZE=<KERNEL_SIZE>] [DO_RANDOM=<0|1>]`
