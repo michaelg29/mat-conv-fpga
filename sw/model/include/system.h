@@ -8,14 +8,16 @@
 #define MAT_COLS 1920
 #define MAT_SIZE (MAT_ROWS*MAT_COLS)
 
-#define MAX_KERN_ROWS 7
+#define MAX_KERN_ROWS 5
 #define MAX_KERN_SIZE (MAX_KERN_ROWS*MAX_KERN_ROWS)
+#define KERN_SIZE_ROUNDED ((((MAX_KERN_SIZE) >> 3) + 1) << 3)
 
-#define MEM_SIZE MAT_SIZE+MAX_KERN_SIZE+MAT_SIZE
+#define MEM_SIZE (1 << (20+4)) // 24MB
 
-#define MAT_ADDR  0
-#define KERN_ADDR 0+MAT_SIZE
-#define OUT_ADDR  KERN_ADDR+MAX_KERN_SIZE
+#define MAT_ADDR    0
+#define KERN_ADDR   MAT_ADDR+MAT_SIZE
+#define OUT_ADDR    KERN_ADDR+KERN_SIZE_ROUNDED
+#define UNUSED_ADDR OUT_ADDR+MAT_SIZE
 
 #define BUILD_MAT_ADDR(r, c) (MAT_ADDR) + ((r) * MAT_COLS) + c
 #define BUILD_KERN_ADDR(i)   (KERN_ADDR) + i
@@ -24,6 +26,7 @@
 bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize);
 bool memoryWrite(char **argv, unsigned char *mem);
 
-void memoryPrint(unsigned char *mem, int kernelsize);
+void printMat(unsigned char *mem, int mat_n_cols, int base_addr, int r, int c, int n_r, int n_c);
+void memoryPrint(unsigned char *mem, int kernel_size);
 
 #endif // SYSTEM_H
