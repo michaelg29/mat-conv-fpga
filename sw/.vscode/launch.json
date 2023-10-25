@@ -5,22 +5,58 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(Windows) Launch",
+            "name": "(Windows) GDB Debug Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${fileDirname}\\build\\${fileBasenameNoExtension}.exe",
+            "preLaunchTask": "build",
+            "args": [
+                /*
+                "${workspaceFolder}\\input",
+                "${workspaceFolder}\\output",
+                "${workspaceFolder}\\kernel",
+                "7",
+                "1"
+                */
+                
+                "",
+                "5",
+                "1"
+                
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:\\msys64\\ucrt64\\bin\\gdb.exe"
+            
+        },
+        {
+            "name": "(Windows) Launch [old]",
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${fileDirname}\\build\\${fileBasenameNoExtension}.exe",
             "preLaunchTask": "build",
             "args": [
+                /*
                 "${workspaceFolder}\\input",
                 "${workspaceFolder}\\output",
                 "${workspaceFolder}\\kernel",
                 "7",
-                "0"
+                "1"
+                */
+                
+                "",
+                "5",
+                "1"
+                
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
-            "externalConsole": true
+            "externalConsole": true,
+            
         },
         {
             "name": "(Windows) Attach",
