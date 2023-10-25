@@ -7,36 +7,39 @@
 
 #include <iostream>
 
-cluster::cluster(sc_module_name name, uint32_t *k, uint32_t n_k, uint32_t n_cores)
-    : sc_module(name), _k(k), _n_k(n_k), _n_cores(n_cores)
+cluster_if::cluster_if(uint32_t *k, uint32_t n_k, uint32_t n_cores)
+    : _k(k), _n_k(n_k), _n_cores(n_cores)
 {
-    // initialize internal cores
-    for (int i = 0; i < _n_cores; ++i) {
-        _cores[i] = new core(("cluster" + std::to_string(k[0]) + "core" + std::to_string(i)).c_str());
-    }
+
+}
+
+cluster::cluster(sc_module_name name, uint32_t *k, uint32_t n_k, uint32_t n_cores)
+    : sc_module(name), cluster_if(k, n_k, n_cores)
+{
+
 }
 
 void cluster::activate(uint32_t command_type, uint32_t r, uint32_t c) {
     std::cout << "Configured " << command_type << " " << r << " " << c << std::endl;
     // allow cluster to tap the bus data
     _enabled = true;
-    
+
     // latch configuration
     _command_type = command_type;
     _max_r = r;
     _max_c = c;
-    
+
     // initialize FSM
     _counter = 0;
 }
 
-void cluster::receive64bitPacket(uint64_t addr, uint64_t packet) {
+void cluster::receive64bitPacket(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
     // ensure enabled
     if (!_enabled) return;
 
     // activate for address
     if ((addr & ADDR_MASK) < OFFSET_PAYLOAD) return;
-    
+
     if (_command_type == MM_CMD_KERN) {
         // store kernel data
         *(uint64_t*)(_kernel_mem + _counter) = packet;
@@ -47,12 +50,27 @@ void cluster::receive64bitPacket(uint64_t addr, uint64_t packet) {
 
         int core_i = 0;
         // iterate through data groups
-        for (int i = 0; i < _n_k; ++i) {
+        for (int p = 0; p < _n_k; ++p) {
             // iterate through kernel rows
-            for (int j = 0; j < MAX_KERN_ROWS; ++j) {
+            bool last_row = true;
+            for (int n = MAX_KERN_ROWS-1; n >= 0; n--) {
+                // get previous subresult
+                uint32_t addr = 0; // TODO calculate address
+                uint32_t subres = _subres_mem[addr];
+
                 // send current kernel row and data group to core to calculate
-                _cores[core_i]->calculate_row_result(_kernel_mem + j * MAX_KERN_ROWS, _packet_buf + _k[i]);
-                
+                subres = core_ifs[core_i]->calculate_row_result(subres, _kernel_mem + n * MAX_KERN_ROWS, _packet_buf + _k[p]);
+
+                if (last_row) {
+                    // output result
+                    last_row = false;
+                    out_ptr[p] = (uint8_t)subres;
+                }
+                else {
+                    // write subresult to internal memory
+                    _subres_mem[addr] = subres;
+                }
+
                 // move to next core
                 core_i = (core_i + 1) % _n_cores;
             }

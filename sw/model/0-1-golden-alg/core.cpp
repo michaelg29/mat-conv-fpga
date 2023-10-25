@@ -10,12 +10,10 @@ core::core(sc_module_name name) : sc_module(name) {
 }
 
 /** Process the first five bytes of each array argument. */
-int32_t core::calculate_row_result(uint8_t *kern_row, uint8_t *group) {
-    _res = 0;
-    
+uint32_t core::calculate_row_result(uint32_t carry, uint8_t *kern_row, uint8_t *group) {
     for (int i = 0; i < MAX_KERN_ROWS; ++i) {
-        _res += kern_row[i] * group[i];
+        carry += kern_row[i] * group[i];
     }
     
-    return _res;
+    return carry;
 }
