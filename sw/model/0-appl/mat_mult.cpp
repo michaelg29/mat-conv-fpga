@@ -111,7 +111,7 @@ bool mat_mult::receive64bitPacket(uint64_t addr, uint64_t packet) {
             // write ack packet to CPU
             _cur_ptr = (uint64_t*)&_cur_ack;
             for (int i = 0; i < N_PACKETS_IN_CMD; ++i) {
-                memIf->write(_cur_cmd.tx_addr, *_cur_ptr);
+                mem_if->write(_cur_cmd.tx_addr, *_cur_ptr);
                 
                 // advance cursors
                 _cur_cmd.tx_addr += 8;
@@ -224,7 +224,7 @@ void mat_mult::calculate() {
             
             // write data back to CPU memory
             if ((c & 0x7) == 0x7) {
-                memIf->write(addr, data);
+                mem_if->write(addr, data);
                 //printf("Write to %016lx, %016lx\n", addr, data);
                 data = 0;
                 addr += 8;

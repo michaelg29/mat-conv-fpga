@@ -13,7 +13,7 @@ int kernel_size;
 int hf_kernel_size;
 uint8_t memory[MEM_SIZE];
 
-class memory_mod : public sc_module, public mem_if {
+class memory_mod : public sc_module, public memory_if {
 
     public:
 
@@ -54,7 +54,7 @@ class memory_mod : public sc_module, public mem_if {
  */
 SC_MODULE(mm_cmd) {
 
-    sc_port<mat_mult_if> mmIf;
+    sc_port<mat_mult_if> mm_if;
 
     SC_CTOR(mm_cmd) {
         SC_THREAD(do_mat_mult);
@@ -62,19 +62,19 @@ SC_MODULE(mm_cmd) {
 
     void do_mat_mult() {
         std::cout << "Starting" << std::endl;
-        mmIf->reset();
+        mm_if->reset();
         std::cout << "Done reset" << std::endl;
 
-        mmIf->sendCmd(MM_CMD_KERN, kernel_size, kernel_size, UNUSED_ADDR, 0);
+        mm_if->sendCmd(MM_CMD_KERN, kernel_size, kernel_size, UNUSED_ADDR, 0);
         std::cout << "Done kernel cmd" << std::endl;
 
-        mmIf->sendPayload(KERN_ADDR, kernel_size, kernel_size);
+        mm_if->sendPayload(KERN_ADDR, kernel_size, kernel_size);
         std::cout << "Done kernel payload" << std::endl;
 
-        mmIf->sendCmd(MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
+        mm_if->sendCmd(MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
         std::cout << "Done subject cmd" << std::endl;
 
-        mmIf->sendPayload(MAT_ADDR, MAT_ROWS, MAT_COLS);
+        mm_if->sendPayload(MAT_ADDR, MAT_ROWS, MAT_COLS);
         std::cout << "Done subject payload" << std::endl;
     }
 
@@ -99,7 +99,7 @@ int sc_main(int argc, char* argv[]) {
     
     // matrix multiplier
     mat_mult_ga *matrix_multiplier = new mat_mult_ga("matrix_multiplier", memory);
-    matrix_multiplier->memIf(*mem);
+    matrix_multiplier->mem_if(*mem);
 
     // design parameters
     uint32_t n_clusters = MAX_N_CLUSTERS;
@@ -141,7 +141,7 @@ int sc_main(int argc, char* argv[]) {
 
     // command issuer
     mm_cmd *cpu = new mm_cmd("cpu");
-    cpu->mmIf(*matrix_multiplier);
+    cpu->mm_if(*matrix_multiplier);
 
     // =============================
     // ==== RUN THE SIMULATION =====
