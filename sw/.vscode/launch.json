@@ -9,7 +9,11 @@
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${fileDirname}\\build\\${fileBasenameNoExtension}.exe",
-            "preLaunchTask": "build",
+
+            //TODO modify the prelaunch task based on the process you want to run
+            //"preLaunchTask": "build 0-appl",
+            "preLaunchTask": "build 0-1-golden-alg",
+
             "args": [
                 "${workspaceFolder}\\input",
                 "${workspaceFolder}\\output",

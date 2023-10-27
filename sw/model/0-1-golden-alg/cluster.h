@@ -15,13 +15,13 @@ class cluster_if : virtual public sc_interface {
     public:
 
         /** Constructor. */
-        cluster_if(uint32_t *k, uint32_t n_k, uint32_t n_cores);
+        cluster_if(uint32_t start_group, uint32_t n_groups, uint32_t n_cores);
         
         /** Once the command header has been received, activate the cluster. */
         virtual void activate(uint32_t command_type, uint32_t r, uint32_t c) = 0;
 
-        /** Receive a 64 bit packet. out_ptr must have n_k bytes allocated. */
-        virtual void receive64bitPacket(uint64_t addr, uint64_t packet, uint8_t *out_ptr) = 0;
+        /** Receive data to process (kernel values or input image data). */
+        virtual void receiveData(uint64_t addr, uint8_t* data, uint32_t size,  uint8_t *out_ptr) = 0;
         
         /** Reset the cluster. */
         virtual void reset() = 0;
@@ -29,11 +29,11 @@ class cluster_if : virtual public sc_interface {
     protected:
     
         // internal cores
-        uint32_t _n_cores;
+        uint32_t _n_cores; //Number of cores
         
         // one-time configuration
-        uint32_t *_k; // assigned group values
-        uint32_t _n_k; // number of assigned groups
+        uint32_t _start_group; //To determine which pixels to process
+        uint32_t _n_groups; //For the data received, number of groups to process
     
 };
 
@@ -45,13 +45,13 @@ class cluster : public sc_module, public cluster_if {
         sc_port<core_if> core_ifs[MAX_N_CORES];
 
         /** Constructor. */
-        cluster(sc_module_name name, uint32_t *k, uint32_t n_k, uint32_t n_cores);
+        cluster(sc_module_name name, uint32_t start_group, uint32_t n_groups, uint32_t n_cores, uint8_t kernel_dim);
 
         /** Once the command header has been received, activate the cluster. */
         void activate(uint32_t command_type, uint32_t r, uint32_t c);
 
-        /** Receive a 64 bit packet. out_ptr must have n_k bytes allocated. */
-        void receive64bitPacket(uint64_t addr, uint64_t packet, uint8_t *out_ptr);
+        /** Receive data to process (kernel values or input image data). */
+        void receiveData(uint64_t addr, uint8_t* data, uint32_t size,  uint8_t *out_ptr);
         
         /** Reset the cluster. */
         void reset();
@@ -63,6 +63,8 @@ class cluster : public sc_module, public cluster_if {
         uint8_t _subres_mem[INTERNAL_MEMORY_SIZE];
         uint8_t _packet_buf[12];
 
+        uint8_t _kern_dim;
+
         // per-image configuration
         bool     _enabled;
         uint32_t _command_type;
@@ -71,6 +73,20 @@ class cluster : public sc_module, public cluster_if {
         
         // FSM
         uint32_t _counter;
+
+
+
+        //New approach
+
+        //Local params
+        uint32_t _kern_val_counter; //Counts how many bytes of the kernel were received
+        uint32_t _col_i; //Current local column being processed
+        uint8_t _input_data[MAX_CLUSTER_INPUT_SIZE];
+
+        //Given params
+        uint32_t _packet_size; //Number of bytes received from input interface (excluding the buffered pixels)
+        
+
 
 };
 

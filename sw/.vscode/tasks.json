@@ -1,8 +1,9 @@
 {
     "version": "2.0.0",
     "tasks": [
+
         {
-            "label": "build",
+            "label": "build 0-appl",
             "type": "shell",
             "command": "g++",
             "args": [
@@ -30,6 +31,43 @@
                 //Include paths
                 "-I${workspaceFolder}\\model\\include",
                 "-I${workspaceFolder}\\model\\0-appl",
+                "-IC:\\Program Files\\SystemC\\include"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+
+        {
+            "label": "build 0-1-golden-alg",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-std=c++11",
+                "-o",
+                "${fileDirname}\\build\\${fileBasenameNoExtension}.exe",
+                "-g",
+
+                //Source files
+                "${fileDirname}\\${fileBasename}",                
+                "${workspaceFolder}\\model\\src\\mat_mult_if.cpp",
+                "${workspaceFolder}\\model\\src\\system.cpp",
+                "${workspaceFolder}\\model\\0-1-golden-alg\\cluster.cpp",
+                "${workspaceFolder}\\model\\0-1-golden-alg\\core.cpp",
+                "${workspaceFolder}\\model\\0-1-golden-alg\\mat_mult_golden_alg.cpp",
+                "${workspaceFolder}\\model\\0-appl\\mat_mult.cpp",
+
+
+                //Libraries
+                "-LC:\\Program Files\\SystemC\\lib",
+                "-lsystemc",
+                "-lpthread",// https://stackoverflow.com/questions/14191566/c-mutex-in-namespace-std-does-not-name-a-type
+
+                //Include paths
+                "-I${workspaceFolder}\\model\\include",
+                "-I${workspaceFolder}\\model\\0-appl",
+                "-I${workspaceFolder}\\model\\0-1-golden-alg",
                 "-IC:\\Program Files\\SystemC\\include"
             ],
             "group": {

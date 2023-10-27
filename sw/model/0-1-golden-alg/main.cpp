@@ -94,52 +94,68 @@ int sc_main(int argc, char* argv[]) {
     // ==== CREATE AND CONNECT MODULES =====
     // =====================================
 
-    // memory interface
+
+    // Design optimization parameters
+    uint8_t kernel_dim = MAX_KERN_DIM;
+    uint32_t n_clusters = MAX_N_CLUSTERS; //Number of clusters (must be a power of 2)
+    uint32_t n_cores_per_cluster = MAX_N_CORES;
+    uint32_t payload_packet_size = PACKET_BYTES;   //Total number of bytes (pixels) received per payload packet (might be bigger than 64-bit if buffered)
+
+    // Calculated design parameters
+    uint32_t n_groups_per_cluster = (payload_packet_size + (kernel_dim - 1)) / n_clusters; //Number of groups to be processed for each cluster (NOTE: the division must yield an integer)
+    
+    /*UNUSED*/
+    uint32_t cluster_input_size = payload_packet_size / n_clusters + (kernel_dim - 1); //Size of the dispatched grouped, which is also the size of each groups made when dispatching the input pixels
+    uint32_t total_mem = PIXEL_SIZE * (kernel_dim - 1) * (MAT_COLS - 2*(kernel_dim-1)); //Total memory required for all the subresults
+    uint32_t total_mem_per_cluster = total_mem / n_clusters; //Total local memory required for each cluster
+    uint32_t num_input_pixels = (kernel_dim - 1) + payload_packet_size;  //Number of pixels to dispatch at once ((kernel_dim - 1) is for the pixels shared from the previous data received)
+
+    //TODO clusters shall have a command to receive from the payload packet + transferred pixels (not just 64 bits essentially)
+    //DONE (see receiveData)
+
+    //TODO clusters should NOT be responsible for buffering the last two pixels, since only the first cluster
+    //will receive those. Only the top-level must take care of that. Clusters are simply computing what they are receiving.
+    //DONE (see matmul and receiveData)
+
+    // memory interface (top-level interface with the CPU)
     memory_mod *mem = new memory_mod("mem", memory, MEM_SIZE);
     
-    // matrix multiplier
-    mat_mult_ga *matrix_multiplier = new mat_mult_ga("matrix_multiplier", memory);
+    // matrix multiplier (top-level)
+    mat_mult_ga *matrix_multiplier = new mat_mult_ga("matrix_multiplier", 
+                                                    memory, 
+                                                    n_clusters,
+                                                    n_cores_per_cluster,
+                                                    kernel_dim,
+                                                    payload_packet_size,
+                                                    n_groups_per_cluster);
     matrix_multiplier->memIf(*mem);
 
-    // design parameters
-    uint32_t n_clusters = MAX_N_CLUSTERS;
-    uint32_t n_cores_per_cluster = MAX_N_CORES;
-    uint32_t k_list[PACKET_BYTES];
-
-    for (int i = 0; i < PACKET_BYTES; ++i) {
-        k_list[i] = i;
-    }
 
     // initialize clusters and cores
-    cluster *clusters[MAX_N_CLUSTERS];
-    core *cores[MAX_N_CLUSTERS * MAX_N_CORES];
-    int i = 0;
-    for (; i < n_clusters; ++i) {
+    cluster *clusters[n_clusters];
+    core *cores[n_clusters * n_cores_per_cluster];
+
+    for (int i = 0; i < n_clusters; i++) {
         // initialize each cluster
         clusters[i] = new cluster(("cluster" + std::to_string(i)).c_str(),
-            k_list + i, 1, // pointer to assigned values of k, number of assigned values
-            n_cores_per_cluster); // number of cores
+                                    i*n_groups_per_cluster, //start group offset
+                                    n_groups_per_cluster,   //number of groups to process
+                                    n_cores_per_cluster,    //number of cores
+                                    kernel_dim);            //dimension of the kernel
 
-        // initialize each core
+
+        // initialize each core for each cluster
         int j = 0;
-        for (; j < n_cores_per_cluster; ++j) {
-            cores[j + i * MAX_N_CORES] = new core(("cluster" + std::to_string(i) + "core" + std::to_string(j)).c_str());
-            clusters[i]->core_ifs[j](*cores[j + i * MAX_N_CORES]);
-        }
-        for (; j < MAX_N_CORES; ++j) {
-            cores[j + i * MAX_N_CORES] = new core("dummy");
-            clusters[i]->core_ifs[j](*cores[j + i * MAX_N_CORES]);
+        for (; j < n_cores_per_cluster; j++) {
+            cores[j + i * n_cores_per_cluster] = new core(("cluster" + std::to_string(i) + "core" + std::to_string(j)).c_str());
+            clusters[i]->core_ifs[j](*cores[j + i * n_cores_per_cluster]);
         }
         
-        // connect to multiplier
-        matrix_multiplier->cluster_ifs[i](*clusters[i]);
-    }
-    for (; i < MAX_N_CLUSTERS; ++i) {
-        clusters[i] = new cluster("dummy", nullptr, 0, 0);
+        // connect each cluster to the matrix multiplier (top-level)
         matrix_multiplier->cluster_ifs[i](*clusters[i]);
     }
 
-    // command issuer
+    // command issuer (CPU)
     mm_cmd *cpu = new mm_cmd("cpu");
     cpu->mmIf(*matrix_multiplier);
 
