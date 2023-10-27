@@ -1,6 +1,5 @@
 
 #include "systemc.h"
-#include "mem_if.h"
 
 #ifndef MAT_MULT_IF_H
 #define MAT_MULT_IF_H
@@ -127,6 +126,7 @@ class mat_mult_if : virtual public sc_interface {
         uint32_t _cur_trans_id;
         mat_mult_cmd_t _cmd;
         mat_mult_ack_t _ack;
+        uint64_t *_packets;
 
         /** Reset the module. */
         void private_reset();

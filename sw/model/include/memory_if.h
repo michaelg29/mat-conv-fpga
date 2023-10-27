@@ -7,7 +7,7 @@
 /**
  * Interface with memory to be overridden for different abstraction levels.
  */
-class mem_if : virtual public sc_interface {
+class memory_if : virtual public sc_interface {
 
     public:
 

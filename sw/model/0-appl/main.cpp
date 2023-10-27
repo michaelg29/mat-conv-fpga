@@ -2,6 +2,7 @@
 #include "system.h"
 #include "mat_mult.h"
 #include "mat_mult_if.h"
+#include "memory_if.h"
 
 #include "systemc.h"
 #include <iostream>
@@ -11,7 +12,7 @@ int kernel_size;
 int hf_kernel_size;
 uint8_t memory[MEM_SIZE];
 
-class memory_mod : public sc_module, public mem_if {
+class memory_mod : public sc_module, public memory_if {
     
     public:
     
@@ -97,7 +98,7 @@ int sc_main(int argc, char* argv[]) {
     
     // matrix multiplier
     mat_mult *matrix_multiplier = new mat_mult("matrix_multiplier", memory);
-    matrix_multiplier->memIf(*mem);
+    matrix_multiplier->mem_if(*mem);
     
     // command issuer
     mm_cmd *cpu = new mm_cmd("cpu");

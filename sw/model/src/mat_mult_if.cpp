@@ -30,9 +30,9 @@ int mat_mult_if::sendCmd(unsigned int cmd_type, unsigned int rows, unsigned int 
     _cmd.chksum   = CALC_CMD_CHKSUM(_cmd);
     
     // send command
-    uint64_t *packets = (uint64_t*)&_cmd;
+    _packets = (uint64_t*)&_cmd;
     for (int i = 0; i < N_PACKETS_IN_CMD; ++i) {
-        receive64bitPacket((i << 3) + OFFSET_COMMAND, packets[i]);
+        receive64bitPacket((i << 3) + OFFSET_COMMAND, _packets[i]);
     }
     
     // read ack
@@ -55,7 +55,7 @@ int mat_mult_if::sendPayload(unsigned int start_addr, unsigned int rows, unsigne
     n >>= 3;
     
     // send payload
-    uint64_t *packets = (uint64_t*)(_ext_mem + start_addr);
+    _packets = (uint64_t*)(_ext_mem + start_addr);
     for (int i = 0; i < n; ++i) {
         // generate address to wrap
         uint64_t addr = (uint64_t)(i & 0b11); // wrap every 4 packets
@@ -63,7 +63,7 @@ int mat_mult_if::sendPayload(unsigned int start_addr, unsigned int rows, unsigne
         addr += OFFSET_PAYLOAD; // add offset
         
         // transmit
-        receive64bitPacket(addr, packets[i]);
+        receive64bitPacket(addr, _packets[i]);
     }
     
     // read ack
