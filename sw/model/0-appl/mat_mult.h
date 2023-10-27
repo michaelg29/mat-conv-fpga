@@ -2,6 +2,7 @@
 #include "systemc.h"
 #include "system.h"
 #include "mat_mult_if.h"
+#include "memory_if.h"
 
 #ifndef MAT_MULT_H
 #define MAT_MULT_H
@@ -20,7 +21,7 @@ class mat_mult : public sc_module, public mat_mult_if {
     
     public:
     
-        sc_port<mem_if> memIf;
+        sc_port<memory_if> mem_if;
 
         /** Constructor. */
         mat_mult(sc_module_name name, uint8_t *ext_mem);

@@ -15,7 +15,7 @@ This model is considered the "Golden Model" as it is implemented completely thro
 
 ### `0-1-golden-alg`: The golden model for the algorithm
 
-This golden model is a proof for the algorithm to be implemented in the module.
+This golden model is a proof for the algorithm to be implemented in the module. The main module (`mat_mult_ga`) in this folder extends from the main module in `0-appl` (`mat_mult`), so the command decoding is maintained. However, the main receive method in `mat_mult_ga` will intercept the payload data as it is received. Instead of being routed to the internal memory in the superclass, it will go to be processed by the `cluster` class.
 
 ### `0-2-golden-wait`: The golden model for the wait method
 
