@@ -77,6 +77,8 @@ void cluster::receiveData(uint64_t addr, uint8_t* data, uint32_t size,  uint8_t 
     }
     else if (_command_type == MM_CMD_SUBJ) {
 
+        cout << "CLUSTER DATA" << endl;
+
         //Get data for cluster
         memcpy(_input_data, data + _start_group, size); 
 

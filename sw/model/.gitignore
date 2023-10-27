@@ -1,3 +1,4 @@
 *.o
+*.exe
 system
 mem_init

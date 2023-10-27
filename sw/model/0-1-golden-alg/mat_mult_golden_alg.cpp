@@ -28,6 +28,8 @@ bool mat_mult_ga::receive64bitPacket(uint64_t addr, uint64_t packet) {
 
     if(_cur_cmd.command == MM_CMD_SUBJ){
 
+        cout << "MM DATA" << endl; //TODO remove
+
         // dispatch input iamge data to clusters
         for (int i = 0; i < _n_clusters; i++) {
             dispatchCluster(i, addr, _cluster_dispatch_data); //Dispatch the pixels to the clusters
@@ -64,10 +66,11 @@ bool mat_mult_ga::receive64bitPacket(uint64_t addr, uint64_t packet) {
     }
     
     // internal FSM (TODO is this to compare the output?)
-    if (!mat_mult::receive64bitPacket(addr, packet)) return false;
+    if (!mat_mult::receive64bitPacket(addr, packet))return false;
     
     // activate clusters if necessary
     if (_cur_state == WAIT_DATA) {
+        cout << "ACTIVATE CLUSTERS" << endl;
         for (int i = 0; i < _n_clusters; ++i) {
             cluster_ifs[i]->activate(GET_CMD_TYPE(_cur_cmd), GET_CMD_SIZE_ROWS(_cur_cmd), GET_CMD_SIZE_COLS(_cur_cmd));
         }
