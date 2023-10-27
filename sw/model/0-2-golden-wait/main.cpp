@@ -104,10 +104,6 @@ int sc_main(int argc, char* argv[]) {
     cpu->mmIf(*matrix_multiplier);
     
 
-
-
-    cpu->do_mat_mult();
-
     // =============================
     // ==== RUN THE SIMULATION =====
     // =============================

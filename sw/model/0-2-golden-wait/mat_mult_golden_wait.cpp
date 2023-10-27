@@ -19,11 +19,11 @@ mat_mult_wait::mat_mult_wait(sc_module_name name, uint8_t *ext_mem)
  */
 bool mat_mult_wait::receive64bitPacket(uint64_t addr, uint64_t packet) {
 
-    sendBytes(addr, packet);
-
-    if ((addr & ADDR_MASK) > (OFFSET_COMMAND + SIZE_COMMAND)) return false;
-    
-    return mat_mult::receive64bitPacket(addr, packet);
+    if (_cur_state == PROCESSING) {
+        return false;
+    }
+        
+    return true;
 }
 
 
@@ -34,11 +34,15 @@ void mat_mult_wait::protected_reset() {
 }
 
 void mat_mult_wait::sendBytes(uint64_t addr, uint64_t packet){
-    // activate for address
-    if ((addr & ADDR_MASK) < OFFSET_PAYLOAD) return;
 
-//deal with if its payload or kernel
     for (int i = 0; i < PACKET_BYTES; ++i) {
         _mmu->store((uint8_t)((packet>>i)&0xFF));
+    }
+}
+
+void mat_mult_wait::computeBytes(){
+
+    for (int i = 0; i < PACKET_BYTES; ++i) {
+        _mmu->compute_output();
     }
 }
