@@ -11,7 +11,7 @@ int kernel_size;
 int hf_kernel_size;
 uint8_t memory[MEM_SIZE];
 
-class memory_mod : public sc_module, public mem_if {
+class memory_mod : public sc_module, public memory_if {
     
     public:
     
@@ -97,7 +97,7 @@ int sc_main(int argc, char* argv[]) {
     
     // matrix multiplier
     mat_mult_wait *matrix_multiplier = new mat_mult_wait("matrix_multiplier", memory);
-    matrix_multiplier->memIf(*mem);
+    matrix_multiplier->mem_if(*mem);
     
     // command issuer
     mm_cmd *cpu = new mm_cmd("cpu");
@@ -117,5 +117,7 @@ int sc_main(int argc, char* argv[]) {
     memoryWrite(argv, memory);
     memoryPrint(memory, kernel_size);
     
+    std::string c;
+    std::getline(std::cin, c);
     return 0;
 }

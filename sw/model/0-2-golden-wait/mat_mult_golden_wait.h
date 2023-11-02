@@ -26,8 +26,7 @@ class mat_mult_wait: public mat_mult {
         bool receive64bitPacket(uint64_t addr, uint64_t packet);
         void protected_reset();
         void sendBytes(uint64_t addr, uint64_t packet);
-        void computeBytes();       
-
+        void computeBytes(); 
 
 };
 

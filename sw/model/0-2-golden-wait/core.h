@@ -12,13 +12,15 @@ class core : public sc_module {
         core(sc_module_name name);
 
         /** Compute one MLA operation. Computes its internal kernelVal*sVal + addInput */
-        int32_t compute_result(uint8_t sVal, uint32_t addInput);
+        void compute_result(uint8_t sVal);
 
         void setKernelValue(uint8_t val);        
         void reset();
+        uint32_t addInput;
+        uint32_t* forward = NULL;
 
     private:
-    
+
         uint8_t _kVal;
 
 };

@@ -15,6 +15,14 @@ mmu::mmu(sc_module_name name, uint32_t n_cores, uint32_t row_length, uint32_t ke
         // initialize each core
         _cores[i] = new core(("core" + std::to_string(i)).c_str());
     }
+
+    for (int i = 0; i < _n_cores-1; ++i) {
+        // connect each core
+        _cores[i]->forward = &(_cores[i+1]->addInput);
+    }
+
+    //TODO connect output FSM
+    //_cores[_n_cores-1]->addInput = *(OUTFSM->in);
 }
 
 
@@ -41,20 +49,20 @@ void mmu::store(uint8_t nextVal) {
     
 }
 
-uint32_t mmu::compute_output() {
+void mmu::compute_output() {
     if(_store_counter >= (_kernel_size*(1+_row_length>>1)-1)) {
         _wait = 0;        
     }
 
-    if(_wait) return 0;
+    if(_wait) return;
 
     //todo deal wityh beginning and end
-    uint32_t k=0, forward=0;
+    uint32_t k=0;
     for(int j = 0; j < _kernel_size; j++) {
         for(int i = 0; i < _kernel_size; i++) {
 
-            uint32_t idx = _compute_row_index_counter + i - (_kernel_size>>1);
-            uint32_t idy = _compute_col_index_counter + j - (_kernel_size>>1);
+            int32_t idx = _compute_row_index_counter + i - (_kernel_size>>1);
+            int32_t idy = _compute_col_index_counter + j - (_kernel_size>>1);
 
             //modulo operation
             if(idy<0){
@@ -66,11 +74,11 @@ uint32_t mmu::compute_output() {
             }
 
             uint8_t sVal = 0;
-            if(idx > 0 && idx < _row_length && (_col_index_counter-j >0) && (_col_index_counter+j <_col_length)){
+            if(idx >= 0 && idx < _row_length && (_col_index_counter-j >= 0) && (_col_index_counter+j <_col_length)){
                 sVal = _lsram->load(ID(idx, idy));
             }
 
-            forward = _cores[i+j*_kernel_size]->compute_result(sVal, forward);
+            _cores[i+j*_kernel_size]->compute_result(sVal);
         }
     }
 
@@ -89,7 +97,6 @@ uint32_t mmu::compute_output() {
         }
     }
 
-    return forward;
 }
 
 void mmu::protected_reset() {
@@ -106,6 +113,9 @@ void mmu::protected_reset() {
     _wait = 1; 
 
     _cur_state = LOAD_KERN;
+
+    _lsram->reset();
+    
 }
 
 

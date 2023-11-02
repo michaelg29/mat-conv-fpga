@@ -10,9 +10,11 @@ core::core(sc_module_name name) : sc_module(name) {
 }
 
 /** Process the first five bytes of each array argument. */
-int32_t core::compute_result(uint8_t sVal, uint32_t addInput) {
+void core::compute_result(uint8_t sVal) {
     
-    return _kVal * sVal + addInput;
+    //temporary until output fsm is made
+    if(forward != NULL)
+        *forward = _kVal * sVal + addInput;
 }
 
 void core::reset(){

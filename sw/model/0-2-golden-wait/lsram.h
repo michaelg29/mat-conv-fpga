@@ -16,6 +16,8 @@ class lsram : public sc_module {
         void store(uint16_t addr, uint8_t val);        
         uint8_t load(uint16_t addr);
 
+        void reset();
+
     private:
     
         uint8_t _sram[LSRAM_MEM_SIZE];

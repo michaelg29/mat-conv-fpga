@@ -19,11 +19,25 @@ mat_mult_wait::mat_mult_wait(sc_module_name name, uint8_t *ext_mem)
  */
 bool mat_mult_wait::receive64bitPacket(uint64_t addr, uint64_t packet) {
 
-    if (_cur_state == PROCESSING) {
-        return false;
+    if (_cur_state == WAIT_DATA && GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
+        _cur_state = PROCESSING;
+        _mmu->setProcessingState();  
+    }   
+
+    if (_cur_state == WAIT_DATA) {
+        sendBytes(addr, packet);        
     }
-        
-    return true;
+    else if(_cur_state ==  PROCESSING){
+        sendBytes(addr, packet);
+        computeBytes();
+    }
+
+    // internal FSM
+    mat_mult::receive64bitPacket(addr, packet);    
+   
+
+   //_mmu->setProcessingState();
+   return true;
 }
 
 
