@@ -4,8 +4,8 @@
 #include "systemc.h"
 #include <stdio.h>
 
-mat_mult::mat_mult(sc_module_name name, uint8_t *ext_mem)
-    : mat_mult_if(ext_mem), sc_module(name)
+mat_mult::mat_mult(sc_module_name name)
+    : sc_module(name)
 {
 
 }
@@ -199,7 +199,7 @@ void mat_mult::calculate() {
     
     // calculations
     uint64_t data = 0;
-    uint64_t addr = ((uint64_t)GET_CMD_OUT_ADDR(_cur_cmd)) << 3;
+    uint64_t addr = ((uint64_t)GET_CMD_OUT_ADDR(_cur_cmd));
     std::cout << "Writing to " << addr << ", matrix is " << rows << "x" << cols << std::endl;
     for (uint16_t r = 0; r < rows; r++) {
         for (uint16_t c = 0; c < cols; c++) {
@@ -212,7 +212,7 @@ void mat_mult::calculate() {
                 for (int i = -hf_kernel_size; i <= hf_kernel_size; i++) {
                     for (int j = -hf_kernel_size; j <= hf_kernel_size; j++) {
                         res += (int32_t)(uint32_t)subj_mem[(r+i)*cols + (c+j)] // matrix value is unsigned byte
-                             * (int32_t)(int8_t)kern_mem[kerneli]; // kernel value is signed byte
+                             * (int32_t)(uint8_t)kern_mem[kerneli]; // kernel value is signed byte
                         kerneli++;
                     }
                 }

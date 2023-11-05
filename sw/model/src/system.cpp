@@ -30,7 +30,7 @@ void memoryRead(char *memfile, unsigned char *mem, unsigned int memout_size) {
 
 bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize) {
     // check usage
-    if (argc == 1 || argc > 6) {
+    if (argc < 5 || argc > 6) {
         std::cerr << "Usage: " << argv[0] << " <INPUT_FILE> <OUTPUT_FILE> <KERNEL_FILE> <KERNEL_SIZE> [<DO_RANDOMIZE>]" << std::endl;
         return false;
     }
@@ -56,23 +56,37 @@ bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize) {
     }
     else {
         // read memory
-        memoryRead(argv[1], mem, MAT_SIZE); //Load image
-        memoryRead(argv[3], mem+MAT_SIZE, MAX_KERN_SIZE); //Load kernel
+        memoryRead(argv[1], mem, MAT_SIZE); // load image
+        memoryRead(argv[3], mem + MAT_SIZE, MAX_KERN_SIZE); // load kernel
     }
     
     return true;
 }
 
 bool memoryWrite(char **argv, unsigned char *mem) {
-    char *memfile = argv[2]; //Output image file
-    
-    FILE *fp = fopen(memfile, "wb");
-    
-    if (!fp) {
-       return false;
+    // write input file
+    char *file = argv[1];
+    FILE *fp = fopen(file, "wb");
+    if (fp) {
+        fwrite(mem, 1, MAT_SIZE, fp);
+        fclose(fp);
     }
     
-    fwrite(mem, 1, MAT_SIZE, fp);
+    // write output file
+    file = argv[2];
+    fp = fopen(file, "wb");
+    if (fp) {
+        fwrite(mem + OUT_ADDR, 1, MAT_SIZE, fp);
+        fclose(fp);
+    }
+    
+    // write kernel file
+    file = argv[3];
+    fp = fopen(file, "wb");
+    if (fp) {
+        fwrite(mem + KERN_ADDR, 1, MAX_KERN_SIZE, fp);
+        fclose(fp);
+    }
     
     return true;
 }
@@ -90,15 +104,17 @@ void printMat(unsigned char *mem, int mat_n_cols, int base_addr, int r, int c, i
 #undef ADDR
 }
 
+#define MIN(a, b) a > b ? b : a
+
 void memoryPrint(unsigned char *mem, int kernel_size) {
     std::cout << std::endl << "==========" << std::endl;
     std::cout << "Input matrix:" << std::endl;
-    printMat(mem, MAT_COLS, MAT_ADDR, 0, 0, 10, 10);
+    printMat(mem, MAT_COLS, MAT_ADDR, 0, 0, MIN(10, MAT_ROWS), MIN(10, MAT_COLS));
     
     std::cout << "Kernel:" << std::endl;
     printMat(mem, kernel_size, KERN_ADDR, 0, 0, kernel_size, kernel_size);
     
     std::cout << "Output matrix:" << std::endl;
-    printMat(mem, MAT_COLS, OUT_ADDR, 0, 0, 10, 10);
+    printMat(mem, MAT_COLS, OUT_ADDR, 0, 0, MIN(10, MAT_ROWS), MIN(10, MAT_COLS));
     std::cout << std::endl << "==========" << std::endl;
 }

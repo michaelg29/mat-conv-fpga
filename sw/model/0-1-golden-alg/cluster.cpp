@@ -49,6 +49,9 @@ void cluster::activate(uint32_t command_type, uint32_t r, uint32_t c) {
     _kern_val_counter = 0;
 }
 
+void cluster::disable() {
+    _enabled = false;
+}
 
 /**
   * @brief  Cluster reception of data and processing.
@@ -62,43 +65,41 @@ void cluster::activate(uint32_t command_type, uint32_t r, uint32_t c) {
   *
   * @retval None
   */
-void cluster::receiveData(uint64_t addr, uint8_t* data, uint32_t size,  uint8_t *out_ptr){
+void cluster::receiveData(uint64_t addr, uint8_t* data, uint32_t size, uint8_t *out_ptr) {
 
     // ensure enabled
-    if (!_enabled) return;
+    if (!_enabled) {
+        return;
+    }
 
     // activate for address
-    if ((addr & ADDR_MASK) < OFFSET_PAYLOAD) return;
+    if ((addr & ADDR_MASK) < OFFSET_PAYLOAD) {
+        return;
+    }
 
     if (_command_type == MM_CMD_KERN) {
         // store kernel data
-        *(uint64_t*)(_kernel_mem + _kern_val_counter) = *(uint64_t*)(data + (_kern_dim - 1)); //Payload stored after the buffered bits
+        *(uint64_t*)(_kernel_mem + _kern_val_counter) = *(uint64_t*)(data + (_kern_dim - 1)); // payload stored after the buffered bits
         _kern_val_counter += sizeof(uint64_t);
     }
     else if (_command_type == MM_CMD_SUBJ) {
 
-        cout << "CLUSTER DATA" << endl;
-
-        //Get data for cluster
-        memcpy(_input_data, data + _start_group, size); 
-
         // iterate through data groups
-        for(int group_i = 0; group_i < _n_groups; group_i++){ //For each group
+        for (int group_i = 0; group_i < _n_groups; group_i++) {
 
-            // iterate through kernel rows
-            //(start with last to not overwrite subresults)
+            // iterate through kernel rows (start with last to not overwrite subresults)
             int core_i = 0;
-            for(int row_i = _kern_dim; row_i >= 0; --row_i){
-                
+            for(int row_i = _n_cores-1; row_i >= 0; --row_i){
+
+                // load previous sub result to accumulate (only after first row)
                 uint32_t subres = 0;
-                if(row_i != 0){ //If first row, no previous subres (is 0)
-                    // get previous subresult
+                if(row_i != 0) {
                     uint32_t raddr = ((row_i-1) * MAT_COLS) + _col_i; // read address
                     subres = _subres_mem[raddr];
-                }                
+                }
 
                 // send current kernel row and data group to core to calculate
-                subres = core_ifs[core_i]->calculate_row_result(subres, _kernel_mem + (row_i * _kern_dim), _kern_dim, _input_data + group_i);
+                subres = core_ifs[core_i]->calculate_row_result(subres, _kernel_mem + (row_i * _kern_dim), _kern_dim, data + _start_group + group_i);
 
                 if (row_i == (_kern_dim - 1)) { //If last row
                     // output result
@@ -106,7 +107,7 @@ void cluster::receiveData(uint64_t addr, uint8_t* data, uint32_t size,  uint8_t 
                 }
                 else {
                     // write subresult to internal memory
-                    uint32_t waddr = (row_i * MAT_COLS) +  _col_i; // write address
+                    uint32_t waddr = (row_i * MAT_COLS) + _col_i; // write address
                     _subres_mem[waddr] = subres;
                 }
 
@@ -122,19 +123,17 @@ void cluster::receiveData(uint64_t addr, uint8_t* data, uint32_t size,  uint8_t 
         _counter += _packet_size;
 
         // update column id if end of row reached
-        if((_counter % MAT_COLS) == 0){ //TODO this assumes that the number of columns is a multiple of packet size. Need extra logic if it's not a multiple.
+        if ((_counter % MAT_COLS) == 0){ // TODO this assumes that the number of columns is a multiple of packet size. Need extra logic if it's not a multiple.
             _col_i = 0;
         }
     }
 
 }
 
-
-
 /**
   * @brief  Cluster FSM reset.
   * @note   The cluster is disabled.
-  * 
+  *
   * @retval None
   */
 void cluster::reset() {

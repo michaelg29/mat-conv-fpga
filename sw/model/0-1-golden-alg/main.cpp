@@ -13,7 +13,7 @@ int kernel_size;
 int hf_kernel_size;
 uint8_t memory[MEM_SIZE];
 
-class memory_mod : public sc_module, public mem_if {
+class memory_mod : public sc_module, public memory_if {
 
     public:
 
@@ -54,7 +54,7 @@ class memory_mod : public sc_module, public mem_if {
  */
 SC_MODULE(mm_cmd) {
 
-    sc_port<mat_mult_if> mmIf;
+    sc_port<mat_mult_if> mm_if;
 
     SC_CTOR(mm_cmd) {
         SC_THREAD(do_mat_mult);
@@ -62,19 +62,19 @@ SC_MODULE(mm_cmd) {
 
     void do_mat_mult() {
         std::cout << "Starting" << std::endl;
-        mmIf->reset();
+        mm_if->reset();
         std::cout << "Done reset" << std::endl;
 
-        mmIf->sendCmd(MM_CMD_KERN, kernel_size, kernel_size, UNUSED_ADDR, 0);
+        mm_if->sendCmd(memory, MM_CMD_KERN, kernel_size, kernel_size, UNUSED_ADDR, 0);
         std::cout << "Done kernel cmd" << std::endl;
 
-        mmIf->sendPayload(KERN_ADDR, kernel_size, kernel_size);
+        mm_if->sendPayload(memory, KERN_ADDR, kernel_size, kernel_size);
         std::cout << "Done kernel payload" << std::endl;
 
-        mmIf->sendCmd(MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
+        mm_if->sendCmd(memory, MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
         std::cout << "Done subject cmd" << std::endl;
 
-        mmIf->sendPayload(MAT_ADDR, MAT_ROWS, MAT_COLS);
+        mm_if->sendPayload(memory, MAT_ADDR, MAT_ROWS, MAT_COLS);
         std::cout << "Done subject payload" << std::endl;
     }
 
@@ -94,16 +94,15 @@ int sc_main(int argc, char* argv[]) {
     // ==== CREATE AND CONNECT MODULES =====
     // =====================================
 
-
     // Design optimization parameters
     uint8_t kernel_dim = MAX_KERN_DIM;
-    uint32_t n_clusters = MAX_N_CLUSTERS; //Number of clusters (must be a power of 2)
+    uint32_t n_clusters = MAX_N_CLUSTERS; // number of clusters (must be a power of 2)
     uint32_t n_cores_per_cluster = MAX_N_CORES;
-    uint32_t payload_packet_size = PACKET_BYTES;   //Total number of bytes (pixels) received per payload packet (might be bigger than 64-bit if buffered)
+    uint32_t payload_packet_size = PACKET_BYTES; // total number of bytes (pixels) received per payload packet (might be bigger than 64-bit if buffered)
 
     // Calculated design parameters
-    uint32_t n_groups_per_cluster = (payload_packet_size + (kernel_dim - 1)) / n_clusters; //Number of groups to be processed for each cluster (NOTE: the division must yield an integer)
-    
+    uint32_t n_groups_per_cluster = (payload_packet_size + (kernel_dim - 1)) / n_clusters; // number of groups to be processed for each cluster (NOTE: the division must yield an integer)
+
     /*UNUSED*/
     uint32_t cluster_input_size = payload_packet_size / n_clusters + (kernel_dim - 1); //Size of the dispatched grouped, which is also the size of each groups made when dispatching the input pixels
     uint32_t total_mem = PIXEL_SIZE * (kernel_dim - 1) * (MAT_COLS - 2*(kernel_dim-1)); //Total memory required for all the subresults
@@ -119,16 +118,15 @@ int sc_main(int argc, char* argv[]) {
 
     // memory interface (top-level interface with the CPU)
     memory_mod *mem = new memory_mod("mem", memory, MEM_SIZE);
-    
+
     // matrix multiplier (top-level)
-    mat_mult_ga *matrix_multiplier = new mat_mult_ga("matrix_multiplier", 
-                                                    memory, 
+    mat_mult_ga *matrix_multiplier = new mat_mult_ga("matrix_multiplier",
                                                     n_clusters,
                                                     n_cores_per_cluster,
                                                     kernel_dim,
                                                     payload_packet_size,
                                                     n_groups_per_cluster);
-    matrix_multiplier->memIf(*mem);
+    matrix_multiplier->mem_if(*mem);
 
 
     // initialize clusters and cores
@@ -150,14 +148,14 @@ int sc_main(int argc, char* argv[]) {
             cores[j + i * n_cores_per_cluster] = new core(("cluster" + std::to_string(i) + "core" + std::to_string(j)).c_str());
             clusters[i]->core_ifs[j](*cores[j + i * n_cores_per_cluster]);
         }
-        
+
         // connect each cluster to the matrix multiplier (top-level)
         matrix_multiplier->cluster_ifs[i](*clusters[i]);
     }
 
     // command issuer (CPU)
     mm_cmd *cpu = new mm_cmd("cpu");
-    cpu->mmIf(*matrix_multiplier);
+    cpu->mm_if(*matrix_multiplier);
 
     // =============================
     // ==== RUN THE SIMULATION =====

@@ -25,7 +25,7 @@
 #define MM_CMD_KERN 0x0
 #define MM_CMD_SUBJ 0x1
 #define GET_CMD_TYPE(cmd) ((cmd.command >> 30) & 0x1)
-#define GET_CMD_OUT_ADDR(cmd) (cmd.command & 0x3FFFFFFF)
+#define GET_CMD_OUT_ADDR(cmd) (cmd.command & 0x3FFFFFFF) << 3
 
 // size field values
 #define GET_CMD_SIZE_ROWS(cmd) ((cmd.size >> 16) & 0xFFFF)
@@ -97,11 +97,11 @@ class mat_mult_if : virtual public sc_interface {
     public:
 
         // constructor
-        mat_mult_if(uint8_t *ext_mem);
+        mat_mult_if();
         
-        int sendCmd(unsigned int cmd_type, unsigned int rows, unsigned int cols, unsigned int tx_addr, unsigned int out_addr);
+        int sendCmd(uint8_t *ext_mem, unsigned int cmd_type, unsigned int rows, unsigned int cols, unsigned int tx_addr, unsigned int out_addr);
         
-        int sendPayload(unsigned int start_addr, unsigned int rows, unsigned int cols);
+        int sendPayload(uint8_t *ext_mem, unsigned int start_addr, unsigned int rows, unsigned int cols);
 
         /** Total reset. */
         void reset();
@@ -118,9 +118,6 @@ class mat_mult_if : virtual public sc_interface {
         virtual void protected_reset() = 0;
 
     private:
-    
-        /** Memory containing data and ack packets. */
-        uint8_t *_ext_mem;
 
         /** Variables to write to the module. */
         uint32_t _cur_trans_id;

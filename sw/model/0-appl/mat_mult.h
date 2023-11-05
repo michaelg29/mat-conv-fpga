@@ -24,7 +24,7 @@ class mat_mult : public sc_module, public mat_mult_if {
         sc_port<memory_if> mem_if;
 
         /** Constructor. */
-        mat_mult(sc_module_name name, uint8_t *ext_mem);
+        mat_mult(sc_module_name name);
     
     protected:
     

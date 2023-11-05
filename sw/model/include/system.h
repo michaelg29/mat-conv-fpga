@@ -6,8 +6,8 @@
 
 #define PIXEL_SIZE 1    //Pixel size in bytes
 
-#define MAT_ROWS 1080
-#define MAT_COLS 1920
+#define MAT_ROWS 5
+#define MAT_COLS 8
 #define MAT_SIZE (MAT_ROWS*MAT_COLS)
 
 #define MAX_KERN_DIM  5
