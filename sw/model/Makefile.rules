@@ -2,7 +2,9 @@
 #####################
 ##### Variables #####
 #####################
-MEM_FILE     ?= ../mem_init
+INPUT_FILE   ?= ../input
+OUTPUT_FILE  ?= ../output
+KERNEL_FILE  ?= ../kernel
 KERNEL_SIZE  ?= 5
 DO_RANDOM    ?= 0
 EXE          ?= system
@@ -67,7 +69,7 @@ $(EXE): $(OBJS)
 	$(CXX) -o $@ $^ $(CFLAGS) $(LFLAGS)
 
 run: $(EXE)
-	./$(EXE) $(MEM_FILE) $(KERNEL_SIZE) $(DO_RANDOM)
+	./$(EXE) $(INPUT_FILE) $(OUTPUT_FILE) $(KERNEL_FILE) $(KERNEL_SIZE) $(DO_RANDOM)
 
 .PHONY: clean
 

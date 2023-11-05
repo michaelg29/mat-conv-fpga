@@ -15,9 +15,9 @@
             "preLaunchTask": "build 0-1-golden-alg",
 
             "args": [
-                "${workspaceFolder}\\input",
-                "${workspaceFolder}\\output",
-                "${workspaceFolder}\\kernel",
+                "${workspaceFolder}\\model\\input",
+                "${workspaceFolder}\\model\\output",
+                "${workspaceFolder}\\model\\kernel",
                 "5",
                 "0"
             ],
