@@ -91,7 +91,7 @@ def get_output_elem(r, c):
 print(f"Validating contents of {output_file} with {kern_rows}x{kern_rows} kernel.")
 err_cnt = 0
 
-def check(r, c, expected):
+def check(r, c, expected, err_cnt):
     # compare to stored value
     if (expected & 0xff != get_output_elem(r, c)):
         if err_cnt < MAX_ERR:
@@ -99,6 +99,8 @@ def check(r, c, expected):
             err_cnt += 1
         else:
             raise Exception("Maximum number of errors encountered")
+
+    return err_cnt
 
 for r in range(0, input_rows, step):
     for c in range(0, input_cols, step):
@@ -112,10 +114,10 @@ for r in range(0, input_rows, step):
                     kerni += 1
 
             if skip_border:
-                check(r, c, expected)
+                err_cnt = check(r, c, expected, err_cnt)
 
         if not(skip_border):
-            check(r, c, expected)
+            err_cnt = check(r, c, expected, err_cnt)
 
 if err_cnt > 0:
     raise Exception(f"{err_cnt} errors encountered in comparison")

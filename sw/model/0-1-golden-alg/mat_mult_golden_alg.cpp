@@ -7,7 +7,7 @@
 #include <string>
 
 mat_mult_ga::mat_mult_ga(sc_module_name name, uint32_t n_clusters, uint32_t n_cores_per_cluster, uint8_t kern_dim, uint32_t packet_size, uint32_t n_groups_per_cluster)
-    : mat_mult(name), _n_clusters(n_clusters), _n_cores_per_cluster(n_cores_per_cluster), _kern_dim(kern_dim), _packet_size(packet_size), _n_groups_per_cluster(n_groups_per_cluster)
+    : mat_mult(name), _n_clusters(n_clusters), _n_cores_per_cluster(n_cores_per_cluster), _kern_dim(kern_dim), _hf_kern_dim(kern_dim >> 1), _packet_size(packet_size), _n_groups_per_cluster(n_groups_per_cluster)
 {
 
 }
@@ -29,23 +29,41 @@ bool mat_mult_ga::receive64bitPacket(uint64_t addr, uint64_t packet) {
     if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ){
         // dispatch input iamge data to clusters
         for (int i = 0; i < _n_clusters; i++) {
-            dispatchCluster(i, addr, _cluster_dispatch_data); //Dispatch the pixels to the clusters
+            dispatchCluster(i, addr, _cluster_dispatch_data);
         }
 
-        //buffer current (kernel_dim - 1) last pixels
+        // buffer current (kernel_dim - 1) last pixels
         memcpy(_cluster_dispatch_data, _cluster_dispatch_data + _packet_size, (_kern_dim - 1));
 
-        //store output pixels
+        // store output pixels
         if (_cur_state == PROCESSING) {
-            printf("Writing to %016lx, started out at %016lx\n", _out_addr, (uint64_t)GET_CMD_OUT_ADDR(_cur_cmd));
-            mem_if->write(_out_addr, *(uint64_t*)_results);
+            // mask output to remove border elements
+            _out_data = *(uint64_t*)_results;
+            uint64_t mask = 0xffffffffffffffff;
+            uint32_t row = _loaded_el / (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd);
+            uint32_t col = _loaded_el % (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd);
+            if (row < _hf_kern_dim || row >= (uint32_t)GET_CMD_SIZE_ROWS(_cur_cmd) - _hf_kern_dim) {
+                mask = 0x0;
+            }
+            if (col < _hf_kern_dim) {
+                mask &= 0xffffffffffffffff << (_hf_kern_dim * 8);
+            }
+            if (col + PACKET_BYTES >= (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd) - _hf_kern_dim) {
+                mask &= 0xffffffffffffffff >> (_hf_kern_dim * 8);
+            }
+
+            // TODO: must write kern_dim//2 columns and kern_dim//2 pixels above and left
+            // total results produced for passed output pixels
+
+            // write data
+            mem_if->write(_out_addr, _out_data & mask);
             _out_addr += sizeof(uint64_t);
         }
     }
     else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN){
         // dispatch kernel values to clusters
         for (int i = 0; i < _n_clusters; i++) {
-            dispatchCluster(i, addr, _cluster_dispatch_data); //Dispatch the pixels to the clusters
+            dispatchCluster(i, addr, _cluster_dispatch_data);
         }
     }
 

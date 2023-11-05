@@ -30,12 +30,14 @@ class mat_mult_ga : public mat_mult {
 
         // configuration
         uint8_t _kern_dim;
+        uint8_t _hf_kern_dim;
         uint32_t _packet_size;
         uint32_t _n_groups_per_cluster;
         uint32_t _n_cores_per_cluster;
         
-        // output address
+        // output data
         uint64_t _out_addr;
+        uint64_t _out_data;
 
         // internal clusters
         uint32_t _n_clusters = 0;

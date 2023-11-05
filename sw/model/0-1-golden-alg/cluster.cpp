@@ -93,9 +93,10 @@ void cluster::receiveData(uint64_t addr, uint8_t* data, uint32_t size, uint8_t *
 
                 // load previous sub result to accumulate (only after first row)
                 uint32_t subres = 0;
+                uint32_t addr = 0;
                 if(row_i != 0) {
-                    uint32_t raddr = ((row_i-1) * MAT_COLS) + _col_i; // read address
-                    subres = _subres_mem[raddr];
+                    addr = ((row_i-1) * MAT_COLS) + _col_i; // read address
+                    subres = ((uint32_t*)_subres_mem)[addr];
                 }
 
                 // send current kernel row and data group to core to calculate
@@ -103,20 +104,20 @@ void cluster::receiveData(uint64_t addr, uint8_t* data, uint32_t size, uint8_t *
 
                 if (row_i == (_kern_dim - 1)) { //If last row
                     // output result
-                    out_ptr[group_i] = (uint8_t)subres;
+                    out_ptr[_start_group + group_i] = (uint8_t)subres;
+                    std::cout << subres << "(out" << (_start_group + group_i) << ")" << std::endl;
                 }
                 else {
+                    addr = (row_i * MAT_COLS) + _col_i;
                     // write subresult to internal memory
-                    uint32_t waddr = (row_i * MAT_COLS) + _col_i; // write address
-                    _subres_mem[waddr] = subres;
+                    ((uint32_t*)_subres_mem)[addr] = subres;
                 }
 
                 // move to next core
                 core_i = (core_i + 1) % _n_cores;
-
-                // update current column id
-                _col_i++;
             }
+            // update current column id
+            _col_i++;
         }
 
         // update state
