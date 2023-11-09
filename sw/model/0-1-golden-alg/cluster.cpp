@@ -7,8 +7,8 @@
 
 #include <iostream>
 
-cluster_if::cluster_if(uint32_t start_group, uint32_t n_groups, uint32_t n_cores)
-    : _start_group(start_group), _n_groups(n_groups), _n_cores(n_cores)
+cluster_if::cluster_if(uint32_t start_group, uint32_t n_groups, uint32_t n_cores, uint32_t packet_size)
+    : _start_group(start_group), _n_groups(n_groups), _n_cores(n_cores), _packet_size(packet_size)
 {
 
 }
@@ -26,8 +26,8 @@ cluster_if::cluster_if(uint32_t start_group, uint32_t n_groups, uint32_t n_cores
   *
   * @retval None
   */
-cluster::cluster(sc_module_name name, uint32_t start_group, uint32_t n_groups, uint32_t n_cores, uint8_t kernel_dim)
-    : sc_module(name), cluster_if(start_group, n_groups, n_cores), _kern_dim(kernel_dim)
+cluster::cluster(sc_module_name name, uint32_t start_group, uint32_t n_groups, uint32_t n_cores, uint8_t kernel_dim, uint32_t packet_size)
+    : sc_module(name), cluster_if(start_group, n_groups, n_cores, packet_size), _kern_dim(kernel_dim)
 {
 
 }
@@ -44,9 +44,7 @@ void cluster::activate(uint32_t command_type, uint32_t r, uint32_t c) {
 
     // initialize FSM
     _counter = 0;
-
     _col_i = 0;
-    _kern_val_counter = 0;
 }
 
 void cluster::disable() {
@@ -60,12 +58,11 @@ void cluster::disable() {
   *
   * @param  addr        Address of the command received
   * @param  data        Pointer to the received data
-  * @param  size        Number of bytes received (including the (kernel_dim - 1) pixels buffered pixels from previous payload)
-  * @param  out_ptr     Address to store the output pixels.
+  * @param  out_ptr     Address to store the local output pixels.
   *
   * @retval None
   */
-void cluster::receiveData(uint64_t addr, uint8_t* data, uint32_t size, uint8_t *out_ptr) {
+void cluster::receiveData(uint64_t addr, uint8_t* data, uint8_t *out_ptr) {
 
     // ensure enabled
     if (!_enabled) {
@@ -79,8 +76,8 @@ void cluster::receiveData(uint64_t addr, uint8_t* data, uint32_t size, uint8_t *
 
     if (_command_type == MM_CMD_KERN) {
         // store kernel data
-        *(uint64_t*)(_kernel_mem + _kern_val_counter) = *(uint64_t*)(data + (_kern_dim - 1)); // payload stored after the buffered bits
-        _kern_val_counter += sizeof(uint64_t);
+        *(uint64_t*)(_kernel_mem + _counter) = *(uint64_t*)(data + (_kern_dim - 1)); // payload stored after the buffered bits
+        _counter += PACKET_BYTES;
     }
     else if (_command_type == MM_CMD_SUBJ) {
 
@@ -102,10 +99,9 @@ void cluster::receiveData(uint64_t addr, uint8_t* data, uint32_t size, uint8_t *
                 // send current kernel row and data group to core to calculate
                 subres = core_ifs[core_i]->calculate_row_result(subres, _kernel_mem + (row_i * _kern_dim), _kern_dim, data + _start_group + group_i);
 
-                if (row_i == (_kern_dim - 1)) { //If last row
-                    // output result
-                    out_ptr[_start_group + group_i] = (uint8_t)subres;
-                    std::cout << subres << "(out" << (_start_group + group_i) << ")" << std::endl;
+                if (row_i == (_kern_dim - 1)) {
+                    // output total result
+                    out_ptr[group_i] = (uint8_t)subres;
                 }
                 else {
                     addr = (row_i * MAT_COLS) + _col_i;
@@ -116,8 +112,9 @@ void cluster::receiveData(uint64_t addr, uint8_t* data, uint32_t size, uint8_t *
                 // move to next core
                 core_i = (core_i + 1) % _n_cores;
             }
+
             // update current column id
-            _col_i++;
+            _col_i += 1;
         }
 
         // update state

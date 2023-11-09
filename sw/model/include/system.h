@@ -7,10 +7,10 @@
 #define PIXEL_SIZE 1    //Pixel size in bytes
 
 #define MAT_ROWS 5
-#define MAT_COLS 8
+#define MAT_COLS 16
 #define MAT_SIZE (MAT_ROWS*MAT_COLS)
 
-#define MAX_KERN_DIM  5
+#define MAX_KERN_DIM 7
 #define MAX_KERN_ROWS MAX_KERN_DIM
 #define MAX_KERN_SIZE (MAX_KERN_ROWS*MAX_KERN_ROWS)
 #define KERN_SIZE_ROUNDED ((((MAX_KERN_SIZE) >> 3) + 1) << 3)
@@ -26,9 +26,9 @@
 #define BUILD_KERN_ADDR(i)   (KERN_ADDR) + i
 #define BUILD_OUT_ADDR(r, c) (OUT_ADDR) + ((r) * MAT_COLS) + c
 
-
 #define MAX_N_CLUSTERS 8
-#define PACKET_BYTES 64 / 8
+#define MAX_N_CORES_PER_CLUSTER MAX_KERN_DIM
+#define PACKET_BYTES sizeof(uint64_t)
 #define MAX_CLUSTER_INPUT_SIZE (PACKET_BYTES + MAX_KERN_DIM - 1)
 
 

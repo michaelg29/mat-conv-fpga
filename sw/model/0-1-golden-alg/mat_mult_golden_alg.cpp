@@ -17,8 +17,6 @@ mat_mult_ga::mat_mult_ga(sc_module_name name, uint32_t n_clusters, uint32_t n_co
  * latch the status in the acknowledge packet.
  */
 bool mat_mult_ga::receive64bitPacket(uint64_t addr, uint64_t packet) {
-
-
     //TODO current code assumes that the packets received are immediately distributed to clusters instead of buffered
     //and concatenated with other packets. Might want to add support for this (another optimization parameter).
     //Partially fixed
@@ -36,28 +34,8 @@ bool mat_mult_ga::receive64bitPacket(uint64_t addr, uint64_t packet) {
         memcpy(_cluster_dispatch_data, _cluster_dispatch_data + _packet_size, (_kern_dim - 1));
 
         // store output pixels
-        if (_cur_state == PROCESSING) {
-            // mask output to remove border elements
-            _out_data = *(uint64_t*)_results;
-            uint64_t mask = 0xffffffffffffffff;
-            uint32_t row = _loaded_el / (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd);
-            uint32_t col = _loaded_el % (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd);
-            if (row < _hf_kern_dim || row >= (uint32_t)GET_CMD_SIZE_ROWS(_cur_cmd) - _hf_kern_dim) {
-                mask = 0x0;
-            }
-            if (col < _hf_kern_dim) {
-                mask &= 0xffffffffffffffff << (_hf_kern_dim * 8);
-            }
-            if (col + PACKET_BYTES >= (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd) - _hf_kern_dim) {
-                mask &= 0xffffffffffffffff >> (_hf_kern_dim * 8);
-            }
-
-            // TODO: must write kern_dim//2 columns and kern_dim//2 pixels above and left
-            // total results produced for passed output pixels
-
-            // write data
-            mem_if->write(_out_addr, _out_data & mask);
-            _out_addr += sizeof(uint64_t);
+        if (_cur_state == PROCESSING && _out_row >= 0) {
+            write_results_buffer();
         }
     }
     else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN){
@@ -69,7 +47,21 @@ bool mat_mult_ga::receive64bitPacket(uint64_t addr, uint64_t packet) {
 
     // address check
     if ((addr & ADDR_MASK) >= (OFFSET_PAYLOAD)) {
-        _loaded_el += 8;
+        // increment counters
+        _loaded_el += PACKET_BYTES;
+        _out_col += PACKET_BYTES;
+        if (_out_col + PACKET_BYTES == (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd)) {
+            // if last column, write last packet with padding
+            write_results_buffer();
+
+            // new row
+            _out_row++;
+            _out_col = -(int32_t)PACKET_BYTES;
+
+            // TODO: write last rows as zeros
+        }
+
+        // transition FSM
         if (_loaded_el >= _expected_el) {
             std::cout << "Received all payload" << std::endl;
             complete_payload();
@@ -90,6 +82,8 @@ bool mat_mult_ga::receive64bitPacket(uint64_t addr, uint64_t packet) {
             cluster_ifs[i]->activate(GET_CMD_TYPE(_cur_cmd), GET_CMD_SIZE_ROWS(_cur_cmd), GET_CMD_SIZE_COLS(_cur_cmd));
         }
         _loaded_el = 0;
+        _out_row = -_hf_kern_dim;
+        _out_col = -(int32_t)PACKET_BYTES;
         _cur_state = PROCESSING;
         _out_addr = (uint64_t)GET_CMD_OUT_ADDR(_cur_cmd);
     }
@@ -98,7 +92,8 @@ bool mat_mult_ga::receive64bitPacket(uint64_t addr, uint64_t packet) {
 }
 
 void mat_mult_ga::dispatchCluster(int i, uint64_t addr, uint8_t* cluster_data) {
-    cluster_ifs[i]->receiveData(addr, cluster_data, (_kern_dim - 1) + _packet_size , _results + i*_n_groups_per_cluster);
+    //cluster_ifs[i]->receiveData(addr, cluster_data, _results + (i * _n_groups_per_cluster));
+    cluster_ifs[i]->receiveData(addr, cluster_data, _results + (PACKET_BYTES - _hf_kern_dim) + (i * _n_groups_per_cluster));
 }
 
 void mat_mult_ga::protected_reset() {
@@ -107,4 +102,30 @@ void mat_mult_ga::protected_reset() {
     }
 
     mat_mult::protected_reset();
+}
+
+void mat_mult_ga::write_results_buffer() {
+    // get data from buffer
+    _out_data = *(uint64_t*)_results;
+
+    // mask output to remove border elements
+    _out_mask = 0xffffffffffffffff;
+    if (_out_row < _hf_kern_dim || _out_row >= (uint32_t)GET_CMD_SIZE_ROWS(_cur_cmd) - _hf_kern_dim) {
+        _out_mask = 0x0;
+    }
+    if (_out_col < _hf_kern_dim) {
+        _out_mask &= 0xffffffffffffffff << (_hf_kern_dim * 8);
+    }
+    if (_out_col + PACKET_BYTES >= (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd) - _hf_kern_dim) {
+        _out_mask &= 0xffffffffffffffff >> (_hf_kern_dim * 8);
+    }
+
+    // write data with mask
+    if (_out_col >= 0 && _out_row >= 0) {
+        mem_if->write(_out_addr, _out_data & _out_mask);
+        _out_addr += PACKET_BYTES;
+    }
+
+    // shift
+    memcpy(_results, _results + PACKET_BYTES, PACKET_BYTES);
 }

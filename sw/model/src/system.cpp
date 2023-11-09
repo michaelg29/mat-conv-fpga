@@ -68,7 +68,7 @@ bool memoryWrite(char **argv, unsigned char *mem) {
     char *file = argv[1];
     FILE *fp = fopen(file, "wb");
     if (fp) {
-        fwrite(mem, 1, MAT_SIZE, fp);
+        fwrite(mem + MAT_ADDR, 1, MAT_SIZE, fp);
         fclose(fp);
     }
     
@@ -109,12 +109,12 @@ void printMat(unsigned char *mem, int mat_n_cols, int base_addr, int r, int c, i
 void memoryPrint(unsigned char *mem, int kernel_size) {
     std::cout << std::endl << "==========" << std::endl;
     std::cout << "Input matrix:" << std::endl;
-    printMat(mem, MAT_COLS, MAT_ADDR, 0, 0, MIN(10, MAT_ROWS), MIN(10, MAT_COLS));
+    printMat(mem, MAT_COLS, MAT_ADDR, 0, 0, MIN(10, MAT_ROWS), MIN(20, MAT_COLS));
     
     std::cout << "Kernel:" << std::endl;
     printMat(mem, kernel_size, KERN_ADDR, 0, 0, kernel_size, kernel_size);
     
     std::cout << "Output matrix:" << std::endl;
-    printMat(mem, MAT_COLS, OUT_ADDR, 0, 0, MIN(10, MAT_ROWS), MIN(10, MAT_COLS));
+    printMat(mem, MAT_COLS, OUT_ADDR, 0, 0, MIN(10, MAT_ROWS), MIN(20, MAT_COLS));
     std::cout << std::endl << "==========" << std::endl;
 }

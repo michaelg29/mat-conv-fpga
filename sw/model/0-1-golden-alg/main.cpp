@@ -9,8 +9,7 @@
 #include <iostream>
 #include <string>
 
-int kernel_size;
-int hf_kernel_size;
+int kernel_dim;
 uint8_t memory[MEM_SIZE];
 
 class memory_mod : public sc_module, public memory_if {
@@ -65,10 +64,10 @@ SC_MODULE(mm_cmd) {
         mm_if->reset();
         std::cout << "Done reset" << std::endl;
 
-        mm_if->sendCmd(memory, MM_CMD_KERN, kernel_size, kernel_size, UNUSED_ADDR, 0);
+        mm_if->sendCmd(memory, MM_CMD_KERN, kernel_dim, kernel_dim, UNUSED_ADDR, 0);
         std::cout << "Done kernel cmd" << std::endl;
 
-        mm_if->sendPayload(memory, KERN_ADDR, kernel_size, kernel_size);
+        mm_if->sendPayload(memory, KERN_ADDR, kernel_dim, kernel_dim);
         std::cout << "Done kernel payload" << std::endl;
 
         mm_if->sendCmd(memory, MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
@@ -81,23 +80,21 @@ SC_MODULE(mm_cmd) {
 }; // SC_MODULE(mm_cmd)
 
 int sc_main(int argc, char* argv[]) {
-    if (!parseCmdLine(argc, argv, memory, &kernel_size)) {
+    if (!parseCmdLine(argc, argv, memory, &kernel_dim)) {
         return 1;
     }
 
     // initial state
-    std::cout << "Matrix size: " << MAT_ROWS << "x" << MAT_COLS << ", kernel size: " << kernel_size << "x" << kernel_size << std::endl;
-    hf_kernel_size = kernel_size >> 1;
-    memoryPrint(memory, kernel_size);
+    std::cout << "Subject size: " << MAT_ROWS << "x" << MAT_COLS << ", kernel size: " << kernel_dim << "x" << kernel_dim << std::endl;
+    memoryPrint(memory, kernel_dim);
 
     // =====================================
     // ==== CREATE AND CONNECT MODULES =====
     // =====================================
 
     // Design optimization parameters
-    uint8_t kernel_dim = MAX_KERN_DIM;
     uint32_t n_clusters = MAX_N_CLUSTERS; // number of clusters (must be a power of 2)
-    uint32_t n_cores_per_cluster = MAX_N_CORES;
+    uint32_t n_cores_per_cluster = kernel_dim;
     uint32_t payload_packet_size = PACKET_BYTES; // total number of bytes (pixels) received per payload packet (might be bigger than 64-bit if buffered)
 
     // Calculated design parameters
@@ -133,14 +130,24 @@ int sc_main(int argc, char* argv[]) {
     cluster *clusters[n_clusters];
     core *cores[n_clusters * n_cores_per_cluster];
 
-    for (int i = 0; i < n_clusters; i++) {
+    // dummy components
+    cluster *dummy_cluster = new cluster("dummy_cluster", 0, 0, 0, 0, 0);
+    core *dummy_core = new core("dummy_core");
+    for (int i = 0; i < MAX_N_CORES_PER_CLUSTER; i++) {
+        dummy_cluster->core_ifs[i](*dummy_core);
+    }
+
+    // initialize each cluster
+    int i = 0;
+    for (i = 0; i < n_clusters; i++) {
         // initialize each cluster
         clusters[i] = new cluster(("cluster" + std::to_string(i)).c_str(),
-                                    i*n_groups_per_cluster, //start group offset
-                                    n_groups_per_cluster,   //number of groups to process
-                                    n_cores_per_cluster,    //number of cores
-                                    kernel_dim);            //dimension of the kernel
-
+                                    i*n_groups_per_cluster, // start group offset
+                                    n_groups_per_cluster,   // number of groups to process
+                                    n_cores_per_cluster,    // number of cores
+                                    kernel_dim,             // dimension of the kernel
+                                    payload_packet_size     // number of bytes in each packet
+                                    );
 
         // initialize each core for each cluster
         int j = 0;
@@ -148,9 +155,17 @@ int sc_main(int argc, char* argv[]) {
             cores[j + i * n_cores_per_cluster] = new core(("cluster" + std::to_string(i) + "core" + std::to_string(j)).c_str());
             clusters[i]->core_ifs[j](*cores[j + i * n_cores_per_cluster]);
         }
+        // garbage cores
+        for (; j < MAX_N_CORES_PER_CLUSTER; j++) {
+            clusters[i]->core_ifs[j](*dummy_core);
+        }
 
         // connect each cluster to the matrix multiplier (top-level)
         matrix_multiplier->cluster_ifs[i](*clusters[i]);
+    }
+    // garbage clusters
+    for (; i < MAX_N_CLUSTERS; i++) {
+        matrix_multiplier->cluster_ifs[i](*dummy_cluster);
     }
 
     // command issuer (CPU)
@@ -168,7 +183,7 @@ int sc_main(int argc, char* argv[]) {
 
     // final state
     memoryWrite(argv, memory);
-    memoryPrint(memory, kernel_size);
+    memoryPrint(memory, kernel_dim);
 
     return 0;
 }
