@@ -1,20 +1,6 @@
 
 from sys import argv
 
-MAT_ROWS = 1080
-MAT_COLS = 1920
-MAT_SIZE = MAT_ROWS * MAT_COLS
-
-MAX_KERN_ROWS = 5
-MAX_KERN_SIZE = MAX_KERN_ROWS**2
-KERN_SIZE_ROUNDED = ((((MAX_KERN_SIZE) >> 3) + 1) << 3)
-
-MEM_SIZE = MAT_SIZE + KERN_SIZE_ROUNDED + MAT_SIZE
-
-MAT_ADDR = 0
-KERN_ADDR = MAT_ADDR + MAT_SIZE
-OUT_ADDR = KERN_ADDR + KERN_SIZE_ROUNDED
-
 MAX_ERR = 10
 
 def twos_complement_8bit(raw_val):
@@ -25,7 +11,7 @@ def twos_complement_8bit(raw_val):
 
 # usage check
 print(len(argv), argv)
-if len(argv) < 2:
+if len(argv) < 7:
     print(f"USAGE: {argv[0]} input_file input_rows input_cols kern_file kern_size output_file [step_size] [twos_complement] [skip_border]")
     exit()
 
@@ -88,14 +74,14 @@ def get_output_elem(r, c):
 ##### MAIN #####
 ################
 
-print(f"Validating contents of {output_file} with {kern_rows}x{kern_rows} kernel.")
+print(f"Validating contents of the {input_rows}x{input_cols} matrix in {output_file} with a {kern_rows}x{kern_rows} kernel.")
 err_cnt = 0
 
 def check(r, c, expected, err_cnt):
     # compare to stored value
     if (expected & 0xff != get_output_elem(r, c)):
         if err_cnt < MAX_ERR:
-            print(f">>>ERROR: at row {r} and col {c}, expected {expected & 0xff}, found {get_output_elem(r, c)}")
+            print(f">>>ERROR: at row {r} and col {c}, expected {hex(expected & 0xff)[2:]}, found {hex(get_output_elem(r, c))[2:]}")
             err_cnt += 1
         else:
             raise Exception("Maximum number of errors encountered")
