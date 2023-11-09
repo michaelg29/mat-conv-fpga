@@ -20,7 +20,7 @@ bool mat_mult::receive_packet(uint64_t addr, uint64_t packet) {
 
     // preprocessing
     switch (_cur_state) {
-    case WAIT_CMD_TID:
+    case WAIT_CMD_SIZE:
         // calculate expected elements
         _expected_el = (uint16_t)(GET_CMD_SIZE_ROWS(_cur_cmd)) * (uint16_t)(GET_CMD_SIZE_COLS(_cur_cmd));
         if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {

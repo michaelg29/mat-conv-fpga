@@ -1,13 +1,13 @@
 
 #include "systemc.h"
 #include "system.h"
-#include "../0-appl/mat_mult.h"
+#include "mat_mult_if.h"
 #include "cluster.h"
 
 #ifndef MAT_MULT_GA_H
 #define MAT_MULT_GA_H
 
-class mat_mult_ga : public mat_mult {
+class mat_mult_ga : public mat_mult_top {
 
     public:
 
@@ -35,6 +35,11 @@ class mat_mult_ga : public mat_mult {
         uint32_t _n_groups_per_cluster;
         uint32_t _n_cores_per_cluster;
 
+        // state variables
+        uint64_t *_cur_ptr;
+        uint32_t _expected_el;
+        uint32_t _loaded_el;
+
         // counters
         uint64_t _out_addr;
         uint64_t _max_out_addr;
@@ -49,12 +54,10 @@ class mat_mult_ga : public mat_mult {
         uint32_t _n_clusters = 0;
         uint8_t _results[PACKET_BYTES * 2]; // store the output pixels from the current batch (has a size of _packet_size)
 
-        bool receive64bitPacket(uint64_t addr, uint64_t packet);
+        bool receive_packet(uint64_t addr, uint64_t packet);
         void dispatchCluster(int i, uint64_t addr, uint8_t* cluster_data);
         void protected_reset();
         void write_results_buffer();
-
-        void calculate();
 
 };
 

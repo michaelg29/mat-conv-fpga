@@ -105,7 +105,7 @@ mat_mult_top::mat_mult_top(sc_module_name name)
 void mat_mult_top::calculate_next_state() {
     switch (_cur_state) {
     case WAIT_CMD_KERN_SKEY:
-    {   
+    {
         _cur_ack.status = MM_STAT_OKAY;
 
         if (_cur_cmd.s_key != MM_S_KEY) _cur_ack.status |= MM_STAT_ERR_KEY;
