@@ -1,5 +1,6 @@
 
 #include "systemc.h"
+#include "memory_if.h"
 
 #ifndef MAT_MULT_IF_H
 #define MAT_MULT_IF_H
@@ -65,18 +66,26 @@ struct mat_mult_ack_t {
 
 #define CMP_CMD_ACK(cmd, ack) ((cmd.s_key == ack.s_key) && (cmd.command == ack.command) && (cmd.size == ack.size) && (cmd.tx_addr == ack.tx_addr) && (cmd.trans_id == ack.trans_id) && (cmd.e_key == ack.e_key))
 
-// ================================
-// ===== REGISTER DEFINITIONS =====
-// ================================
+// ==========================================
+// ===== REGISTER AND STATE DEFINITIONS =====
+// ==========================================
 
 struct mat_mult_reg_status_reg_t {
     uint8_t error;
     bool ready;
-    bool multiplying;
 };
 
 struct mat_mult_reg_t {
     mat_mult_reg_status_reg_t status_reg;
+};
+
+enum mat_mult_state_t {
+    WAIT_CMD_KERN_SKEY, // waiting for s_key and command fields for kernel
+    WAIT_CMD_SUBJ_SKEY, // waiting for s_key and command fields for subject
+    WAIT_CMD_SIZE,      // waiting for size and tx_addr fields
+    WAIT_CMD_TID,       // waiting for trans_id and reserved fields
+    WAIT_CMD_EKEY,      // waiting for e_key and chksum fields
+    WAIT_DATA,          // waiting for data to be received
 };
 
 // ================================
@@ -96,11 +105,33 @@ class mat_mult_if : virtual public sc_interface {
 
     public:
 
-        // constructor
+        /** Constructor. */
         mat_mult_if();
-        
+
+        /**
+         * @brief Issue a command to the module to load a matrix.
+         *
+         * @param ext_mem  CPU memory which will eventually contain the acknowledge packet.
+         * @param cmd_type `MM_CMD_KERN` or `MM_CMD_SUBJ`.
+         * @param rows     Number of rows in the matrix.
+         * @param cols     Number of columns in the matrix. Must be a multiple of 8.
+         * @param tx_addr  Where to write the acknowledge packet.
+         * @param out_addr Where to write the output matrix. Ignored for `MM_CMD_KERN`.
+         *
+         * @retval           The status returned in the acknowledge packet.
+         */
         int sendCmd(uint8_t *ext_mem, unsigned int cmd_type, unsigned int rows, unsigned int cols, unsigned int tx_addr, unsigned int out_addr);
-        
+
+        /**
+         * @brief Issue a command to the module to load a matrix.
+         *
+         * @param ext_mem    CPU memory which contains the matrix memory and will eventually contain the acknowledge packet.
+         * @param start_addr Where to start reading memory from in the CPU memory buffer.
+         * @param rows       Number of rows in the matrix.
+         * @param cols       Number of columns in the matrix. Must be a multiple of 8.
+         *
+         * @retval           The status returned in the acknowledge packet.
+         */
         int sendPayload(uint8_t *ext_mem, unsigned int start_addr, unsigned int rows, unsigned int cols);
 
         /** Total reset. */
@@ -108,11 +139,8 @@ class mat_mult_if : virtual public sc_interface {
 
     protected:
 
-        /** Register collection. */
-        mat_mult_reg_t regs;
-
-        /** Receive a 64-bit packet on the module. */
-        virtual bool receive64bitPacket(uint64_t addr, uint64_t packet) = 0;
+        /** Receive a 64-bit `packet` on the module, addressed to `addr`. */
+        virtual bool receive_packet(uint64_t addr, uint64_t packet) = 0;
 
         /** Subclass resets. */
         virtual void protected_reset() = 0;
@@ -127,6 +155,43 @@ class mat_mult_if : virtual public sc_interface {
 
         /** Reset the module. */
         void private_reset();
+
+};
+
+/**
+ * Top-level virtual wrapper for the matrix multiplier.
+ */
+class mat_mult_top : public mat_mult_if, public sc_module {
+
+    public:
+
+        sc_port<memory_if> mem_if;
+
+        mat_mult_top(sc_module_name name);
+
+    protected:
+
+        /** Register collection. */
+        mat_mult_reg_t _regs;
+
+        /** Internal state. */
+        mat_mult_cmd_t _cur_cmd;
+        mat_mult_ack_t _cur_ack;
+        mat_mult_state_t _cur_state;
+        mat_mult_state_t _next_state;
+
+        /** Required subclass overrides. */
+        virtual bool receive_packet(uint64_t addr, uint64_t packet) = 0;
+        void protected_reset();
+        
+        /**
+         * @brief Calculate the next state using the current state.
+         */
+        void calculate_next_state();
+        
+        void advance_state();
+
+    private:
 
 };
 

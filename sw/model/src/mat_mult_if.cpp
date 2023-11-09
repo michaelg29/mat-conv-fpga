@@ -2,6 +2,7 @@
 #include "systemc.h"
 
 #include "mat_mult_if.h"
+#include "system.h"
 
 // generate command field
 #define GEN_COMMAND(type, out_addr) \
@@ -34,17 +35,19 @@ int mat_mult_if::sendCmd(uint8_t *ext_mem, unsigned int cmd_type, unsigned int r
     // send command
     _packets = (uint64_t*)&_cmd;
     for (int i = 0; i < N_PACKETS_IN_CMD; ++i) {
-        receive64bitPacket((i << 3) + OFFSET_COMMAND, _packets[i]);
+        receive_packet((i << 3) + OFFSET_COMMAND, _packets[i]);
     }
 
     // read ack
     memcpy(&_ack, ext_mem + _cmd.tx_addr, sizeof(_ack));
 
+    // verify acknowledge packet
     if (!CMP_CMD_ACK(_cmd, _ack)) {
         std::cerr << "ERROR>>> Acknowledge packet does not match command." << std::endl;
     }
     std::cout << "Ack trans_id is " << _ack.trans_id << " for transaction " << _cmd.trans_id << " and status is " << _ack.status << std::endl;
 
+    // return the status
     return _ack.status;
 }
 
@@ -65,19 +68,22 @@ int mat_mult_if::sendPayload(uint8_t *ext_mem, unsigned int start_addr, unsigned
         addr += OFFSET_PAYLOAD; // add offset
 
         // transmit
-        receive64bitPacket(addr, _packets[i]);
+        receive_packet(addr, _packets[i]);
     }
 
     // read ack
     memcpy(&_ack, ext_mem + _cmd.tx_addr, sizeof(_ack));
 
+    // verify acknowledge packet
     if (!CMP_CMD_ACK(_cmd, _ack)) {
         std::cerr << "ERROR>>> Acknowledge packet does not match command." << std::endl;
     }
     std::cout << "Ack trans_id is " << _ack.trans_id << " for transaction " << _cmd.trans_id << " and status is " << _ack.status << std::endl;
 
+    // increment transaction ID for next transaction
     _cur_trans_id++;
 
+    // return the status
     return _ack.status;
 }
 
@@ -88,7 +94,147 @@ void mat_mult_if::reset() {
 
 void mat_mult_if::private_reset() {
     _cur_trans_id = 1;
-    regs.status_reg.error = 0;
-    regs.status_reg.ready = false;
-    regs.status_reg.multiplying = false;
+}
+
+mat_mult_top::mat_mult_top(sc_module_name name)
+    : sc_module(name), mat_mult_if()
+{
+
+}
+
+void mat_mult_top::calculate_next_state() {
+    switch (_cur_state) {
+    case WAIT_CMD_KERN_SKEY:
+    {   
+        _cur_ack.status = MM_STAT_OKAY;
+
+        if (_cur_cmd.s_key != MM_S_KEY) _cur_ack.status |= MM_STAT_ERR_KEY;
+
+        if (GET_CMD_TYPE(_cur_cmd) != MM_CMD_KERN) _cur_ack.status |= MM_STAT_ERR_ORD;
+
+        // latch in acknowledge message
+        _cur_ack.s_key = MM_S_KEY;
+        _cur_ack.command = _cur_cmd.command;
+
+        // advance state
+        _next_state = WAIT_CMD_SIZE;
+        std::cout << "WAIT_CMD_KERN_SKEY " << _cur_ack.status << std::endl;
+        break;
+    }
+    case WAIT_CMD_SUBJ_SKEY:
+    {
+        _cur_ack.status = MM_STAT_OKAY;
+
+        if (_cur_cmd.s_key != MM_S_KEY) _cur_ack.status |= MM_STAT_ERR_KEY;
+
+        if ((GET_CMD_TYPE(_cur_cmd)) != (MM_CMD_SUBJ)) _cur_ack.status |= MM_STAT_ERR_ORD;
+
+        // latch in acknowledge message
+        _cur_ack.s_key = MM_S_KEY;
+        _cur_ack.command = _cur_cmd.command;
+
+        // advance state
+        _next_state = WAIT_CMD_SIZE;
+        std::cout << "WAIT_CMD_SUBJ_SKEY " << _cur_ack.status << std::endl;
+        break;
+    }
+    case WAIT_CMD_SIZE:
+    {
+        uint16_t rows = (uint16_t)(GET_CMD_SIZE_ROWS(_cur_cmd));
+        uint16_t cols = (uint16_t)(GET_CMD_SIZE_COLS(_cur_cmd));
+        if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN &&
+            ((rows != cols) ||      // kernel must be square
+            ((rows & 0b1) == 0) ||  // kernel must have an odd dimension
+            (rows > MAX_KERN_DIM))) // kernel size constraint
+            _cur_ack.status |= MM_STAT_ERR_SIZE;
+
+        if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ &&
+            (cols & 0b111) != 0)    // subject columns must be divisible by 8
+            _cur_ack.status |= MM_STAT_ERR_SIZE;
+
+        std::cout << rows << "x" << cols << std::endl;
+
+        // latch in acknowledge message
+        _cur_ack.size = _cur_cmd.size;
+        _cur_ack.tx_addr = _cur_cmd.tx_addr;
+
+        // advance state
+        _next_state = WAIT_CMD_TID;
+        std::cout << "WAIT_CMD_SIZE " << _cur_ack.status << std::endl;
+        break;
+    }
+    case WAIT_CMD_TID:
+    {
+        // latch in acknowledge message
+        _cur_ack.trans_id = _cur_cmd.trans_id;
+
+        // advance state
+        _next_state = WAIT_CMD_EKEY;
+        std::cout << "WAIT_CMD_TID " << _cur_ack.status << std::endl;
+        break;
+    }
+    case WAIT_CMD_EKEY:
+    {
+        if (((uint32_t)_cur_cmd.chksum) != ((uint32_t)CALC_CMD_CHKSUM(_cur_cmd))) _cur_ack.status |= MM_STAT_ERR_CHKSM;
+
+        // latch in acknowledge message
+        _cur_ack.e_key = MM_E_KEY;
+        _cur_ack.chksum = (uint32_t)CALC_ACK_CHKSUM(_cur_ack);
+
+        // write ack packet to CPU
+        uint64_t *packets = (uint64_t*)&_cur_ack;
+        for (int i = 0; i < N_PACKETS_IN_CMD; ++i) {
+            mem_if->write(_cur_cmd.tx_addr, *packets);
+
+            // advance cursors
+            _cur_cmd.tx_addr += 8;
+            packets += 1;
+        }
+
+        // raise interrupt
+
+        if (_cur_ack.status == MM_STAT_OKAY) {
+            // advance state
+            _next_state = WAIT_DATA;
+        }
+        else {
+            // advance state
+            if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {
+                _next_state = WAIT_CMD_KERN_SKEY;
+            }
+            else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
+                _next_state = WAIT_CMD_SUBJ_SKEY;
+            }
+        }
+
+        std::cout << "WAIT_CMD_EKEY " << _cur_ack.status << std::endl;
+
+        break;
+    }
+    case WAIT_DATA:
+    {
+        if (_regs.status_reg.ready) {
+            // advance state
+            if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {
+                _next_state = WAIT_CMD_SUBJ_SKEY;
+            }
+            else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
+                _next_state = WAIT_CMD_KERN_SKEY;
+            }
+        }
+        break;
+    }
+    default:
+    {
+        break;
+    }
+    };
+}
+
+void mat_mult_top::advance_state() {
+    _cur_state = _next_state;
+}
+
+void mat_mult_top::protected_reset() {
+    _cur_state = WAIT_CMD_KERN_SKEY;
 }

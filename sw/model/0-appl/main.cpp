@@ -53,7 +53,7 @@ class memory_mod : public sc_module, public memory_if {
  */
 SC_MODULE(mm_cmd) {
 
-    sc_port<mat_mult_if> mmIf;
+    sc_port<mat_mult_if> mm_if;
 
     SC_CTOR(mm_cmd) {
         SC_THREAD(do_mat_mult);
@@ -61,19 +61,19 @@ SC_MODULE(mm_cmd) {
 
     void do_mat_mult() {
         std::cout << "Starting" << std::endl;
-        mmIf->reset();
+        mm_if->reset();
         std::cout << "Done reset" << std::endl;
 
-        mmIf->sendCmd(memory, MM_CMD_KERN, kernel_size, kernel_size, UNUSED_ADDR, 0);
+        mm_if->sendCmd(memory, MM_CMD_KERN, kernel_size, kernel_size, UNUSED_ADDR, 0);
         std::cout << "Done kernel cmd" << std::endl;
 
-        mmIf->sendPayload(memory, KERN_ADDR, kernel_size, kernel_size);
+        mm_if->sendPayload(memory, KERN_ADDR, kernel_size, kernel_size);
         std::cout << "Done kernel payload" << std::endl;
 
-        mmIf->sendCmd(memory, MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
+        mm_if->sendCmd(memory, MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
         std::cout << "Done subject cmd" << std::endl;
 
-        mmIf->sendPayload(memory, MAT_ADDR, MAT_ROWS, MAT_COLS);
+        mm_if->sendPayload(memory, MAT_ADDR, MAT_ROWS, MAT_COLS);
         std::cout << "Done subject payload" << std::endl;
     }
 
@@ -102,7 +102,7 @@ int sc_main(int argc, char* argv[]) {
 
     // command issuer
     mm_cmd *cpu = new mm_cmd("cpu");
-    cpu->mmIf(*matrix_multiplier);
+    cpu->mm_if(*matrix_multiplier);
 
     // =============================
     // ==== RUN THE SIMULATION =====
