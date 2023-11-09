@@ -38,7 +38,7 @@ bool mat_mult_ga::receive64bitPacket(uint64_t addr, uint64_t packet) {
             write_results_buffer();
         }
     }
-    else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN){
+    else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {
         // dispatch kernel values to clusters
         for (int i = 0; i < _n_clusters; i++) {
             dispatchCluster(i, addr, _cluster_dispatch_data);
@@ -49,20 +49,27 @@ bool mat_mult_ga::receive64bitPacket(uint64_t addr, uint64_t packet) {
     if ((addr & ADDR_MASK) >= (OFFSET_PAYLOAD)) {
         // increment counters
         _loaded_el += PACKET_BYTES;
-        _out_col += PACKET_BYTES;
-        if (_out_col + PACKET_BYTES == (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd)) {
-            // if last column, write last packet with padding
-            write_results_buffer();
+        if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
+            _out_col += PACKET_BYTES;
+            if (_out_col + PACKET_BYTES == (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd)) {
+                // if last column, write last packet with padding
+                write_results_buffer();
 
-            // new row
-            _out_row++;
-            _out_col = -(int32_t)PACKET_BYTES;
-
-            // TODO: write last rows as zeros
+                // new row
+                _out_row++;
+                _out_col = -(int32_t)PACKET_BYTES;
+            }
         }
 
         // transition FSM
         if (_loaded_el >= _expected_el) {
+            if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
+                // write last rows as zeros
+                for (; _out_addr < _max_out_addr; _out_addr += PACKET_BYTES) {
+                    mem_if->write(_out_addr, 0);
+                }
+            }
+
             std::cout << "Received all payload" << std::endl;
             complete_payload();
             for (int i = 0; i < _n_clusters; ++i) {
@@ -86,6 +93,7 @@ bool mat_mult_ga::receive64bitPacket(uint64_t addr, uint64_t packet) {
         _out_col = -(int32_t)PACKET_BYTES;
         _cur_state = PROCESSING;
         _out_addr = (uint64_t)GET_CMD_OUT_ADDR(_cur_cmd);
+        _max_out_addr = _out_addr + GET_CMD_SIZE_ROWS(_cur_cmd) * GET_CMD_SIZE_COLS(_cur_cmd);
     }
 
     return true;

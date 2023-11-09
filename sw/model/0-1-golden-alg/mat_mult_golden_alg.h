@@ -36,11 +36,12 @@ class mat_mult_ga : public mat_mult {
         uint32_t _n_cores_per_cluster;
 
         // counters
-
-        // output data
         uint64_t _out_addr;
+        uint64_t _max_out_addr;
         int32_t _out_row;
         int32_t _out_col;
+
+        // output data
         uint64_t _out_data;
         uint64_t _out_mask;
 
