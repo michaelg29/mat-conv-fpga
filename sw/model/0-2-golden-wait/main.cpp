@@ -112,9 +112,9 @@ int sc_main(int argc, char* argv[]) {
     sc_time stopTime = sc_time_stamp();
 
     cout << "Simulated for " << (stopTime - startTime) << endl;
-    
+
     // final state
-    memoryWrite(argv, memory);
+    writeOutput(argv, memory);
     memoryPrint(memory, kernel_size);
     
     std::string c;

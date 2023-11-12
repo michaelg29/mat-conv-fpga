@@ -12,9 +12,7 @@ core::core(sc_module_name name) : sc_module(name) {
 /** Process the first five bytes of each array argument. */
 void core::compute_result(uint8_t sVal) {
     
-    //temporary until output fsm is made
-    if(forward != NULL)
-        *forward = _kVal * sVal + addInput;
+    *forward = _kVal * sVal + addInput;
 }
 
 void core::reset(){

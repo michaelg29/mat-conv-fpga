@@ -3,6 +3,7 @@
 #include "system.h"
 #include "../0-appl/mat_mult.h"
 #include "mmu.h"
+#include "concat.h"
 
 #ifndef MAT_MULT_WAIT_H
 #define MAT_MULT_WAIT_H
@@ -21,6 +22,14 @@ class mat_mult_wait: public mat_mult {
     private:
 
         mmu* _mmu;
+
+        concat* _concat;
+
+        uint64_t _out_reg;
+
+        uint64_t _out_addr=0;
+
+        uint32_t _kernel_size, _row_length;
 
 
         bool receive64bitPacket(uint64_t addr, uint64_t packet);

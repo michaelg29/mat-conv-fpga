@@ -11,18 +11,17 @@
             "program": "${fileDirname}\\build\\${fileBasenameNoExtension}.exe",
             "preLaunchTask": "build",
             "args": [
-                /*
                 "${workspaceFolder}\\input",
                 "${workspaceFolder}\\output",
                 "${workspaceFolder}\\kernel",
-                "7",
-                "1"
-                */
+                "5",
+                "0"
+                /*
                 
                 "",
                 "5",
                 "1"
-                
+                */                
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -38,19 +37,18 @@
             "request": "launch",
             "program": "${fileDirname}\\build\\${fileBasenameNoExtension}.exe",
             "preLaunchTask": "build",
-            "args": [
-                /*
+            "args": [                
                 "${workspaceFolder}\\input",
                 "${workspaceFolder}\\output",
                 "${workspaceFolder}\\kernel",
-                "7",
-                "1"
-                */
+                "5",
+                "0"
+                /*
                 
                 "",
                 "5",
                 "1"
-                
+                */
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

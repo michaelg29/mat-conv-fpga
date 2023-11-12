@@ -30,13 +30,13 @@ void memoryRead(char *memfile, unsigned char *mem, unsigned int memout_size) {
 
 bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize) {
     // check usage
-    if (argc == 1 || argc > 4) {
-        std::cerr << "Usage: " << argv[0] << " <MEMORY_FILE> <KERNEL_SIZE> [<DO_RANDOMIZE>]" << std::endl;
+    if (argc == 1 || argc > 6) {
+        std::cerr << "Usage: " << argv[0] << " <INPUT_FILE> <OUTPUT_FILE> <KERNEL_FILE> <KERNEL_SIZE> [<DO_RANDOMIZE>]" << std::endl;
         return false;
     }
     
     // validate kernel size
-    *kernelsize = std::stoi(argv[2]);
+    *kernelsize = std::stoi(argv[4]);
     if (*kernelsize > MAX_KERN_ROWS) {
         std::cerr << "*** ERROR in main: invalid KERNEL_SIZE, max is " << MAX_KERN_ROWS << std::endl;
         return false;
@@ -47,7 +47,7 @@ bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize) {
     }
     
     // determine randomization
-    if (argc == 4 && argv[3][0] == '1') {
+    if (argc == 6 && argv[5][0] == '1') {
         printf("Randomizing\n");
         srand(time(0));
         for (int i = 0; i < MEM_SIZE; i++) {
@@ -56,14 +56,15 @@ bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize) {
     }
     else {
         // read memory
-        memoryRead(argv[1], mem, MEM_SIZE);
+        memoryRead(argv[1], mem, MAT_SIZE); //Load image
+        memoryRead(argv[3], mem+MAT_SIZE, MAX_KERN_SIZE); //Load kernel
     }
     
     return true;
 }
 
 bool memoryWrite(char **argv, unsigned char *mem) {
-    char *memfile = argv[1];
+    char *memfile = argv[2];
     
     FILE *fp = fopen(memfile, "wb");
     
@@ -72,6 +73,20 @@ bool memoryWrite(char **argv, unsigned char *mem) {
     }
     
     fwrite(mem, 1, MEM_SIZE, fp);
+    
+    return true;
+}
+
+bool writeOutput(char **argv, unsigned char *mem) {
+    char *file = argv[2];
+    
+    FILE *fp = fopen(file, "wb");
+    
+    if (!fp) {
+       return false;
+    }
+    
+    fwrite(mem + OUT_ADDR, 1, MAT_SIZE, fp);
     
     return true;
 }

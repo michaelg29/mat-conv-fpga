@@ -4,7 +4,7 @@
 #include "system.h"
 
 
-mmu::mmu(sc_module_name name, uint32_t n_cores, uint32_t row_length, uint32_t kernel_size) 
+mmu::mmu(sc_module_name name, uint32_t* outptr, uint32_t n_cores, uint32_t row_length, uint32_t kernel_size) 
         : sc_module(name), _n_cores(n_cores), _row_length(row_length), _kernel_size(kernel_size)
 {
     _lsram = new lsram("LSRAM");
@@ -22,7 +22,7 @@ mmu::mmu(sc_module_name name, uint32_t n_cores, uint32_t row_length, uint32_t ke
     }
 
     //TODO connect output FSM
-    //_cores[_n_cores-1]->addInput = *(OUTFSM->in);
+    _cores[_n_cores-1]->forward = outptr;
 }
 
 
@@ -83,7 +83,7 @@ void mmu::compute_output() {
     }
 
     _compute_row_index_counter += 1;
-    if(_compute_row_index_counter >= _row_length*_kernel_size) {
+    if(_compute_row_index_counter >= _row_length) {
         _compute_row_index_counter = 0;
 
         _compute_col_index_counter += 1;

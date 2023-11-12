@@ -16,12 +16,12 @@ class core : public sc_module {
 
         void setKernelValue(uint8_t val);        
         void reset();
-        uint32_t addInput;
+        uint32_t addInput=0;
         uint32_t* forward = NULL;
 
     private:
 
-        uint8_t _kVal;
+        int8_t _kVal=0;
 
 };
 

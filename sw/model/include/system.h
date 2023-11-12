@@ -25,6 +25,7 @@
 
 bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize);
 bool memoryWrite(char **argv, unsigned char *mem);
+bool writeOutput(char **argv, unsigned char *mem);
 
 void printMat(unsigned char *mem, int mat_n_cols, int base_addr, int r, int c, int n_r, int n_c);
 void memoryPrint(unsigned char *mem, int kernel_size);

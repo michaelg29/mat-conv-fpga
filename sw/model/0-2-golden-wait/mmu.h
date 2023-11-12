@@ -21,7 +21,7 @@ class mmu : public sc_module {
 
     public:
 
-        mmu(sc_module_name name, uint32_t n_cores = MAX_NUM_CORES, uint32_t row_length = MAT_COLS, uint32_t kernel_size = MAX_KERN_ROWS);
+        mmu(sc_module_name name, uint32_t* outptr, uint32_t n_cores = MAX_NUM_CORES, uint32_t row_length = MAT_COLS, uint32_t kernel_size = MAX_KERN_ROWS);
 
         void store(uint8_t nextVal);
         void compute_output();
