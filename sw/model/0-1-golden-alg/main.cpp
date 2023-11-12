@@ -12,73 +12,6 @@
 int kernel_dim;
 uint8_t memory[MEM_SIZE];
 
-class memory_mod : public sc_module, public memory_if {
-
-    public:
-
-        memory_mod(sc_module_name name, uint8_t *memory, uint64_t mem_size) : sc_module(name), memory(memory), mem_size(mem_size) {}
-
-        bool write(uint64_t addr, uint64_t data) {
-            if (!check_addr(addr)) return false;
-            align_addr(addr);
-            ((uint64_t*)memory)[addr] = data;
-            return true;
-        }
-
-        bool read(uint64_t addr, uint64_t& data) {
-            if (!check_addr(addr)) return false;
-            align_addr(addr);
-            data = ((uint64_t*)memory)[addr];
-            return true;
-        }
-
-    private:
-
-        uint8_t *memory;
-        uint64_t mem_size;
-
-        // align address to count by data width (64b/8B)
-        void align_addr(uint64_t& addr) {
-            addr >>= 3;
-        }
-
-        bool check_addr(uint64_t addr) {
-            return addr < mem_size;
-        }
-
-};
-
-/**
- * Module to issue commands to the matrix multiplier.
- */
-SC_MODULE(mm_cmd) {
-
-    sc_port<mat_mult_if> mm_if;
-
-    SC_CTOR(mm_cmd) {
-        SC_THREAD(do_mat_mult);
-    }
-
-    void do_mat_mult() {
-        std::cout << "Starting" << std::endl;
-        mm_if->reset();
-        std::cout << "Done reset" << std::endl;
-
-        mm_if->sendCmd(memory, MM_CMD_KERN, kernel_dim, kernel_dim, UNUSED_ADDR, 0);
-        std::cout << "Done kernel cmd" << std::endl;
-
-        mm_if->sendPayload(memory, KERN_ADDR, kernel_dim, kernel_dim);
-        std::cout << "Done kernel payload" << std::endl;
-
-        mm_if->sendCmd(memory, MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
-        std::cout << "Done subject cmd" << std::endl;
-
-        mm_if->sendPayload(memory, MAT_ADDR, MAT_ROWS, MAT_COLS);
-        std::cout << "Done subject payload" << std::endl;
-    }
-
-}; // SC_MODULE(mm_cmd)
-
 int sc_main(int argc, char* argv[]) {
     if (!parseCmdLine(argc, argv, memory, &kernel_dim)) {
         return 1;
@@ -114,7 +47,7 @@ int sc_main(int argc, char* argv[]) {
     //DONE (see matmul and receiveData)
 
     // memory interface (top-level interface with the CPU)
-    memory_mod *mem = new memory_mod("mem", memory, MEM_SIZE);
+    simple_memory_mod<uint64_t> *mem = new simple_memory_mod<uint64_t>("mem", memory, MEM_SIZE);
 
     // matrix multiplier (top-level)
     mat_mult_ga *matrix_multiplier = new mat_mult_ga("matrix_multiplier",
@@ -169,7 +102,7 @@ int sc_main(int argc, char* argv[]) {
     }
 
     // command issuer (CPU)
-    mm_cmd *cpu = new mm_cmd("cpu");
+    mat_mult_cmd *cpu = new mat_mult_cmd("cpu", memory, kernel_dim);
     cpu->mm_if(*matrix_multiplier);
 
     // =============================

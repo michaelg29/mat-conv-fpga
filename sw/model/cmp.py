@@ -10,7 +10,6 @@ def twos_complement_8bit(raw_val):
     return val
 
 # usage check
-print(len(argv), argv)
 if len(argv) < 7:
     print(f"USAGE: {argv[0]} input_file input_rows input_cols kern_file kern_size output_file [step_size] [twos_complement] [skip_border]")
     exit()

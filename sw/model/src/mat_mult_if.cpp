@@ -184,7 +184,7 @@ void mat_mult_top::calculate_next_state() {
         // write ack packet to CPU
         uint64_t *packets = (uint64_t*)&_cur_ack;
         for (int i = 0; i < N_PACKETS_IN_CMD; ++i) {
-            mem_if->write(_cur_cmd.tx_addr, *packets);
+            mem_if->write((uint64_t)(_cur_cmd.tx_addr), *packets);
 
             // advance cursors
             _cur_cmd.tx_addr += 8;
@@ -237,4 +237,28 @@ void mat_mult_top::advance_state() {
 
 void mat_mult_top::protected_reset() {
     _cur_state = WAIT_CMD_KERN_SKEY;
+}
+
+mat_mult_cmd::mat_mult_cmd(sc_module_name name, uint8_t *memory, int kernel_size)
+    : sc_module(name), _memory(memory), _kernel_size(kernel_size)
+{
+    SC_THREAD(do_mat_mult);
+}
+
+void mat_mult_cmd::do_mat_mult() {
+    std::cout << "Starting" << std::endl;
+    mm_if->reset();
+    std::cout << "Done reset" << std::endl;
+
+    mm_if->sendCmd(_memory, MM_CMD_KERN, _kernel_size, _kernel_size, UNUSED_ADDR, 0);
+    std::cout << "Done kernel cmd" << std::endl;
+
+    mm_if->sendPayload(_memory, KERN_ADDR, _kernel_size, _kernel_size);
+    std::cout << "Done kernel payload" << std::endl;
+
+    mm_if->sendCmd(_memory, MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
+    std::cout << "Done subject cmd" << std::endl;
+
+    mm_if->sendPayload(_memory, MAT_ADDR, MAT_ROWS, MAT_COLS);
+    std::cout << "Done subject payload" << std::endl;
 }

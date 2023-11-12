@@ -1,6 +1,6 @@
 
 #include "systemc.h"
-#include "memory_if.h"
+#include "memory_if.hpp"
 
 #ifndef MAT_MULT_IF_H
 #define MAT_MULT_IF_H
@@ -165,7 +165,7 @@ class mat_mult_top : public mat_mult_if, public sc_module {
 
     public:
 
-        sc_port<memory_if> mem_if;
+        sc_port<memory_if<uint64_t>> mem_if;
 
         mat_mult_top(sc_module_name name);
 
@@ -183,15 +183,34 @@ class mat_mult_top : public mat_mult_if, public sc_module {
         /** Required subclass overrides. */
         virtual bool receive_packet(uint64_t addr, uint64_t packet) = 0;
         void protected_reset();
-        
+
         /**
          * @brief Calculate the next state using the current state.
          */
         void calculate_next_state();
-        
+
         void advance_state();
 
+};
+
+/**
+ * Module to issue commands to the matrix multiplier.
+ */
+class mat_mult_cmd : public sc_module {
+
+    public:
+
+        sc_port<mat_mult_if> mm_if;
+
+        SC_HAS_PROCESS(mat_mult_cmd);
+        mat_mult_cmd(sc_module_name name, uint8_t *memory, int kernel_size);
+
+        void do_mat_mult();
+
     private:
+
+        uint8_t *_memory;
+        int _kernel_size;
 
 };
 
