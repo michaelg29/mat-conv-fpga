@@ -1,13 +1,42 @@
 
-#include "systemc.h"
 #include "system.h"
+#include "memory_if.hpp"
+
+#include "systemc.h"
 #include "core.h"
 
 #ifndef CLUSTER_H
 #define CLUSTER_H
 
-#define INTERNAL_MEMORY_SIZE MAT_COLS*(MAX_KERN_DIM-1)
+#define INTERNAL_MEMORY_SIZE_PER_GROUP MAT_COLS / MAX_N_CLUSTERS
 
+/**
+ * @brief Memory interface to store sub results in a cluster.
+ */
+typedef memory_if<uint32_t, uint32_t> cluster_memory_if_t;
+class cluster_memory : public sc_module, public cluster_memory_if_t {
+
+    public:
+
+        cluster_memory(sc_module_name name, uint32_t n_groups);
+
+        bool do_read(uint32_t addr, uint32_t& data);
+
+        bool do_write(uint32_t addr, uint32_t data);
+
+    private:
+
+        // number of groups the memory will hold sub results for
+        uint32_t _n_groups;
+
+        // memory array
+        uint32_t *_mem;
+
+};
+
+/**
+ * @brief Interface to interact with an internal cluster.
+ */
 class cluster_if : virtual public sc_interface {
 
     public:
@@ -22,7 +51,7 @@ class cluster_if : virtual public sc_interface {
         virtual void disable() = 0;
 
         /** Receive data to process (kernel values or input image data). */
-        virtual void receiveData(uint64_t addr, uint8_t* data, uint8_t *out_ptr) = 0;
+        virtual void receive_data(uint64_t addr, uint8_t* data, uint8_t *out_ptr) = 0;
 
         /** Reset the cluster. */
         virtual void reset() = 0;
@@ -39,12 +68,18 @@ class cluster_if : virtual public sc_interface {
 
 };
 
+/**
+ * @brief Golden model implementation of a cluster.
+ */
 class cluster : public sc_module, public cluster_if {
 
     public:
 
         // internal core interfaces
         sc_port<core_if> core_ifs[MAX_N_CORES_PER_CLUSTER];
+
+        // internal memory interface
+        sc_port<cluster_memory_if_t> subres_mem_ifs[MAX_N_CORES_PER_CLUSTER-1];
 
         /** Constructor. */
         cluster(sc_module_name name, uint32_t start_group, uint32_t n_groups, uint32_t n_cores, uint8_t kernel_dim, uint32_t packet_size);
@@ -56,17 +91,15 @@ class cluster : public sc_module, public cluster_if {
         void disable();
 
         /** Receive data to process (kernel values or input image data). */
-        void receiveData(uint64_t addr, uint8_t* data, uint8_t *out_ptr);
+        void receive_data(uint64_t addr, uint8_t* data, uint8_t *out_ptr);
 
         /** Reset the cluster. */
         void reset();
 
     private:
 
-        // internal memories
+        // internal kernel storage as registers
         uint8_t _kernel_mem[KERN_SIZE_ROUNDED];
-        uint8_t _subres_mem[INTERNAL_MEMORY_SIZE];
-
         uint8_t _kern_dim;
 
         // per-image configuration
@@ -75,9 +108,9 @@ class cluster : public sc_module, public cluster_if {
         uint32_t _max_r;
         uint32_t _max_c;
 
-        // FSM
-        uint32_t _counter;
-        uint32_t _col_i; // Ccrrent local column being processed
+        // counters
+        uint32_t _counter; // global image column counter
+        uint32_t _col_i;   // current local column being processed
 
 };
 

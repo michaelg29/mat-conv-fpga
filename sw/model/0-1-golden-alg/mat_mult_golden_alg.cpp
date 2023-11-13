@@ -27,7 +27,7 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
     if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ){
         // dispatch input iamge data to clusters
         for (int i = 0; i < _n_clusters; i++) {
-            dispatchCluster(i, addr, _cluster_dispatch_data);
+            cluster_ifs[i]->receive_data(addr, _cluster_dispatch_data, _results + (PACKET_BYTES - _hf_kern_dim) + (i * _n_groups_per_cluster));
         }
 
         // buffer current (kernel_dim - 1) last pixels
@@ -41,7 +41,7 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
     else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {
         // dispatch kernel values to clusters
         for (int i = 0; i < _n_clusters; i++) {
-            dispatchCluster(i, addr, _cluster_dispatch_data);
+            cluster_ifs[i]->receive_data(addr, _cluster_dispatch_data, _results + (PACKET_BYTES - _hf_kern_dim) + (i * _n_groups_per_cluster));
         }
     }
 
@@ -117,11 +117,6 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
     advance_state();
 
     return true;
-}
-
-void mat_mult_ga::dispatchCluster(int i, uint64_t addr, uint8_t* cluster_data) {
-    //cluster_ifs[i]->receiveData(addr, cluster_data, _results + (i * _n_groups_per_cluster));
-    cluster_ifs[i]->receiveData(addr, cluster_data, _results + (PACKET_BYTES - _hf_kern_dim) + (i * _n_groups_per_cluster));
 }
 
 void mat_mult_ga::protected_reset() {

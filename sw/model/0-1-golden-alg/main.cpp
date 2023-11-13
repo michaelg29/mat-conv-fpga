@@ -62,12 +62,17 @@ int sc_main(int argc, char* argv[]) {
     // initialize clusters and cores
     cluster *clusters[n_clusters];
     core *cores[n_clusters * n_cores_per_cluster];
+    cluster_memory *cluster_mems[n_clusters * (n_cores_per_cluster - 1)];
 
     // dummy components
     cluster *dummy_cluster = new cluster("dummy_cluster", 0, 0, 0, 0, 0);
     core *dummy_core = new core("dummy_core");
     for (int i = 0; i < MAX_N_CORES_PER_CLUSTER; i++) {
         dummy_cluster->core_ifs[i](*dummy_core);
+    }
+    cluster_memory *dummy_cluster_mem = new cluster_memory("dummy_cluster_mem", 0);
+    for (int i = 0; i < MAX_N_CORES_PER_CLUSTER-1; i++) {
+        dummy_cluster->subres_mem_ifs[i](*dummy_cluster_mem);
     }
 
     // initialize each cluster
@@ -91,6 +96,16 @@ int sc_main(int argc, char* argv[]) {
         // garbage cores
         for (; j < MAX_N_CORES_PER_CLUSTER; j++) {
             clusters[i]->core_ifs[j](*dummy_core);
+        }
+
+        // initialize each memory for each cluster
+        for (j = 0; j < n_cores_per_cluster-1; j++) {
+            cluster_mems[j + i * (n_cores_per_cluster - 1)] = new cluster_memory(("cluster" + std::to_string(i) + "mem" + std::to_string(j)).c_str(), n_groups_per_cluster);
+            clusters[i]->subres_mem_ifs[j](*cluster_mems[j + i * (n_cores_per_cluster - 1)]);
+        }
+        // garbage cores
+        for (; j < MAX_N_CORES_PER_CLUSTER-1; j++) {
+            clusters[i]->subres_mem_ifs[j](*dummy_cluster_mem);
         }
 
         // connect each cluster to the matrix multiplier (top-level)

@@ -7,6 +7,24 @@
 
 #include <iostream>
 
+cluster_memory::cluster_memory(sc_module_name name, uint32_t n_groups)
+    : sc_module(name), _n_groups(n_groups)
+{
+    if (n_groups) {
+        _mem = (uint32_t*)malloc(n_groups * INTERNAL_MEMORY_SIZE_PER_GROUP);
+    }
+}
+
+bool cluster_memory::do_read(uint32_t addr, uint32_t& data) {
+    data = _mem[addr];
+    return true;
+}
+
+bool cluster_memory::do_write(uint32_t addr, uint32_t data) {
+    _mem[addr] = data;
+    return true;
+}
+
 cluster_if::cluster_if(uint32_t start_group, uint32_t n_groups, uint32_t n_cores, uint32_t packet_size)
     : _start_group(start_group), _n_groups(n_groups), _n_cores(n_cores), _packet_size(packet_size)
 {
@@ -62,7 +80,7 @@ void cluster::disable() {
   *
   * @retval None
   */
-void cluster::receiveData(uint64_t addr, uint8_t* data, uint8_t *out_ptr) {
+void cluster::receive_data(uint64_t addr, uint8_t* data, uint8_t *out_ptr) {
 
     // ensure enabled
     if (!_enabled) {
@@ -90,10 +108,8 @@ void cluster::receiveData(uint64_t addr, uint8_t* data, uint8_t *out_ptr) {
 
                 // load previous sub result to accumulate (only after first row)
                 uint32_t subres = 0;
-                uint32_t addr = 0;
                 if(row_i != 0) {
-                    addr = ((row_i-1) * MAT_COLS) + _col_i; // read address
-                    subres = ((uint32_t*)_subres_mem)[addr];
+                    subres_mem_ifs[row_i-1]->read(_col_i, subres);
                 }
 
                 // send current kernel row and data group to core to calculate
@@ -104,9 +120,8 @@ void cluster::receiveData(uint64_t addr, uint8_t* data, uint8_t *out_ptr) {
                     out_ptr[group_i] = (uint8_t)subres;
                 }
                 else {
-                    addr = (row_i * MAT_COLS) + _col_i;
                     // write subresult to internal memory
-                    ((uint32_t*)_subres_mem)[addr] = subres;
+                    subres_mem_ifs[row_i]->write(_col_i, subres);
                 }
 
                 // move to next core

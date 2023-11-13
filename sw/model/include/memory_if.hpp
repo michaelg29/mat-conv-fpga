@@ -16,18 +16,6 @@ class memory_if : virtual public sc_interface {
     public:
 
         /**
-         * Write data to the memory.
-         *
-         * @param addr The address to write to.
-         * @param data The data to write.
-         * @retval     Whether the write was successful.
-         */
-        bool write(addr_t addr, data_t data){
-            bool success = do_write(addr, data);
-            return success;
-        }
-
-        /**
          * Read data from the memory.
          *
          * @param addr The address to read from.
@@ -39,8 +27,21 @@ class memory_if : virtual public sc_interface {
             return success;
         }
 
+        /**
+         * Write data to the memory.
+         *
+         * @param addr The address to write to.
+         * @param data The data to write.
+         * @retval     Whether the write was successful.
+         */
+        bool write(addr_t addr, data_t data){
+            bool success = do_write(addr, data);
+            return success;
+        }
+
     protected:
 
+        /** Subclass methods specify internal functionality of the memory. */
         virtual bool do_write(addr_t addr, data_t data) = 0;
         virtual bool do_read(addr_t addr, data_t& data) = 0;
 
@@ -58,18 +59,18 @@ class simple_memory_mod : public sc_module, public memory_if<data_t, addr_t> {
     public:
 
         simple_memory_mod(sc_module_name name, uint8_t *memory, uint64_t mem_size) : sc_module(name), memory(memory), mem_size(mem_size) {}
-    
-    private:
 
-        bool do_write(addr_t addr, data_t data) {
-            if (!check_addr(addr)) return false;
-            *((data_t*)(memory + addr)) = data;
-            return true;
-        }
+    private:
 
         bool do_read(addr_t addr, data_t& data) {
             if (!check_addr(addr)) return false;
             data = *(addr_t*)(memory + addr);
+            return true;
+        }
+
+        bool do_write(addr_t addr, data_t data) {
+            if (!check_addr(addr)) return false;
+            *((data_t*)(memory + addr)) = data;
             return true;
         }
 

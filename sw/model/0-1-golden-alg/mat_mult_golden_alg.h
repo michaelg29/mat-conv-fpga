@@ -55,7 +55,6 @@ class mat_mult_ga : public mat_mult_top {
         uint8_t _results[PACKET_BYTES * 2]; // store the output pixels from the current batch (has a size of _packet_size)
 
         bool receive_packet(uint64_t addr, uint64_t packet);
-        void dispatchCluster(int i, uint64_t addr, uint8_t* cluster_data);
         void protected_reset();
         void write_results_buffer();
 
