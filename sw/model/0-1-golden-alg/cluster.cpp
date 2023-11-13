@@ -34,15 +34,12 @@ cluster_if::cluster_if(uint32_t start_group, uint32_t n_groups, uint32_t n_cores
 
 /**
   * @brief  Cluster constructor function.
-  * @note   None.
   *
-  * @param  name        Give a name to the cluster
-  * @param  start_group Offset to the first group to process in the input data
-  * @param  n_groups    Number of groups of input data to process
+  * @param  name        Give a name to the cluster.
+  * @param  start_group Offset to the first group to process in the input data.
+  * @param  n_groups    Number of groups of input data to process.
   * @param  n_cores     Number of computation cores in the cluster.
-  * @param  kernel_dim  Size of the current kerel
-  *
-  * @retval None
+  * @param  kernel_dim  Size of the current kernel.
   */
 cluster::cluster(sc_module_name name, uint32_t start_group, uint32_t n_groups, uint32_t n_cores, uint8_t kernel_dim, uint32_t packet_size)
     : sc_module(name), cluster_if(start_group, n_groups, n_cores, packet_size), _kern_dim(kernel_dim)
@@ -77,8 +74,6 @@ void cluster::disable() {
   * @param  addr        Address of the command received
   * @param  data        Pointer to the received data
   * @param  out_ptr     Address to store the local output pixels.
-  *
-  * @retval None
   */
 void cluster::receive_data(uint64_t addr, uint8_t* data, uint8_t *out_ptr) {
 
@@ -135,19 +130,15 @@ void cluster::receive_data(uint64_t addr, uint8_t* data, uint8_t *out_ptr) {
         // update state
         _counter += _packet_size;
 
-        // update column id if end of row reached
-        if ((_counter % MAT_COLS) == 0){ // TODO this assumes that the number of columns is a multiple of packet size. Need extra logic if it's not a multiple.
+        // update column id if end of row reached (_counter is a multiple of the packet size)
+        if ((_counter % MAT_COLS) == 0){
             _col_i = 0;
         }
     }
-
 }
 
 /**
   * @brief  Cluster FSM reset.
-  * @note   The cluster is disabled.
-  *
-  * @retval None
   */
 void cluster::reset() {
     _enabled = false;

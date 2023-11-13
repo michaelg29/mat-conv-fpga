@@ -120,7 +120,7 @@ class mat_mult_if : virtual public sc_interface {
          *
          * @retval           The status returned in the acknowledge packet.
          */
-        int sendCmd(uint8_t *ext_mem, unsigned int cmd_type, unsigned int rows, unsigned int cols, unsigned int tx_addr, unsigned int out_addr);
+        int send_cmd(uint8_t *ext_mem, unsigned int cmd_type, unsigned int rows, unsigned int cols, unsigned int tx_addr, unsigned int out_addr);
 
         /**
          * @brief Issue a command to the module to load a matrix.
@@ -132,7 +132,7 @@ class mat_mult_if : virtual public sc_interface {
          *
          * @retval           The status returned in the acknowledge packet.
          */
-        int sendPayload(uint8_t *ext_mem, unsigned int start_addr, unsigned int rows, unsigned int cols);
+        int send_payload(uint8_t *ext_mem, unsigned int start_addr, unsigned int rows, unsigned int cols);
 
         /** Total reset. */
         void reset();
@@ -189,6 +189,9 @@ class mat_mult_top : public mat_mult_if, public sc_module {
          */
         void calculate_next_state();
 
+        /**
+         * @brief Assign the _next_state to _cur_state.
+         */
         void advance_state();
 
 };

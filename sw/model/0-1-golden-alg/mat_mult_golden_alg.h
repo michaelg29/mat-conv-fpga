@@ -7,6 +7,10 @@
 #ifndef MAT_MULT_GA_H
 #define MAT_MULT_GA_H
 
+/**
+ * @brief Golden model implementation of matrix convolution using the 
+          designed algorithm.
+ */
 class mat_mult_ga : public mat_mult_top {
 
     public:
@@ -16,6 +20,16 @@ class mat_mult_ga : public mat_mult_top {
         // internal clusters
         sc_port<cluster_if> cluster_ifs[MAX_N_CLUSTERS];
 
+        /**
+         * @brief Constructor with running parameters.
+         * 
+         * @param name                  SystemC module name
+         * @param n_clusters            Number of clusters in the module.
+         * @param n_cores_per_cluster   Number of cores in each cluster.
+         * @param kern_dim              Kernel dimension.
+         * @param packet_size           Number of pixels to be processed at once.
+         * @param n_groups_per_cluster  Number of groups each cluster will calculate.
+         */
         mat_mult_ga(sc_module_name name,
                     uint32_t n_clusters = MAX_N_CLUSTERS,
                     uint32_t n_cores_per_cluster = MAX_N_CORES_PER_CLUSTER,

@@ -19,7 +19,7 @@ mat_mult_if::mat_mult_if()
 
 }
 
-int mat_mult_if::sendCmd(uint8_t *ext_mem, unsigned int cmd_type, unsigned int rows, unsigned int cols, unsigned int tx_addr, unsigned int out_addr) {
+int mat_mult_if::send_cmd(uint8_t *ext_mem, unsigned int cmd_type, unsigned int rows, unsigned int cols, unsigned int tx_addr, unsigned int out_addr) {
     // construct command
     _cmd.s_key    = MM_S_KEY;
     _cmd.command  = GEN_COMMAND(cmd_type, out_addr);
@@ -51,7 +51,7 @@ int mat_mult_if::sendCmd(uint8_t *ext_mem, unsigned int cmd_type, unsigned int r
     return _ack.status;
 }
 
-int mat_mult_if::sendPayload(uint8_t *ext_mem, unsigned int start_addr, unsigned int rows, unsigned int cols) {
+int mat_mult_if::send_payload(uint8_t *ext_mem, unsigned int start_addr, unsigned int rows, unsigned int cols) {
     // calculate number of packets to send
     int n = rows * cols;
     if (n & 0b111) {
@@ -250,15 +250,15 @@ void mat_mult_cmd::do_mat_mult() {
     mm_if->reset();
     std::cout << "Done reset" << std::endl;
 
-    mm_if->sendCmd(_memory, MM_CMD_KERN, _kernel_size, _kernel_size, UNUSED_ADDR, 0);
+    mm_if->send_cmd(_memory, MM_CMD_KERN, _kernel_size, _kernel_size, UNUSED_ADDR, 0);
     std::cout << "Done kernel cmd" << std::endl;
 
-    mm_if->sendPayload(_memory, KERN_ADDR, _kernel_size, _kernel_size);
+    mm_if->send_payload(_memory, KERN_ADDR, _kernel_size, _kernel_size);
     std::cout << "Done kernel payload" << std::endl;
 
-    mm_if->sendCmd(_memory, MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
+    mm_if->send_cmd(_memory, MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
     std::cout << "Done subject cmd" << std::endl;
 
-    mm_if->sendPayload(_memory, MAT_ADDR, MAT_ROWS, MAT_COLS);
+    mm_if->send_payload(_memory, MAT_ADDR, MAT_ROWS, MAT_COLS);
     std::cout << "Done subject payload" << std::endl;
 }
