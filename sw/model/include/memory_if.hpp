@@ -1,6 +1,8 @@
 
 #include "systemc.h"
 
+#include <math.h>
+
 #ifndef MEM_IF_HPP
 #define MEM_IF_HPP
 
@@ -15,6 +17,13 @@ class memory_if : virtual public sc_interface {
 
     public:
 
+        memory_if(sc_module_name name, uint32_t mem_size) : _name(name), _mem_size(mem_size)
+        {
+            std::cout << "Memory with name " << _name << std::endl;
+            _reads = (uint32_t*)malloc(mem_size * sizeof(uint32_t));
+            _writes = (uint32_t*)malloc(mem_size * sizeof(uint32_t));
+        }
+
         /**
          * Read data from the memory.
          *
@@ -24,6 +33,7 @@ class memory_if : virtual public sc_interface {
          */
         bool read(addr_t addr, data_t& data) {
             bool success = do_read(addr, data);
+            if (success) _reads[addr] += 1;
             return success;
         }
 
@@ -36,14 +46,53 @@ class memory_if : virtual public sc_interface {
          */
         bool write(addr_t addr, data_t data){
             bool success = do_write(addr, data);
+            if (success) _writes[addr] += 1;
             return success;
         }
 
+        void print_report() {
+            std::cout << "Memory " << _name << std::endl;
+            analyze_array("Reads", _reads, _mem_size);
+            analyze_array("Writes", _writes, _mem_size);
+        }
+        sc_module_name _name;
+
     protected:
+
+        /** Statistics. */
+        uint32_t _mem_size;
+        uint32_t *_reads;
+        uint32_t *_writes;
 
         /** Subclass methods specify internal functionality of the memory. */
         virtual bool do_write(addr_t addr, data_t data) = 0;
         virtual bool do_read(addr_t addr, data_t& data) = 0;
+
+    private:
+
+        void analyze_array(const char *arr_name, uint32_t *arr, uint32_t n) {
+            double mean = 0.0;
+            double max = 0.0;
+            double stddev = 0.0;
+
+            // calculate mean
+            for (uint32_t i = 0; i < n; ++i) {
+                mean += (double)arr[i];
+                if (arr[i] > max) {
+                    max = (double)arr[i];
+                }
+            }
+            mean /= (double)n;
+
+            // calculate standard deviation
+            for (uint32_t i = 0; i < n; ++i) {
+                double var = arr[i] - mean;
+                stddev += var * var;
+            }
+            stddev = sqrt(stddev / (double)(n - 1));
+
+            std::cout << arr_name << " per address: Mean " << mean << ", maximum " << max << ", stddev " << stddev << std::endl;
+        }
 
 };
 
@@ -58,7 +107,8 @@ class simple_memory_mod : public sc_module, public memory_if<data_t, addr_t> {
 
     public:
 
-        simple_memory_mod(sc_module_name name, uint8_t *memory, uint64_t mem_size) : sc_module(name), memory(memory), mem_size(mem_size) {}
+        simple_memory_mod(sc_module_name name, uint8_t *memory, uint64_t mem_size)
+            : sc_module(name), memory_if<data_t, addr_t>(name, mem_size), memory(memory), mem_size(mem_size) {}
 
     private:
 

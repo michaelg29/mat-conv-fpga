@@ -7,8 +7,8 @@
 #define PIXEL_SIZE 1 // pixel size in bytes
 
 // matrix dimensions
-#define MAT_ROWS 5
-#define MAT_COLS 16
+#define MAT_ROWS 1080
+#define MAT_COLS 1920
 #define MAT_SIZE (MAT_ROWS*MAT_COLS)
 
 // kernel dimensions

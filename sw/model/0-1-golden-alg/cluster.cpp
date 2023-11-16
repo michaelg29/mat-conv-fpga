@@ -8,10 +8,10 @@
 #include <iostream>
 
 cluster_memory::cluster_memory(sc_module_name name, uint32_t n_groups)
-    : sc_module(name), _n_groups(n_groups)
+    : memory_if<uint32_t, uint32_t>(name, n_groups * INTERNAL_MEMORY_SIZE_PER_GROUP), sc_module(name), _n_groups(n_groups)
 {
     if (n_groups) {
-        _mem = (uint32_t*)malloc(n_groups * INTERNAL_MEMORY_SIZE_PER_GROUP);
+        _mem = (uint32_t*)malloc(n_groups * INTERNAL_MEMORY_SIZE_PER_GROUP * sizeof(uint32_t));
     }
 }
 

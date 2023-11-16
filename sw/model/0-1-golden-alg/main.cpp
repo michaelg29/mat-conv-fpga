@@ -133,5 +133,11 @@ int sc_main(int argc, char* argv[]) {
     memoryWrite(argv, memory);
     memoryPrint(memory, kernel_dim);
 
+    // print report
+    // for (i = 0; i < n_clusters * (n_cores_per_cluster - 1); i++) {
+        // std::cout << i << " " << cluster_mems[i]->_name << std::endl;
+        // cluster_mems[i]->print_report();
+    // }
+
     return 0;
 }
