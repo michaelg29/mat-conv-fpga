@@ -5,6 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
+<<<<<<< HEAD
             "name": "(Windows) Launch",
             "type": "cppvsdbg",
             "request": "launch",
@@ -20,11 +21,62 @@
                 "${workspaceFolder}\\model\\kernel",
                 "5",
                 "0"
+=======
+            "name": "(Windows) GDB Debug Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${fileDirname}\\build\\${fileBasenameNoExtension}.exe",
+            "preLaunchTask": "build",
+            "args": [
+                "${workspaceFolder}\\input",
+                "${workspaceFolder}\\output",
+                "${workspaceFolder}\\kernel",
+                "5",
+                "0"
+                /*
+                
+                "",
+                "5",
+                "1"
+                */                
+>>>>>>> origin/naive-implementation
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
+<<<<<<< HEAD
             "externalConsole": true
+=======
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:\\msys64\\ucrt64\\bin\\gdb.exe"
+            
+        },
+        {
+            "name": "(Windows) Launch [old]",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${fileDirname}\\build\\${fileBasenameNoExtension}.exe",
+            "preLaunchTask": "build",
+            "args": [                
+                "${workspaceFolder}\\input",
+                "${workspaceFolder}\\output",
+                "${workspaceFolder}\\kernel",
+                "5",
+                "0"
+                /*
+                
+                "",
+                "5",
+                "1"
+                */
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true,
+            
+>>>>>>> origin/naive-implementation
         },
         {
             "name": "(Windows) Attach",

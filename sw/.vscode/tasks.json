@@ -1,7 +1,6 @@
 {
     "version": "2.0.0",
     "tasks": [
-
         {
             "label": "build 0-appl",
             "type": "shell",
@@ -13,15 +12,12 @@
                 "-g",
 
                 //Source files
-                "${fileDirname}\\${fileBasename}",
 
                 //"$(find", "${workspaceFolder}\\model\\src\\", "-type", "f", "-iregex", "'.*\\.cpp')",
                 //"C:\\Users\\Jacoby\\Desktop\\Github\\systemc\\src\\*.cpp",
-                //"${workspaceFolder}\\model\\src\\*.cpp", //Recursive search of source files
-                "${workspaceFolder}\\model\\0-appl\\mat_mult.cpp",
-                "${workspaceFolder}\\model\\src\\mat_mult_if.cpp",
+                "${workspaceFolder}\\model\\src/*.cpp", //Recursive search of source files
                 "${workspaceFolder}\\model\\src\\system.cpp",
-
+                "${workspaceFolder}\\model\\0-appl\\mat_mult.cpp",
 
                 //Libraries
                 "-LC:\\Program Files\\SystemC\\lib",
