@@ -30,7 +30,7 @@ void memoryRead(char *memfile, unsigned char *mem, unsigned int memout_size) {
 
 bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize) {
     // check usage
-    if (argc < 5 || argc > 6)
+    if (argc < 5 || argc > 6) {
         std::cerr << "Usage: " << argv[0] << " <INPUT_FILE> <OUTPUT_FILE> <KERNEL_FILE> <KERNEL_SIZE> [<DO_RANDOMIZE>]" << std::endl;
         return false;
     }
