@@ -20,8 +20,8 @@ class memory_if : virtual public sc_interface {
         memory_if(sc_module_name name, uint32_t mem_size) : _name(name), _mem_size(mem_size)
         {
             std::cout << "Memory with name " << _name << std::endl;
-            _reads = (uint32_t*)malloc(mem_size * sizeof(uint32_t));
-            _writes = (uint32_t*)malloc(mem_size * sizeof(uint32_t));
+            _reads = new uint32_t[mem_size];
+            _writes = new uint32_t[mem_size];
         }
 
         /**

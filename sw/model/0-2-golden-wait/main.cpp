@@ -50,7 +50,7 @@ int sc_main(int argc, char* argv[]) {
     memoryWrite(argv, memory);
     memoryPrint(memory, kernel_size);
     
-    std::cout << "Press any key to continue." << std::endl;
+    std::cout << "Press enter to continue." << std::endl;
     std::string c;
     std::getline(std::cin, c);
     return 0;
