@@ -25,7 +25,7 @@ class cluster_if : virtual public sc_interface {
         virtual void disable() = 0;
 
         /** Receive data to process (kernel values or input image data). */
-        virtual void receive_data(uint64_t addr, uint8_t* data, uint8_t *out_ptr) = 0;
+        virtual void receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) = 0;
 
         /** Reset the cluster. */
         virtual void reset() = 0;

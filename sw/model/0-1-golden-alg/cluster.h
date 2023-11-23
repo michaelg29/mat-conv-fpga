@@ -56,12 +56,15 @@ class cluster : public sc_module, public cluster_if {
         void disable();
 
         /** Receive data to process (kernel values or input image data). */
-        void receive_data(uint64_t addr, uint8_t* data, uint8_t *out_ptr);
+        void receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr);
 
         /** Reset the cluster. */
         void reset();
 
     private:
+    
+        // dispatch data
+        uint8_t _dispatch_data[MAX_CLUSTER_INPUT_SIZE];
 
         // internal kernel storage as registers
         uint8_t _kernel_mem[KERN_SIZE_ROUNDED];

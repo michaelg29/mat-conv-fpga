@@ -40,7 +40,7 @@ class mat_mult_ga : public mat_mult_top {
     private:
 
         // cluster dispatch handling
-        uint8_t _cluster_dispatch_data[(MAX_KERN_DIM - 1) + PACKET_BYTES];
+        //uint8_t _cluster_dispatch_data[(MAX_KERN_DIM - 1) + PACKET_BYTES];
 
         // configuration
         uint8_t _kern_dim;

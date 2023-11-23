@@ -12,6 +12,7 @@ cluster_memory::cluster_memory(sc_module_name name, uint32_t n_groups)
 {
     if (n_groups) {
         _mem = new uint32_t[n_groups * INTERNAL_MEMORY_SIZE_PER_GROUP];
+        memset(_mem, 0, n_groups * INTERNAL_MEMORY_SIZE_PER_GROUP * sizeof(uint32_t));
     }
 }
 
@@ -72,10 +73,10 @@ void cluster::disable() {
   *         The cluster must be enabled before this function can be used.
   *
   * @param  addr        Address of the command received
-  * @param  data        Pointer to the received data
+  * @param  packet      The received packet
   * @param  out_ptr     Address to store the local output pixels.
   */
-void cluster::receive_data(uint64_t addr, uint8_t* data, uint8_t *out_ptr) {
+void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
 
     // ensure enabled
     if (!_enabled) {
@@ -89,10 +90,13 @@ void cluster::receive_data(uint64_t addr, uint8_t* data, uint8_t *out_ptr) {
 
     if (_command_type == MM_CMD_KERN) {
         // store kernel data
-        *(uint64_t*)(_kernel_mem + _counter) = *(uint64_t*)(data + (_kern_dim - 1)); // payload stored after the buffered bits
+        *(uint64_t*)(_kernel_mem + _counter) = packet;
         _counter += PACKET_BYTES;
     }
     else if (_command_type == MM_CMD_SUBJ) {
+        
+        // stitch incoming packet to buffered (kernel_dim - 1) pixels from previous dispatch
+        *((uint64_t*)(_dispatch_data + (_kern_dim - 1))) = packet;
 
         // iterate through data groups
         for (int group_i = 0; group_i < _n_groups; group_i++) {
@@ -108,7 +112,15 @@ void cluster::receive_data(uint64_t addr, uint8_t* data, uint8_t *out_ptr) {
                 }
 
                 // send current kernel row and data group to core to calculate
-                subres = core_ifs[core_i]->calculate_row_result(subres, _kernel_mem + (row_i * _kern_dim), _kern_dim, data + _start_group + group_i);
+                subres = core_ifs[core_i]->calculate_row_result(subres, _kernel_mem + (row_i * _kern_dim), _kern_dim, _dispatch_data + _start_group + group_i);
+                
+                if (!(_counter % MAT_COLS)) {
+                    //printf("%d %d: ", _counter, row_i);
+                    for (int m = 0; m < _kern_dim; ++m) {
+                        //printf("%02x and %02x; ", _dispatch_data[_start_group + group_i + m], _kernel_mem[row_i * _kern_dim + m]);
+                    }
+                    //printf("=> %08x\n", subres);
+                }
 
                 if (row_i == (_kern_dim - 1)) {
                     // output total result
@@ -126,13 +138,18 @@ void cluster::receive_data(uint64_t addr, uint8_t* data, uint8_t *out_ptr) {
             // update current column id
             _col_i += 1;
         }
-
+        
         // update state
         _counter += _packet_size;
 
         // update column id if end of row reached (_counter is a multiple of the packet size)
         if ((_counter % MAT_COLS) == 0){
             _col_i = 0;
+            memset(_dispatch_data, 0, MAX_CLUSTER_INPUT_SIZE);
+        }
+        else {
+            // buffer current (kernel_dim - 1) last pixels
+            memcpy(_dispatch_data, _dispatch_data + _packet_size, (_kern_dim - 1));
         }
     }
 }
