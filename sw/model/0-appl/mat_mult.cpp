@@ -101,28 +101,27 @@ void mat_mult::calculate() {
     for (uint16_t r = 0; r < rows; r++) {
         for (uint16_t c = 0; c < cols; c++) {
             // accumulate result
-            int32_t res = 0;
+            uint32_t res = 0;
 
             // compute kernel dot product with neighborhood
-            if (r >= _hf_kern_dim && r < (rows-_hf_kern_dim) && c >= _hf_kern_dim && c < (cols-_hf_kern_dim)) {
-                int kerneli = 0;
-                for (int i = -_hf_kern_dim; i <= _hf_kern_dim; i++) {
-                    for (int j = -_hf_kern_dim; j <= _hf_kern_dim; j++) {
-                        res += (int32_t)(uint32_t)subj_mem[(r+i)*cols + (c+j)] // matrix value is unsigned byte
-                             * (int32_t)(uint8_t)kern_mem[kerneli]; // kernel value is signed byte
-                        kerneli++;
+            int kerneli = 0;
+            for (int i = r - _hf_kern_dim; i <= r + _hf_kern_dim; i++) {
+                for (int j = c - _hf_kern_dim; j <= c + _hf_kern_dim; j++) {
+                    if (i >= 0 && i < rows && j >= 0 && j < cols) {
+                        res += (uint32_t)subj_mem[i*cols + j] // matrix value is unsigned byte
+                            * (uint32_t)kern_mem[kerneli]; // kernel value is signed byte
                     }
+                    kerneli++;
                 }
             }
 
             // write data to output buffer
             data |= (uint64_t)(res & 0xff) << ((c & 0x7) << 3);
-            //printf("%02x => %016lx\n", res & 0xff, data);
 
             // write data back to CPU memory
             if ((c & 0x7) == 0x7) {
                 mem_if->write(addr, data);
-                printf("Write to %016lx, %016lx\n", addr, data);
+                //printf("Write to %016lx, %016lx\n", addr, data);
                 data = 0;
                 addr += 8;
             }

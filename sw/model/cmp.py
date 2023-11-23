@@ -11,7 +11,7 @@ def twos_complement_8bit(raw_val):
 
 # usage check
 if len(argv) < 7:
-    print(f"USAGE: {argv[0]} input_file input_rows input_cols kern_file kern_size output_file [step_size] [twos_complement] [skip_border]")
+    print(f"USAGE: {argv[0]} input_file input_rows input_cols kern_file kern_size output_file [step_size] [twos_complement]")
     exit()
 
 # get input matrix
@@ -50,17 +50,15 @@ twos_complement = True
 if len(argv) >= 9:
     twos_complement = argv[8] == "1"
 
-skip_border = False
-if len(argv) >= 10:
-    skip_border = argv[9] == "1"
-
-print(f"Step: {step}, 2's complement: {twos_complement}, skip border check: {skip_border}")
+print(f"Step: {step}, 2's complement: {twos_complement}")
 
 ###############################
 ##### CONSTRUCT ADDRESSES #####
 ###############################
 
 def get_input_elem(r, c):
+    if r < 0 or r >= input_rows or c < 0 or c >= input_cols:
+        return 0
     return int(input_mem[r * input_cols + c])
 
 def get_kern_elem(i):
@@ -78,6 +76,7 @@ err_cnt = 0
 
 def check(r, c, expected, err_cnt):
     # compare to stored value
+    #print(f"at row {r} and col {c}, expected {hex(expected & 0xff)[2:]}, found {hex(get_output_elem(r, c))[2:]}")
     if (expected & 0xff != get_output_elem(r, c)):
         if err_cnt < MAX_ERR:
             print(f">>>ERROR: at row {r} and col {c}, expected {hex(expected & 0xff)[2:]}, found {hex(get_output_elem(r, c))[2:]}")
@@ -89,20 +88,14 @@ def check(r, c, expected, err_cnt):
 
 for r in range(0, input_rows, step):
     for c in range(0, input_cols, step):
-        # get expected value
         expected = 0
-        if (r >= hf_kern_rows and r < input_rows-hf_kern_rows and c >= hf_kern_rows and c < input_cols-hf_kern_rows):
-            kerni = 0
-            for i in range(-hf_kern_rows, hf_kern_rows+1, 1):
-                for j in range(-hf_kern_rows, hf_kern_rows+1, 1):
-                    expected += get_input_elem(r+i, c+j) * get_kern_elem(kerni)
-                    kerni += 1
-
-            if skip_border:
-                err_cnt = check(r, c, expected, err_cnt)
-
-        if not(skip_border):
-            err_cnt = check(r, c, expected, err_cnt)
+        kerni = 0
+        for i in range(-hf_kern_rows, hf_kern_rows+1, 1):
+            for j in range(-hf_kern_rows, hf_kern_rows+1, 1):
+                expected += get_input_elem(r+i, c+j) * get_kern_elem(kerni)
+                kerni += 1
+    
+        err_cnt = check(r, c, expected, err_cnt)
 
 if err_cnt > 0:
     raise Exception(f"{err_cnt} errors encountered in comparison")
