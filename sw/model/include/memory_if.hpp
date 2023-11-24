@@ -1,5 +1,6 @@
 
 #include "systemc.h"
+#include "sc_trace.hpp"
 
 #include <math.h>
 
@@ -19,9 +20,12 @@ class memory_if : virtual public sc_interface {
 
         memory_if(sc_module_name name, uint32_t mem_size) : _name(name), _mem_size(mem_size)
         {
-            std::cout << "Memory with name " << _name << std::endl;
             _reads = new uint32_t[mem_size];
             _writes = new uint32_t[mem_size];
+
+            sc_tracer::trace(_raddr, _name, "raddr");
+            sc_tracer::trace(_waddr, _name, "waddr");
+            sc_tracer::trace(_mem_size, _name, "size");
         }
 
         /**
@@ -34,6 +38,7 @@ class memory_if : virtual public sc_interface {
         bool read(addr_t addr, data_t& data) {
             bool success = do_read(addr, data);
             if (success) _reads[addr] += 1;
+            _raddr = addr;
             return success;
         }
 
@@ -47,6 +52,7 @@ class memory_if : virtual public sc_interface {
         bool write(addr_t addr, data_t data){
             bool success = do_write(addr, data);
             if (success) _writes[addr] += 1;
+            _waddr = addr;
             return success;
         }
 
@@ -55,12 +61,14 @@ class memory_if : virtual public sc_interface {
             analyze_array("Reads", _reads, _mem_size);
             analyze_array("Writes", _writes, _mem_size);
         }
-        sc_module_name _name;
 
     protected:
 
         /** Statistics. */
+        sc_module_name _name;
         uint32_t _mem_size;
+        addr_t _raddr;
+        addr_t _waddr;
         uint32_t *_reads;
         uint32_t *_writes;
 

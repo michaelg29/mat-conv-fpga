@@ -2,12 +2,14 @@
 #####################
 ##### Variables #####
 #####################
-INPUT_FILE   ?= ../input
-OUTPUT_FILE  ?= ../output
-KERNEL_FILE  ?= ../kernel
-KERNEL_SIZE  ?= 5
-DO_RANDOM    ?= 0
-EXE          ?= system
+INPUT_FILE    ?= ../input
+OUTPUT_FILE   ?= ../output
+KERNEL_FILE   ?= ../kernel
+KERNEL_SIZE   ?= 5
+DO_RANDOM     ?= 0
+DISABLE_TRACE ?=
+TRACE_FILE    ?= trace_file
+EXE           ?= system
 
 #########################
 ##### Configuration #####
@@ -58,6 +60,10 @@ OBJS   = $(SRCS:.cpp=.o)
 ##### Process command line arguments #####
 ##########################################
 
+ifneq (,$(DISABLE_TRACE))
+  TRACE_FILE =
+endif
+
 ###################
 ##### Targets #####
 ###################
@@ -69,12 +75,12 @@ $(EXE): $(OBJS)
 	$(CXX) -o $@ $^ $(CFLAGS) $(LFLAGS)
 
 run: $(EXE)
-	./$(EXE) $(INPUT_FILE) $(OUTPUT_FILE) $(KERNEL_FILE) $(KERNEL_SIZE) $(DO_RANDOM)
+	./$(EXE) $(INPUT_FILE) $(OUTPUT_FILE) $(KERNEL_FILE) $(KERNEL_SIZE) $(DO_RANDOM) $(TRACE_FILE)
 
-verif: run
-	python3 ../cmp.py $(INPUT_FILE) 1080 1920 $(KERNEL_FILE) $(KERNEL_SIZE) $(OUTPUT_FILE) 1 0
+verif:
+	python3 ../scripts/cmp.py $(INPUT_FILE) 1080 1920 $(KERNEL_FILE) $(KERNEL_SIZE) $(OUTPUT_FILE) 1 0
 
 .PHONY: clean
 
 clean:
-	rm -f $(OBJS) $(EXE)
+	rm -f $(wildcard *.o) $(wildcard ../src/*.o) $(EXE)

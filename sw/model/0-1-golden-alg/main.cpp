@@ -4,6 +4,7 @@
 #include "cluster.h"
 #include "mat_mult_golden_alg.h"
 #include "mat_mult_if.h"
+#include "sc_trace.hpp"
 
 #include "systemc.h"
 #include <iostream>
@@ -11,6 +12,8 @@
 
 int kernel_dim;
 uint8_t memory[MEM_SIZE];
+
+sc_tracer sc_tracer::tracer;
 
 int sc_main(int argc, char* argv[]) {
     if (!parseCmdLine(argc, argv, memory, &kernel_dim)) {
@@ -21,9 +24,9 @@ int sc_main(int argc, char* argv[]) {
     std::cout << "Subject size: " << MAT_ROWS << "x" << MAT_COLS << ", kernel size: " << kernel_dim << "x" << kernel_dim << std::endl;
     memoryPrint(memory, kernel_dim);
 
-    // =====================================
-    // ==== CREATE AND CONNECT MODULES =====
-    // =====================================
+    // ============================
+    // ==== DESIGN PARAMETERS =====
+    // ============================
 
     // Design optimization parameters
     uint32_t n_clusters = MAX_N_CLUSTERS; // number of clusters (must be a power of 2)
@@ -58,6 +61,15 @@ int sc_main(int argc, char* argv[]) {
                                                     n_groups_per_cluster);
     matrix_multiplier->mem_if(*mem);
 
+    // initial trace
+    sc_tracer::trace(n_clusters, "top", "n_clusters");
+    sc_tracer::trace(n_cores_per_cluster, "top", "n_cores_per_cluster");
+    sc_tracer::trace(payload_packet_size, "top", "payload_packet_size");
+    sc_tracer::trace(n_groups_per_cluster, "top", "n_groups_per_cluster");
+
+    // =====================================
+    // ==== CREATE AND CONNECT MODULES =====
+    // =====================================
 
     // initialize clusters and cores
     cluster *clusters[n_clusters];
@@ -132,6 +144,7 @@ int sc_main(int argc, char* argv[]) {
     // final state
     memoryWrite(argv, memory);
     memoryPrint(memory, kernel_dim);
+    sc_tracer::close();
 
     // print report
     // for (i = 0; i < n_clusters * (n_cores_per_cluster - 1); i++) {

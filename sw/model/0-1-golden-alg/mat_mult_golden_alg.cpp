@@ -119,6 +119,8 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
 
     // advance to next state
     advance_state();
+    
+    wait(1, SC_NS);
 
     return true;
 }

@@ -1,5 +1,6 @@
 
 #include "system.h"
+#include "sc_trace.hpp"
 
 #include <iostream>
 #include <stdio.h>
@@ -30,8 +31,8 @@ void memoryRead(char *memfile, unsigned char *mem, unsigned int memout_size) {
 
 bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize) {
     // check usage
-    if (argc < 5 || argc > 6) {
-        std::cerr << "Usage: " << argv[0] << " <INPUT_FILE> <OUTPUT_FILE> <KERNEL_FILE> <KERNEL_SIZE> [<DO_RANDOMIZE>]" << std::endl;
+    if (argc < 5 || argc > 7) {
+    std::cerr << "Usage: " << argv[0] << " <INPUT_FILE> <OUTPUT_FILE> <KERNEL_FILE> <KERNEL_SIZE> [<DO_RANDOMIZE> [<TRACE_FILE>]]" << std::endl;
         return false;
     }
 
@@ -47,7 +48,7 @@ bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize) {
     }
 
     // determine randomization
-    if (argc == 6 && argv[5][0] == '1') {
+    if (argc >= 6 && argv[5][0] == '1') {
         printf("Randomizing\n");
         srand(time(0));
         for (int i = 0; i < MEM_SIZE; i++) {
@@ -58,6 +59,15 @@ bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize) {
         // read memory
         memoryRead(argv[1], mem, MAT_SIZE); // load image
         memoryRead(argv[3], mem + MAT_SIZE, MAX_KERN_SIZE); // load kernel
+    }
+
+    // enable or disable logging
+    if (argc >= 7) {
+        sc_tracer::enable();
+        sc_tracer::init(argv[6]);
+    }
+    else {
+        sc_tracer::disable();
     }
 
     return true;

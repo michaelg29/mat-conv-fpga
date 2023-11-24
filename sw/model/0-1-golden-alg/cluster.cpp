@@ -94,7 +94,7 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
         _counter += PACKET_BYTES;
     }
     else if (_command_type == MM_CMD_SUBJ) {
-        
+
         // stitch incoming packet to buffered (kernel_dim - 1) pixels from previous dispatch
         *((uint64_t*)(_dispatch_data + (_kern_dim - 1))) = packet;
 
@@ -113,7 +113,7 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
 
                 // send current kernel row and data group to core to calculate
                 subres = core_ifs[core_i]->calculate_row_result(subres, _kernel_mem + (row_i * _kern_dim), _kern_dim, _dispatch_data + _start_group + group_i);
-                
+
                 if (!(_counter % MAT_COLS)) {
                     //printf("%d %d: ", _counter, row_i);
                     for (int m = 0; m < _kern_dim; ++m) {
@@ -138,7 +138,7 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
             // update current column id
             _col_i += 1;
         }
-        
+
         // update state
         _counter += _packet_size;
 
