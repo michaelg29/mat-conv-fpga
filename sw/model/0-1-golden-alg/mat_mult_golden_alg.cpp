@@ -21,18 +21,11 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
     //and concatenated with other packets. Might want to add support for this (another optimization parameter).
     //Partially fixed
 
-    // stitch incoming packet to buffered (kernel_dim - 1) pixels from previous dispatch
-    //*((uint64_t*)(_cluster_dispatch_data + (_kern_dim - 1))) = packet;
-
     if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ){
         // dispatch input image data to clusters
         for (int i = 0; i < _n_clusters; i++) {
-            //cluster_ifs[i]->receive_data(addr, _cluster_dispatch_data, _results + (PACKET_BYTES - _hf_kern_dim) + (i * _n_groups_per_cluster));
             cluster_ifs[i]->receive_packet(addr, packet, _results + (PACKET_BYTES - _hf_kern_dim) + (i * _n_groups_per_cluster));
         }
-
-        // buffer current (kernel_dim - 1) last pixels
-        //memcpy(_cluster_dispatch_data, _cluster_dispatch_data + _packet_size, (_kern_dim - 1));
 
         // store output pixels
         if (_cur_state == WAIT_DATA && _out_row >= 0) {
@@ -42,7 +35,6 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
     else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {
         // dispatch kernel values to clusters
         for (int i = 0; i < _n_clusters; i++) {
-            //cluster_ifs[i]->receive_data(addr, _cluster_dispatch_data, _results + (PACKET_BYTES - _hf_kern_dim) + (i * _n_groups_per_cluster));
             cluster_ifs[i]->receive_packet(addr, packet, _results + (PACKET_BYTES - _hf_kern_dim) + (i * _n_groups_per_cluster));
         }
     }
@@ -69,8 +61,9 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
         if (_loaded_el >= _expected_el) {
             if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
                 // write last rows as zeros
+                // TODO: do computation for final rows without new packet
                 for (; _out_addr < _max_out_addr; _out_addr += PACKET_BYTES) {
-                    
+
                     mem_if->write(_out_addr, 0);
                 }
             }
@@ -119,7 +112,7 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
 
     // advance to next state
     advance_state();
-    
+
     wait(1, SC_NS);
 
     return true;
@@ -153,7 +146,6 @@ void mat_mult_ga::write_results_buffer() {
         //printf("%016lx, %016lx\n", _out_data, _out_addr);
         mem_if->write(_out_addr, _out_data);
         _out_addr += PACKET_BYTES;
-        //exit(0);
     }
 
     // shift

@@ -78,7 +78,7 @@ run: $(EXE)
 	./$(EXE) $(INPUT_FILE) $(OUTPUT_FILE) $(KERNEL_FILE) $(KERNEL_SIZE) $(DO_RANDOM) $(TRACE_FILE)
 
 verif:
-	python3 ../scripts/cmp.py $(INPUT_FILE) 1080 1920 $(KERNEL_FILE) $(KERNEL_SIZE) $(OUTPUT_FILE) 1 0
+	python3 ../scripts/cmp.py $(INPUT_FILE) 1080 1920 $(KERNEL_FILE) $(KERNEL_SIZE) $(OUTPUT_FILE) 1 1
 
 .PHONY: clean
 

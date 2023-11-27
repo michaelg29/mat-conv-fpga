@@ -62,7 +62,6 @@ class mat_mult_ga : public mat_mult_top {
 
         // output data
         uint64_t _out_data;
-        uint64_t _out_mask;
 
         // internal clusters
         uint32_t _n_clusters = 0;

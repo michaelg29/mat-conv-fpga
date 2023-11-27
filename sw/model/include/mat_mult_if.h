@@ -79,7 +79,7 @@ struct mat_mult_reg_t {
     mat_mult_reg_status_reg_t status_reg;
 };
 
-enum mat_mult_state_t {
+enum mat_mult_state_e {
     WAIT_CMD_KERN_SKEY, // waiting for s_key and command fields for kernel
     WAIT_CMD_SUBJ_SKEY, // waiting for s_key and command fields for subject
     WAIT_CMD_SIZE,      // waiting for size and tx_addr fields
@@ -177,8 +177,8 @@ class mat_mult_top : public mat_mult_if, public sc_module {
         /** Internal state. */
         mat_mult_cmd_t _cur_cmd;
         mat_mult_ack_t _cur_ack;
-        mat_mult_state_t _cur_state;
-        mat_mult_state_t _next_state;
+        mat_mult_state_e _cur_state;
+        mat_mult_state_e _next_state;
 
         /** Required subclass overrides. */
         virtual bool receive_packet(uint64_t addr, uint64_t packet) = 0;

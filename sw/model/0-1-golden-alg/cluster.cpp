@@ -103,7 +103,7 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
 
             // iterate through kernel rows (start with last to not overwrite subresults)
             int core_i = 0;
-            for(int row_i = _n_cores-1; row_i >= 0; --row_i){
+            for (int row_i = _n_cores-1; row_i >= 0; --row_i){
 
                 // load previous sub result to accumulate (only after first row)
                 uint32_t subres = 0;
@@ -123,8 +123,12 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
                 }
 
                 if (row_i == (_kern_dim - 1)) {
+                    // round and truncate total result
+                    subres += (1 << 6); // +0.5 in SQ.7
+                    subres >>= 7;       // truncate to get 8 integer bits in LSB
+
                     // output total result
-                    out_ptr[group_i] = (uint8_t)subres;
+                    out_ptr[group_i] = (uint8_t)subres; // implicit mask with 0xff
                 }
                 else {
                     // write subresult to internal memory

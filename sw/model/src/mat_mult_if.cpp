@@ -175,6 +175,7 @@ void mat_mult_top::calculate_next_state() {
     }
     case WAIT_CMD_EKEY:
     {
+        if (_cur_cmd.e_key != MM_E_KEY) _cur_ack.status |= MM_STAT_ERR_KEY;
         if (((uint32_t)_cur_cmd.chksum) != ((uint32_t)CALC_CMD_CHKSUM(_cur_cmd))) _cur_ack.status |= MM_STAT_ERR_CHKSM;
 
         // latch in acknowledge message

@@ -36,8 +36,8 @@ class sc_tracer {
         
         /** Trace a signal. */
         template <class T>
-        static void trace(T& value, std::string module_name, const char *signal_name) {
-            trace(value, sc_module_name(module_name.c_str()), signal_name);
+        static void trace(T& value, const char *module_name, const char *signal_name) {
+            trace(value, sc_module_name(module_name), signal_name);
         }
 
         /** Comment. */

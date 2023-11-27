@@ -42,12 +42,15 @@ int sc_main(int argc, char* argv[]) {
     uint32_t total_mem_per_cluster = total_mem / n_clusters; //Total local memory required for each cluster
     uint32_t num_input_pixels = (kernel_dim - 1) + payload_packet_size;  //Number of pixels to dispatch at once ((kernel_dim - 1) is for the pixels shared from the previous data received)
 
-    //TODO clusters shall have a command to receive from the payload packet + transferred pixels (not just 64 bits essentially)
-    //DONE (see receiveData)
+    // initial trace
+    sc_tracer::trace(n_clusters, "top", "n_clusters");
+    sc_tracer::trace(n_cores_per_cluster, "top", "n_cores_per_cluster");
+    sc_tracer::trace(payload_packet_size, "top", "payload_packet_size");
+    sc_tracer::trace(n_groups_per_cluster, "top", "n_groups_per_cluster");
 
-    //TODO clusters should NOT be responsible for buffering the last two pixels, since only the first cluster
-    //will receive those. Only the top-level must take care of that. Clusters are simply computing what they are receiving.
-    //DONE (see matmul and receiveData)
+    // =====================================
+    // ==== CREATE AND CONNECT MODULES =====
+    // =====================================
 
     // memory interface (top-level interface with the CPU)
     simple_memory_mod<uint64_t> *mem = new simple_memory_mod<uint64_t>("mem", memory, MEM_SIZE);
@@ -60,16 +63,6 @@ int sc_main(int argc, char* argv[]) {
                                                     payload_packet_size,
                                                     n_groups_per_cluster);
     matrix_multiplier->mem_if(*mem);
-
-    // initial trace
-    sc_tracer::trace(n_clusters, "top", "n_clusters");
-    sc_tracer::trace(n_cores_per_cluster, "top", "n_cores_per_cluster");
-    sc_tracer::trace(payload_packet_size, "top", "payload_packet_size");
-    sc_tracer::trace(n_groups_per_cluster, "top", "n_groups_per_cluster");
-
-    // =====================================
-    // ==== CREATE AND CONNECT MODULES =====
-    // =====================================
 
     // initialize clusters and cores
     cluster *clusters[n_clusters];
@@ -115,7 +108,7 @@ int sc_main(int argc, char* argv[]) {
             cluster_mems[j + i * (n_cores_per_cluster - 1)] = new cluster_memory(("cluster" + std::to_string(i) + "mem" + std::to_string(j)).c_str(), n_groups_per_cluster);
             clusters[i]->subres_mem_ifs[j](*cluster_mems[j + i * (n_cores_per_cluster - 1)]);
         }
-        // garbage cores
+        // garbage memories
         for (; j < MAX_N_CORES_PER_CLUSTER-1; j++) {
             clusters[i]->subres_mem_ifs[j](*dummy_cluster_mem);
         }
