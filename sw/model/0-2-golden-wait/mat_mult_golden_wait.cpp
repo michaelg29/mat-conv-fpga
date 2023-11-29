@@ -59,6 +59,7 @@ bool mat_mult_wait::receive64bitPacket(uint64_t addr, uint64_t packet) {
         //finish last rows after receiving the last packet. ugly but good enough for now
         if (_loaded_el >= _expected_el) {
            while (_out_addr<_expected_el) {
+                sendBytes(addr, 0);
                 computeBytes();
                 uint64_t out_addr = (uint64_t)GET_CMD_OUT_ADDR(_cur_cmd);
                 mem_if->write((((uint64_t)GET_CMD_OUT_ADDR(_cur_cmd)) << 3) + _out_addr, _out_reg);
