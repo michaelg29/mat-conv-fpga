@@ -122,3 +122,7 @@ void mmu::protected_reset() {
 void mmu::setProcessingState() {
     _cur_state = SUBJ_PROCESSING;
 }
+
+void mmu::setKernelSize(uint32_t kernel_size){
+    _kernel_size = kernel_size;
+}

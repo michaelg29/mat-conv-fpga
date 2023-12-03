@@ -12,7 +12,7 @@ void concat::concatenate() {
     _concatenateReg &= ~(((uint64_t)0xff) << (_concat_counter << 3));
     
     //round by adding .5 and truncate
-    _concatenateReg |= ((((uint64_t)(inputReg+(1<<6))>>7)&0xff) << (_concat_counter << 3));//todo check for fixedpoitn number & stuff. divide by 273 only for testing purposes of gaussian 5x5
+    _concatenateReg |= ((((uint64_t)(inputReg+(1<<6)) >>7) & 0xff) << (_concat_counter << 3));
 
     if(_concat_counter >= PACKET_BYTES-1) {
         //write reg to memory bus

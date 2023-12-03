@@ -5,28 +5,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-<<<<<<< HEAD
-            "name": "(Windows) Launch",
-            "type": "cppvsdbg",
-            "request": "launch",
-            "program": "${fileDirname}\\build\\${fileBasenameNoExtension}.exe",
 
-            //TODO modify the prelaunch task based on the process you want to run
-            //"preLaunchTask": "build 0-appl",
-            "preLaunchTask": "build 0-1-golden-alg",
-
-            "args": [
-                "${workspaceFolder}\\model\\input",
-                "${workspaceFolder}\\model\\output",
-                "${workspaceFolder}\\model\\kernel",
-                "5",
-                "0"
-=======
             "name": "(Windows) GDB Debug Launch",
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}\\build\\${fileBasenameNoExtension}.exe",
-            "preLaunchTask": "build",
+            "preLaunchTask": "build 0-2-golden-wait",
             "args": [
                 "${workspaceFolder}\\input",
                 "${workspaceFolder}\\output",
@@ -39,14 +23,10 @@
                 "5",
                 "1"
                 */                
->>>>>>> origin/naive-implementation
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
-<<<<<<< HEAD
-            "externalConsole": true
-=======
             "externalConsole": true,
             "MIMode": "gdb",
             "miDebuggerPath": "C:\\msys64\\ucrt64\\bin\\gdb.exe"
@@ -76,7 +56,7 @@
             "environment": [],
             "externalConsole": true,
             
->>>>>>> origin/naive-implementation
+
         },
         {
             "name": "(Windows) Attach",

@@ -8,7 +8,7 @@
 #ifndef MMU_H
 #define MMU_H
 
-#define MAX_NUM_CORES (MAX_KERN_ROWS*MAX_KERN_ROWS)
+#define MAX_NUM_CORES 25 //TODO make core structure depend on kernel size (MAX_KERN_ROWS*MAX_KERN_ROWS)
 #define ID(x, y) (x + y * _row_length)
 
 enum mmu_state_t {
@@ -26,7 +26,8 @@ class mmu : public sc_module {
         void store(uint8_t nextVal);
         void compute_output();
         void protected_reset();
-        void setProcessingState();
+        void setProcessingState();        
+        void setKernelSize(uint32_t kernel_size);
 
 
     private:

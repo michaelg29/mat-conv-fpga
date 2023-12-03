@@ -6,6 +6,9 @@
 #include "systemc.h"
 #include <iostream>
 #include <string>
+#include "sc_trace.hpp"
+
+sc_tracer sc_tracer::tracer;
 
 int kernel_size;
 int hf_kernel_size;
@@ -49,6 +52,7 @@ int sc_main(int argc, char* argv[]) {
     // final state
     memoryWrite(argv, memory);
     memoryPrint(memory, kernel_size);
+    sc_tracer::close();
     
     std::cout << "Press enter to continue." << std::endl;
     std::string c;
