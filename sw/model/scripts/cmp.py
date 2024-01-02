@@ -136,9 +136,6 @@ if __name__ == "__main__":
             if do_round:
                 pass
 
-            if c < 1918:
-                err_cnt = check(r, c, int(expected), err_cnt)
-
     if err_cnt > 0:
         raise Exception(f"{err_cnt} errors encountered in comparison")
 

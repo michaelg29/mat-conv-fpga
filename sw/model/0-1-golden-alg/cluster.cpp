@@ -124,8 +124,8 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
 
                 if (row_i == (_kern_dim - 1)) {
                     // round and truncate total result
-                    subres += (1 << 6); // +0.5 in SQ.7
-                    subres >>= 7;       // truncate to get 8 integer bits in LSB
+                    //subres += (1 << 6); // +0.5 in SQ.7
+                    //subres >>= 7;       // truncate to get 8 integer bits in LSB
 
                     // output total result
                     out_ptr[group_i] = (uint8_t)subres; // implicit mask with 0xff
@@ -147,7 +147,7 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
         _counter += _packet_size;
 
         // update column id if end of row reached (_counter is a multiple of the packet size)
-        if ((_counter % MAT_COLS) == 0){
+        if ((_counter % (MAT_COLS + _packet_size)) == 0) {
             _col_i = 0;
             memset(_dispatch_data, 0, MAX_CLUSTER_INPUT_SIZE);
         }

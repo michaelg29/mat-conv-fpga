@@ -206,12 +206,13 @@ class mat_mult_cmd : public sc_module {
         sc_port<mat_mult_if> mm_if;
 
         SC_HAS_PROCESS(mat_mult_cmd);
-        mat_mult_cmd(sc_module_name name, uint8_t *memory, int kernel_size);
+        mat_mult_cmd(sc_module_name name, uint8_t *memory, int kernel_size, bool extra_padding = false);
 
         void do_mat_mult();
 
     private:
 
+        bool _extra_padding;
         uint8_t *_memory;
         int _kernel_size;
 

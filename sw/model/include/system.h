@@ -19,10 +19,11 @@
 
 // CPU memory constraint
 #define MEM_SIZE (1 << (20+4)) // 24MB
+#define MAT_SIZE_PADDED ((MAT_ROWS+(MAX_KERN_DIM>>1))*MAT_COLS)
 
 // CPU memory addresses
 #define MAT_ADDR    0
-#define KERN_ADDR   MAT_ADDR+MAT_SIZE
+#define KERN_ADDR   MAT_ADDR+MAT_SIZE_PADDED
 #define OUT_ADDR    KERN_ADDR+KERN_SIZE_ROUNDED
 #define UNUSED_ADDR OUT_ADDR+MAT_SIZE
 #define BUILD_MAT_ADDR(r, c) (MAT_ADDR) + ((r) * MAT_COLS) + c

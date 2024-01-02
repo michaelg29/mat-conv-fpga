@@ -57,14 +57,14 @@ bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize) {
     }
     else {
         // read memory
-        memoryRead(argv[1], mem, MAT_SIZE); // load image
-        memoryRead(argv[3], mem + MAT_SIZE, MAX_KERN_SIZE); // load kernel
+        memoryRead(argv[1], mem, MAT_SIZE_PADDED); // load image
+        memoryRead(argv[3], mem + KERN_ADDR, MAX_KERN_SIZE); // load kernel
     }
 
     // enable or disable logging
     if (argc >= 7) {
         sc_tracer::enable();
-        sc_tracer::init(argv[6]);
+        sc_tracer::init(argv[6], SC_NS);
     }
     else {
         sc_tracer::disable();

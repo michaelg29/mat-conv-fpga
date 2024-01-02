@@ -240,8 +240,8 @@ void mat_mult_top::protected_reset() {
     _cur_state = WAIT_CMD_KERN_SKEY;
 }
 
-mat_mult_cmd::mat_mult_cmd(sc_module_name name, uint8_t *memory, int kernel_size)
-    : sc_module(name), _memory(memory), _kernel_size(kernel_size)
+mat_mult_cmd::mat_mult_cmd(sc_module_name name, uint8_t *memory, int kernel_size, bool extra_padding)
+    : sc_module(name), _memory(memory), _kernel_size(kernel_size), _extra_padding(extra_padding)
 {
     SC_THREAD(do_mat_mult);
 }
@@ -257,9 +257,25 @@ void mat_mult_cmd::do_mat_mult() {
     mm_if->send_payload(_memory, KERN_ADDR, _kernel_size, _kernel_size);
     std::cout << "Done kernel payload" << std::endl;
 
-    mm_if->send_cmd(_memory, MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
-    std::cout << "Done subject cmd" << std::endl;
+    // mm_if->send_cmd(_memory, MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
+    // std::cout << "Done subject cmd" << std::endl;
 
-    mm_if->send_payload(_memory, MAT_ADDR, MAT_ROWS, MAT_COLS);
-    std::cout << "Done subject payload" << std::endl;
+    // mm_if->send_payload(_memory, MAT_ADDR, MAT_ROWS, MAT_COLS);
+    // std::cout << "Done subject payload" << std::endl;
+
+    uint32_t hf_kernel_size = _kernel_size >> 1;
+    if (_extra_padding) {
+        mm_if->send_cmd(_memory, MM_CMD_SUBJ, MAT_ROWS+hf_kernel_size, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
+        std::cout << "Done subject cmd" << std::endl;
+
+        mm_if->send_payload(_memory, MAT_ADDR, MAT_ROWS+hf_kernel_size, MAT_COLS);
+        std::cout << "Done subject payload" << std::endl;
+    }
+    else {
+        mm_if->send_cmd(_memory, MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
+        std::cout << "Done subject cmd" << std::endl;
+
+        mm_if->send_payload(_memory, MAT_ADDR, MAT_ROWS, MAT_COLS);
+        std::cout << "Done subject payload" << std::endl;
+    }
 }

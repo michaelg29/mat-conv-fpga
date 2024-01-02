@@ -18,8 +18,8 @@ uint32_t core::calculate_row_result(uint32_t carry, uint8_t *kern_row, uint8_t k
     //printf("=> %08x\n", carry);
 
     // round and truncate after each dot product
-    carry += 1 << 3; // add 2^-4 (in SQ.7)
-    carry >>= 4;     // truncate 4 fractional bits
+    //carry += 1 << 3; // add 2^-4 (in SQ.7)
+    //carry >>= 4;     // truncate 4 fractional bits
 
     // output 18 bits
     return carry & 0x3ffff;

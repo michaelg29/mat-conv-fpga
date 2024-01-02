@@ -46,28 +46,22 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
         _loaded_el += PACKET_BYTES;
         if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
             _out_col += PACKET_BYTES;
-            if (_out_col + PACKET_BYTES == (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd)) {
+            if (_out_col == (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd)) {
                 // if last column, write last complete packet
                 // TODO: do computation for final elements without new packet
+                for (int i = 0; i < _n_clusters; i++) {
+                    cluster_ifs[i]->receive_packet(addr, 0, _results + (PACKET_BYTES - _hf_kern_dim) + (i * _n_groups_per_cluster));
+                }
                 write_results_buffer();
 
                 // new row
                 _out_row++;
-                _out_col = -(int32_t)PACKET_BYTES;
+                _out_col = 0;
             }
         }
 
         // complete payload reception
         if (_loaded_el >= _expected_el) {
-            if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
-                // write last rows as zeros
-                // TODO: do computation for final rows without new packet
-                for (; _out_addr < _max_out_addr; _out_addr += PACKET_BYTES) {
-
-                    mem_if->write(_out_addr, 0);
-                }
-            }
-
             std::cout << "Received all payload " << _loaded_el << " " << _expected_el << std::endl;
             _loaded_el = 0;
             _expected_el = 0;
@@ -105,7 +99,7 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
         }
         _loaded_el = 0;
         _out_row = -_hf_kern_dim;
-        _out_col = -(int32_t)PACKET_BYTES;
+        _out_col = 0;
         _out_addr = (uint64_t)GET_CMD_OUT_ADDR(_cur_cmd);
         _max_out_addr = _out_addr + GET_CMD_SIZE_ROWS(_cur_cmd) * GET_CMD_SIZE_COLS(_cur_cmd);
     }
@@ -142,7 +136,7 @@ void mat_mult_ga::write_results_buffer() {
     _out_data = *(uint64_t*)_results;
 
     // write data with mask
-    if (_out_col >= 0 && _out_row >= 0) {
+    if (_out_col >= PACKET_BYTES && _out_row >= 0) {
         //printf("%016lx, %016lx\n", _out_data, _out_addr);
         mem_if->write(_out_addr, _out_data);
         _out_addr += PACKET_BYTES;

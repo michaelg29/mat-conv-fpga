@@ -6,7 +6,7 @@
 #ifndef CLUSTER_IF_H
 #define CLUSTER_IF_H
 
-#define INTERNAL_MEMORY_SIZE_PER_GROUP MAT_COLS / MAX_N_CLUSTERS
+#define INTERNAL_MEMORY_SIZE_PER_GROUP ((MAT_COLS / MAX_N_CLUSTERS) + 1)
 
 /**
  * @brief Interface to interact with an internal cluster.
