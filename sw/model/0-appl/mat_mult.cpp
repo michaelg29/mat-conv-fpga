@@ -43,6 +43,9 @@ bool mat_mult::receive_packet(uint64_t addr, uint64_t packet) {
             _expected_el = 0;
 
             _regs.status_reg.ready = true;
+            
+            // issue acknowledge packet
+            write_ack();
         }
         break;
 

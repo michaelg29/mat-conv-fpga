@@ -19,7 +19,7 @@ mat_mult_if::mat_mult_if()
 
 }
 
-int mat_mult_if::send_cmd(uint8_t *ext_mem, unsigned int cmd_type, unsigned int rows, unsigned int cols, unsigned int tx_addr, unsigned int out_addr) {
+void mat_mult_if::send_cmd(uint8_t *ext_mem, unsigned int cmd_type, unsigned int rows, unsigned int cols, unsigned int tx_addr, unsigned int out_addr, unsigned int in_addr) {
     // construct command
     _cmd.s_key    = MM_S_KEY;
     _cmd.command  = GEN_COMMAND(cmd_type, out_addr);
@@ -38,20 +38,6 @@ int mat_mult_if::send_cmd(uint8_t *ext_mem, unsigned int cmd_type, unsigned int 
         receive_packet((i << 3) + OFFSET_COMMAND, _packets[i]);
     }
 
-    // read ack
-    memcpy(&_ack, ext_mem + _cmd.tx_addr, sizeof(_ack));
-
-    // verify acknowledge packet
-    if (!CMP_CMD_ACK(_cmd, _ack)) {
-        std::cerr << "ERROR>>> Acknowledge packet does not match command." << std::endl;
-    }
-    std::cout << "Ack trans_id is " << _ack.trans_id << " for transaction " << _cmd.trans_id << " and status is " << _ack.status << std::endl;
-
-    // return the status
-    return _ack.status;
-}
-
-int mat_mult_if::send_payload(uint8_t *ext_mem, unsigned int start_addr, unsigned int rows, unsigned int cols) {
     // calculate number of packets to send
     int n = rows * cols;
     if (n & 0b111) {
@@ -60,7 +46,7 @@ int mat_mult_if::send_payload(uint8_t *ext_mem, unsigned int start_addr, unsigne
     n >>= 3;
 
     // send payload
-    _packets = (uint64_t*)(ext_mem + start_addr);
+    _packets = (uint64_t*)(ext_mem + in_addr);
     for (int i = 0; i < n; ++i) {
         // generate address to wrap
         uint64_t addr = (uint64_t)(i & 0b11); // wrap every 4 packets
@@ -70,13 +56,16 @@ int mat_mult_if::send_payload(uint8_t *ext_mem, unsigned int start_addr, unsigne
         // transmit
         receive_packet(addr, _packets[i]);
     }
+}
 
+int mat_mult_if::verify_ack(uint8_t *ext_mem, unsigned int tx_addr) {
     // read ack
     memcpy(&_ack, ext_mem + _cmd.tx_addr, sizeof(_ack));
 
     // verify acknowledge packet
     if (!CMP_CMD_ACK(_cmd, _ack)) {
         std::cerr << "ERROR>>> Acknowledge packet does not match command." << std::endl;
+        return MM_STAT_ERR_OTHER;
     }
     std::cout << "Ack trans_id is " << _ack.trans_id << " for transaction " << _cmd.trans_id << " and status is " << _ack.status << std::endl;
 
@@ -182,18 +171,6 @@ void mat_mult_top::calculate_next_state() {
         _cur_ack.e_key = MM_E_KEY;
         _cur_ack.chksum = (uint32_t)CALC_ACK_CHKSUM(_cur_ack);
 
-        // write ack packet to CPU
-        uint64_t *packets = (uint64_t*)&_cur_ack;
-        for (int i = 0; i < N_PACKETS_IN_CMD; ++i) {
-            mem_if->write((uint64_t)(_cur_cmd.tx_addr), *packets);
-
-            // advance cursors
-            _cur_cmd.tx_addr += 8;
-            packets += 1;
-        }
-
-        // raise interrupt
-
         if (_cur_ack.status == MM_STAT_OKAY) {
             // advance state
             _next_state = WAIT_DATA;
@@ -240,6 +217,21 @@ void mat_mult_top::protected_reset() {
     _cur_state = WAIT_CMD_KERN_SKEY;
 }
 
+void mat_mult_top::write_ack() {
+    // write ack packet to CPU
+    uint64_t *packets = (uint64_t*)&_cur_ack;
+    for (int i = 0; i < N_PACKETS_IN_CMD; ++i) {
+        mem_if->write((uint64_t)(_cur_cmd.tx_addr), *packets);
+
+        // advance cursors
+        _cur_cmd.tx_addr += 8;
+        packets += 1;
+    }
+
+    // raise interrupt
+    cmd_if->raise_interrupt();
+}
+
 mat_mult_cmd::mat_mult_cmd(sc_module_name name, uint8_t *memory, int kernel_size, bool extra_padding)
     : sc_module(name), _memory(memory), _kernel_size(kernel_size), _extra_padding(extra_padding)
 {
@@ -251,31 +243,45 @@ void mat_mult_cmd::do_mat_mult() {
     mm_if->reset();
     std::cout << "Done reset" << std::endl;
 
-    mm_if->send_cmd(_memory, MM_CMD_KERN, _kernel_size, _kernel_size, UNUSED_ADDR, 0);
-    std::cout << "Done kernel cmd" << std::endl;
+    // send kernel
+    _verif_ack = false;
+    _sent_subject = false;
+    mm_if->send_cmd(_memory, MM_CMD_KERN, _kernel_size, _kernel_size, UNUSED_ADDR, 0, KERN_ADDR);
+    std::cout << "Done kernel" << std::endl;
 
-    mm_if->send_payload(_memory, KERN_ADDR, _kernel_size, _kernel_size);
-    std::cout << "Done kernel payload" << std::endl;
+    // wait until acknowledge verified
+    while (!_verif_ack) {}
 
-    // mm_if->send_cmd(_memory, MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
-    // std::cout << "Done subject cmd" << std::endl;
-
-    // mm_if->send_payload(_memory, MAT_ADDR, MAT_ROWS, MAT_COLS);
-    // std::cout << "Done subject payload" << std::endl;
-
+    // send subject
+    _verif_ack = false;
+    _sent_subject = true;
     uint32_t hf_kernel_size = _kernel_size >> 1;
     if (_extra_padding) {
-        mm_if->send_cmd(_memory, MM_CMD_SUBJ, MAT_ROWS+hf_kernel_size, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
-        std::cout << "Done subject cmd" << std::endl;
-
-        mm_if->send_payload(_memory, MAT_ADDR, MAT_ROWS+hf_kernel_size, MAT_COLS);
-        std::cout << "Done subject payload" << std::endl;
+        mm_if->send_cmd(_memory, MM_CMD_SUBJ, MAT_ROWS+hf_kernel_size, MAT_COLS, UNUSED_ADDR, OUT_ADDR, MAT_ADDR);
+        std::cout << "Done subject" << std::endl;
     }
     else {
-        mm_if->send_cmd(_memory, MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR);
-        std::cout << "Done subject cmd" << std::endl;
+        mm_if->send_cmd(_memory, MM_CMD_SUBJ, MAT_ROWS, MAT_COLS, UNUSED_ADDR, OUT_ADDR, MAT_ADDR);
+        std::cout << "Done subject" << std::endl;
+    }
 
-        mm_if->send_payload(_memory, MAT_ADDR, MAT_ROWS, MAT_COLS);
-        std::cout << "Done subject payload" << std::endl;
+    // wait until acknowledge verified
+    while (!_verif_ack) {}
+}
+
+void mat_mult_cmd::raise_interrupt() {
+    std::cout << "interrupt" << std::endl;
+
+    if (mm_if->verify_ack(_memory, UNUSED_ADDR)) {
+        std::cerr << "Error in ack packet" << std::endl;
+        sc_stop();
+        return;
+    }
+
+    _verif_ack = true;
+    if(_sent_subject) {
+        // done with subject
+        std::cout << "Done!" << std::endl;
+        sc_stop();
     }
 }

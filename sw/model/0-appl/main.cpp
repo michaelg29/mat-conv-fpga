@@ -12,6 +12,8 @@ int kernel_dim;
 int hf_kernel_dim;
 uint8_t memory[MEM_SIZE];
 
+sc_tracer sc_tracer::tracer;
+
 int sc_main(int argc, char* argv[]) {
     if (!parseCmdLine(argc, argv, memory, &kernel_dim)) {
         return 1;
@@ -36,6 +38,7 @@ int sc_main(int argc, char* argv[]) {
     // command issuer (CPU)
     mat_mult_cmd *cpu = new mat_mult_cmd("cpu", memory, kernel_dim);
     cpu->mm_if(*matrix_multiplier);
+    matrix_multiplier->cmd_if(*cpu);
 
     // =============================
     // ==== RUN THE SIMULATION =====

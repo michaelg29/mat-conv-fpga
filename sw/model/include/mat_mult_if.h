@@ -117,22 +117,16 @@ class mat_mult_if : virtual public sc_interface {
          * @param cols     Number of columns in the matrix. Must be a multiple of 8.
          * @param tx_addr  Where to write the acknowledge packet.
          * @param out_addr Where to write the output matrix. Ignored for `MM_CMD_KERN`.
-         *
-         * @retval           The status returned in the acknowledge packet.
+         * @param in_addr  The start address of the payload in ext_mem.
          */
-        int send_cmd(uint8_t *ext_mem, unsigned int cmd_type, unsigned int rows, unsigned int cols, unsigned int tx_addr, unsigned int out_addr);
+        void send_cmd(uint8_t *ext_mem, unsigned int cmd_type, unsigned int rows, unsigned int cols, unsigned int tx_addr, unsigned int out_addr, unsigned int in_addr);
 
         /**
-         * @brief Issue a command to the module to load a matrix.
+         * @brief Verify the acknowledge packet in `ext_mem` at `tx_addr`.
          *
-         * @param ext_mem    CPU memory which contains the matrix memory and will eventually contain the acknowledge packet.
-         * @param start_addr Where to start reading memory from in the CPU memory buffer.
-         * @param rows       Number of rows in the matrix.
-         * @param cols       Number of columns in the matrix. Must be a multiple of 8.
-         *
-         * @retval           The status returned in the acknowledge packet.
+         * @retval The status in the acknowledge packet.
          */
-        int send_payload(uint8_t *ext_mem, unsigned int start_addr, unsigned int rows, unsigned int cols);
+        int verify_ack(uint8_t *ext_mem, unsigned int tx_addr);
 
         /** Total reset. */
         void reset();
@@ -161,11 +155,13 @@ class mat_mult_if : virtual public sc_interface {
 /**
  * Top-level virtual wrapper for the matrix multiplier.
  */
+class cmd_host_if; // forward declaration
 class mat_mult_top : public mat_mult_if, public sc_module {
 
     public:
 
         sc_port<memory_if<uint64_t>> mem_if;
+        sc_port<cmd_host_if> cmd_if;
 
         mat_mult_top(sc_module_name name);
 
@@ -194,27 +190,63 @@ class mat_mult_top : public mat_mult_if, public sc_module {
          */
         void advance_state();
 
+        /**
+         * @brief Write the current acknowledge packet to the command host, then issue an interrupt.
+         */
+        void write_ack();
+
+};
+
+/**
+ * Interface with the command host to issue interrupts.
+ */
+class cmd_host_if : virtual public sc_interface {
+
+    public:
+
+        /** Issue an interrupt to the module. */
+        virtual void raise_interrupt() = 0;
+
 };
 
 /**
  * Module to issue commands to the matrix multiplier.
  */
-class mat_mult_cmd : public sc_module {
+class mat_mult_cmd : public sc_module, public cmd_host_if {
 
     public:
 
+        /** Interface with module. */
         sc_port<mat_mult_if> mm_if;
 
         SC_HAS_PROCESS(mat_mult_cmd);
+
+        /**
+         * @brief Constructor.
+         *
+         * @param name          Module name.
+         * @param memory        Pointer to memory for the command host.
+         * @param kernel_size   Size of the kernel.
+         * @param extra_padding Whether to send the input matrix with extra rows of padding.
+         */
         mat_mult_cmd(sc_module_name name, uint8_t *memory, int kernel_size, bool extra_padding = false);
 
+        /** Execute the command sequence. */
         void do_mat_mult();
+
+        /** cmd_host_if.raise_interrupt */
+        void raise_interrupt();
 
     private:
 
+        /** Runtime configuration parameters. */
         bool _extra_padding;
         uint8_t *_memory;
         int _kernel_size;
+
+        /** Internal state. */
+        bool _verif_ack;
+        bool _sent_subject;
 
 };
 
