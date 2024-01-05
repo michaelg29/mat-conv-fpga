@@ -63,11 +63,11 @@ int mat_mult_if::verify_ack(uint8_t *ext_mem, unsigned int tx_addr) {
     memcpy(&_ack, ext_mem + _cmd.tx_addr, sizeof(_ack));
 
     // verify acknowledge packet
+    std::cout << "Ack trans_id is " << _ack.trans_id << " for transaction " << _cmd.trans_id << " and status is " << _ack.status << std::endl;
     if (!CMP_CMD_ACK(_cmd, _ack)) {
         std::cerr << "ERROR>>> Acknowledge packet does not match command." << std::endl;
         return MM_STAT_ERR_OTHER;
     }
-    std::cout << "Ack trans_id is " << _ack.trans_id << " for transaction " << _cmd.trans_id << " and status is " << _ack.status << std::endl;
 
     // increment transaction ID for next transaction
     _cur_trans_id++;
