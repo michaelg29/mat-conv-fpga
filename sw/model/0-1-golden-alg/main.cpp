@@ -124,6 +124,7 @@ int sc_main(int argc, char* argv[]) {
     // command issuer (CPU)
     mat_mult_cmd *cpu = new mat_mult_cmd("cpu", memory, kernel_dim, true);
     cpu->mm_if(*matrix_multiplier);
+    matrix_multiplier->cmd_if(*cpu);
 
     // =============================
     // ==== RUN THE SIMULATION =====

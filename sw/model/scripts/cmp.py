@@ -107,7 +107,23 @@ if __name__ == "__main__":
     print(f"Validating contents of the {input_rows}x{input_cols} matrix in {output_file} with a {kern_rows}x{kern_rows} kernel.")
     err_cnt = 0
 
-    def check(r, c, expected, err_cnt):
+    def check(r, c, err_cnt):
+        # calculate expected value
+        expected = 0
+        kerni = 0
+        for i in range(-hf_kern_rows, hf_kern_rows+1, 1):
+            for j in range(-hf_kern_rows, hf_kern_rows+1, 1):
+                expected += get_input_elem(r+i, c+j) * get_kern_elem(kerni)
+                kerni += 1
+
+            # round and truncate
+            if do_round:
+                pass
+
+        # round and truncate
+        if do_round:
+            pass
+    
         # compare to stored value
         #print(f"at row {r} and col {c}, expected {hex(expected & 0xff)[2:]}, found {hex(get_output_elem(r, c))[2:]}")
         if (expected & 0xff != get_output_elem(r, c)):
@@ -119,22 +135,23 @@ if __name__ == "__main__":
 
         return err_cnt
 
-    for r in range(0, input_rows, step):
-        for c in range(0, input_cols, step):
-            expected = 0
-            kerni = 0
-            for i in range(-hf_kern_rows, hf_kern_rows+1, 1):
-                for j in range(-hf_kern_rows, hf_kern_rows+1, 1):
-                    expected += get_input_elem(r+i, c+j) * get_kern_elem(kerni)
-                    kerni += 1
-
-                # round and truncate
-                if do_round:
-                    pass
-
-            # round and truncate
-            if do_round:
-                pass
+            
+    # step through output
+    for r in range(0, input_rows):
+        if r < hf_kern_rows or r > (input_rows-hf_kern_rows):
+            # check all elements in the edge rows
+            for c in range(0, input_cols):
+                err_cnt = check(r, c, err_cnt)
+                
+        else:
+            # check all elements in edge columns
+            for c in range(0, hf_kern_rows):
+                err_cnt = check(r, c, err_cnt)
+                err_cnt = check(r, input_cols-c-1, err_cnt)
+            
+            # step through rest of subject using step size
+            for c in range(hf_kern_rows, input_cols-hf_kern_rows, step):
+                err_cnt = check(r, c, err_cnt)
 
     if err_cnt > 0:
         raise Exception(f"{err_cnt} errors encountered in comparison")

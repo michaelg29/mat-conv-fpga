@@ -48,7 +48,6 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
             _out_col += PACKET_BYTES;
             if (_out_col == (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd)) {
                 // if last column, write last complete packet
-                // TODO: do computation for final elements without new packet
                 for (int i = 0; i < _n_clusters; i++) {
                     cluster_ifs[i]->receive_packet(addr, 0, _results + (PACKET_BYTES - _hf_kern_dim) + (i * _n_groups_per_cluster));
                 }
@@ -69,6 +68,9 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
             for (int i = 0; i < _n_clusters; ++i) {
                 cluster_ifs[i]->disable();
             }
+
+            // issue acknowledge packet
+            write_ack();
         }
     }
     else {
