@@ -88,7 +88,7 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
 
     // advance pointer
     _cur_ptr += 1;
-    if (_next_state == WAIT_CMD_KERN_SKEY || _next_state == WAIT_CMD_SUBJ_SKEY) {
+    if (_next_state == WAIT_CMD_SKEY) {
         // reset for new command
         _cur_ptr = (uint64_t*)&_cur_cmd.s_key;
     }

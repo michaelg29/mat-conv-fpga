@@ -93,38 +93,19 @@ mat_mult_top::mat_mult_top(sc_module_name name)
 
 void mat_mult_top::calculate_next_state() {
     switch (_cur_state) {
-    case WAIT_CMD_KERN_SKEY:
+    case WAIT_CMD_SKEY:
     {
         _cur_ack.status = MM_STAT_OKAY;
 
         if (_cur_cmd.s_key != MM_S_KEY) _cur_ack.status |= MM_STAT_ERR_KEY;
-
-        if (GET_CMD_TYPE(_cur_cmd) != MM_CMD_KERN) _cur_ack.status |= MM_STAT_ERR_ORD;
-
+        
         // latch in acknowledge message
         _cur_ack.s_key = MM_S_KEY;
         _cur_ack.command = _cur_cmd.command;
 
         // advance state
         _next_state = WAIT_CMD_SIZE;
-        std::cout << "WAIT_CMD_KERN_SKEY " << _cur_ack.status << std::endl;
-        break;
-    }
-    case WAIT_CMD_SUBJ_SKEY:
-    {
-        _cur_ack.status = MM_STAT_OKAY;
-
-        if (_cur_cmd.s_key != MM_S_KEY) _cur_ack.status |= MM_STAT_ERR_KEY;
-
-        if ((GET_CMD_TYPE(_cur_cmd)) != (MM_CMD_SUBJ)) _cur_ack.status |= MM_STAT_ERR_ORD;
-
-        // latch in acknowledge message
-        _cur_ack.s_key = MM_S_KEY;
-        _cur_ack.command = _cur_cmd.command;
-
-        // advance state
-        _next_state = WAIT_CMD_SIZE;
-        std::cout << "WAIT_CMD_SUBJ_SKEY " << _cur_ack.status << std::endl;
+        std::cout << "WAIT_CMD_SKEY " << _cur_ack.status << std::endl;
         break;
     }
     case WAIT_CMD_SIZE:
@@ -178,10 +159,10 @@ void mat_mult_top::calculate_next_state() {
         else {
             // advance state
             if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {
-                _next_state = WAIT_CMD_KERN_SKEY;
+                _next_state = WAIT_CMD_SKEY;
             }
             else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
-                _next_state = WAIT_CMD_SUBJ_SKEY;
+                _next_state = WAIT_CMD_SKEY;
             }
         }
 
@@ -194,10 +175,10 @@ void mat_mult_top::calculate_next_state() {
         if (_regs.status_reg.ready) {
             // advance state
             if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {
-                _next_state = WAIT_CMD_SUBJ_SKEY;
+                _next_state = WAIT_CMD_SKEY;
             }
             else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
-                _next_state = WAIT_CMD_KERN_SKEY;
+                _next_state = WAIT_CMD_SKEY;
             }
         }
         break;
@@ -214,7 +195,7 @@ void mat_mult_top::advance_state() {
 }
 
 void mat_mult_top::protected_reset() {
-    _cur_state = WAIT_CMD_KERN_SKEY;
+    _cur_state = WAIT_CMD_SKEY;
 }
 
 void mat_mult_top::write_ack() {

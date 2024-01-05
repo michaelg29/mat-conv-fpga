@@ -80,12 +80,11 @@ struct mat_mult_reg_t {
 };
 
 enum mat_mult_state_e {
-    WAIT_CMD_KERN_SKEY, // waiting for s_key and command fields for kernel
-    WAIT_CMD_SUBJ_SKEY, // waiting for s_key and command fields for subject
-    WAIT_CMD_SIZE,      // waiting for size and tx_addr fields
-    WAIT_CMD_TID,       // waiting for trans_id and reserved fields
-    WAIT_CMD_EKEY,      // waiting for e_key and chksum fields
-    WAIT_DATA,          // waiting for data to be received
+    WAIT_CMD_SKEY, // waiting for s_key and command fields
+    WAIT_CMD_SIZE, // waiting for size and tx_addr fields
+    WAIT_CMD_TID,  // waiting for trans_id and reserved fields
+    WAIT_CMD_EKEY, // waiting for e_key and chksum fields
+    WAIT_DATA,     // waiting for data to be received
 };
 
 // ================================
