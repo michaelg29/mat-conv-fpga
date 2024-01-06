@@ -57,9 +57,12 @@ bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize) {
     }
     else {
         // read memory
-        memoryRead(argv[1], mem, MAT_SIZE_PADDED); // load image
+        memoryRead(argv[1], mem, MAT_SIZE); // load image
         memoryRead(argv[3], mem + KERN_ADDR, MAX_KERN_SIZE); // load kernel
     }
+
+    // pad input matrix with zeros
+    memset(mem + MAT_ADDR + MAT_SIZE, 0, MAT_SIZE_PADDED - MAT_SIZE);
 
     // enable or disable logging
     if (argc >= 7) {
@@ -104,9 +107,12 @@ bool memoryWrite(char **argv, unsigned char *mem) {
 void printMat(unsigned char *mem, int mat_n_cols, int base_addr, int r, int c, int n_r, int n_c) {
 #define ADDR(row, col) base_addr + (row) * mat_n_cols + (col)
 
-    for (int i = 0; i < n_r; i++) {
-        for (int j = 0; j < n_c; j++) {
-            printf("%02x ", (int)mem[ADDR(r + i, c + j)]);
+    n_r += r;
+    n_c += c;
+    for (; r < n_r; r++) {
+        printf("%04d: ", r);
+        for (int c_i = c; c_i < n_c; c_i++) {
+            printf("%02x ", (int)mem[ADDR(r, c_i)]);
         }
         printf("\n");
     }
@@ -119,12 +125,12 @@ void printMat(unsigned char *mem, int mat_n_cols, int base_addr, int r, int c, i
 void memoryPrint(unsigned char *mem, int kernel_size) {
     std::cout << std::endl << "==========" << std::endl;
     std::cout << "Input matrix:" << std::endl;
-    printMat(mem, MAT_COLS, MAT_ADDR, 0, 0, MIN(10, MAT_ROWS), MIN(20, MAT_COLS));
+    printMat(mem, MAT_COLS, MAT_ADDR, MAT_ROWS-10, MAT_COLS-20, 10, 20);
 
     std::cout << "Kernel:" << std::endl;
     printMat(mem, kernel_size, KERN_ADDR, 0, 0, kernel_size, kernel_size);
 
     std::cout << "Output matrix:" << std::endl;
-    printMat(mem, MAT_COLS, OUT_ADDR, 0, 0, MIN(10, MAT_ROWS), MIN(20, MAT_COLS));
+    printMat(mem, MAT_COLS, OUT_ADDR, MAT_ROWS-10, MAT_COLS-20, 10, 20);
     std::cout << std::endl << "==========" << std::endl;
 }

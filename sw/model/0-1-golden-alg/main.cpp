@@ -4,6 +4,7 @@
 #include "cluster.h"
 #include "mat_mult_golden_alg.h"
 #include "mat_mult_if.h"
+#include "mat_mult_cmd.h"
 #include "sc_trace.hpp"
 
 #include "systemc.h"

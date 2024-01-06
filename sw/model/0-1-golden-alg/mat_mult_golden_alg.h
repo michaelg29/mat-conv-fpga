@@ -2,6 +2,7 @@
 #include "systemc.h"
 #include "system.h"
 #include "mat_mult_if.h"
+#include "mat_mult_top.h"
 #include "cluster.h"
 
 #ifndef MAT_MULT_GA_H
@@ -38,9 +39,6 @@ class mat_mult_ga : public mat_mult_top {
                     uint32_t n_groups_per_cluster = PACKET_BYTES/MAX_N_CLUSTERS);
 
     private:
-
-        // cluster dispatch handling
-        //uint8_t _cluster_dispatch_data[(MAX_KERN_DIM - 1) + PACKET_BYTES];
 
         // configuration
         uint8_t _kern_dim;

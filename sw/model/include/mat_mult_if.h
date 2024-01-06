@@ -1,6 +1,5 @@
 
 #include "systemc.h"
-#include "memory_if.hpp"
 
 #ifndef MAT_MULT_IF_H
 #define MAT_MULT_IF_H
@@ -157,104 +156,6 @@ class mat_mult_if : virtual public sc_interface {
 
         /** Reset the module. */
         void private_reset();
-
-};
-
-/**
- * Top-level virtual wrapper for the matrix multiplier.
- */
-class cmd_host_if; // forward declaration
-class mat_mult_top : public mat_mult_if, public sc_module {
-
-    public:
-
-        sc_port<memory_if<uint64_t>> mem_if;
-        sc_port<cmd_host_if> cmd_if;
-
-        mat_mult_top(sc_module_name name);
-
-    protected:
-
-        /** Register collection. */
-        mat_mult_reg_t _regs;
-
-        /** Internal state. */
-        mat_mult_cmd_t _cur_cmd;
-        mat_mult_ack_t _cur_ack;
-        mat_mult_state_e _cur_state;
-        mat_mult_state_e _next_state;
-
-        /** Required subclass overrides. */
-        virtual bool receive_packet(uint64_t addr, uint64_t packet) = 0;
-        void protected_reset();
-
-        /**
-         * @brief Calculate the next state using the current state.
-         */
-        void calculate_next_state();
-
-        /**
-         * @brief Assign the _next_state to _cur_state.
-         */
-        void advance_state();
-
-        /**
-         * @brief Write the current acknowledge packet to the command host, then issue an interrupt.
-         */
-        void write_ack();
-
-};
-
-/**
- * Interface with the command host to issue interrupts.
- */
-class cmd_host_if : virtual public sc_interface {
-
-    public:
-
-        /** Issue an interrupt to the module. */
-        virtual void raise_interrupt() = 0;
-
-};
-
-/**
- * Module to issue commands to the matrix multiplier.
- */
-class mat_mult_cmd : public sc_module, public cmd_host_if {
-
-    public:
-
-        /** Interface with module. */
-        sc_port<mat_mult_if> mm_if;
-
-        SC_HAS_PROCESS(mat_mult_cmd);
-
-        /**
-         * @brief Constructor.
-         *
-         * @param name          Module name.
-         * @param memory        Pointer to memory for the command host.
-         * @param kernel_size   Size of the kernel.
-         * @param extra_padding Whether to send the input matrix with extra rows of padding.
-         */
-        mat_mult_cmd(sc_module_name name, uint8_t *memory, int kernel_size, bool extra_padding = false);
-
-        /** Execute the command sequence. */
-        void do_mat_mult();
-
-        /** cmd_host_if.raise_interrupt */
-        void raise_interrupt();
-
-    private:
-
-        /** Runtime configuration parameters. */
-        bool _extra_padding;
-        uint8_t *_memory;
-        int _kernel_size;
-
-        /** Internal state. */
-        bool _verif_ack;
-        bool _sent_subject;
 
 };
 

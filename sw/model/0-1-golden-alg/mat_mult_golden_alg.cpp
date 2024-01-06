@@ -34,7 +34,7 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
         }
 
         // store output pixels
-        if (_cur_state == WAIT_DATA && _out_row >= 0) {
+        if (_cur_state == WAIT_DATA) {
             write_results_buffer();
         }
     }
@@ -138,7 +138,6 @@ void mat_mult_ga::write_results_buffer() {
 
     // write data with mask
     if (_out_col >= PACKET_BYTES && _out_row >= 0) {
-        //printf("%016lx, %016lx\n", _out_data, _out_addr);
         mem_if->write(_out_addr, _out_data);
         _out_addr += PACKET_BYTES;
     }

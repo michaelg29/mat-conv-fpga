@@ -2,6 +2,7 @@
 #include "systemc.h"
 #include "system.h"
 #include "mat_mult_if.h"
+#include "mat_mult_top.h"
 
 #ifndef MAT_MULT_H
 #define MAT_MULT_H

@@ -2,6 +2,7 @@
 #include "system.h"
 #include "mat_mult_golden_wait.h"
 #include "mat_mult_if.h"
+#include "mat_mult_cmd.h"
 
 #include "systemc.h"
 #include <iostream>

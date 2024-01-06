@@ -138,7 +138,7 @@ if __name__ == "__main__":
             
     # step through output
     for r in range(0, input_rows):
-        if r < hf_kern_rows or r > (input_rows-hf_kern_rows):
+        if r < hf_kern_rows or r >= (input_rows-hf_kern_rows):
             # check all elements in the edge rows
             for c in range(0, input_cols):
                 err_cnt = check(r, c, err_cnt)

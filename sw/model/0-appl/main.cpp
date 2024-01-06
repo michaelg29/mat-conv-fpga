@@ -2,6 +2,7 @@
 #include "system.h"
 #include "mat_mult.h"
 #include "mat_mult_if.h"
+#include "mat_mult_cmd.h"
 #include "memory_if.hpp"
 
 #include "systemc.h"
