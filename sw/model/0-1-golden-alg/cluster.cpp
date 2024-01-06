@@ -7,22 +7,23 @@
 
 #include <iostream>
 
-cluster_memory::cluster_memory(sc_module_name name, uint32_t n_groups)
-    : memory_if<uint32_t, uint32_t>(name, n_groups * INTERNAL_MEMORY_SIZE_PER_GROUP), sc_module(name), _n_groups(n_groups)
+cluster_memory::cluster_memory(sc_module_name name, bool dummy)
+    : memory_if<uint32_t, uint32_t>(name, INTERNAL_MEMORY_SIZE_PER_GROUP), sc_module(name), _cursor(0)
 {
-    if (n_groups) {
-        _mem = new uint32_t[n_groups * INTERNAL_MEMORY_SIZE_PER_GROUP];
-        memset(_mem, 0, n_groups * INTERNAL_MEMORY_SIZE_PER_GROUP * sizeof(uint32_t));
+    if (!dummy) {
+        _mem = new uint32_t[INTERNAL_MEMORY_SIZE_PER_GROUP];
+        memset(_mem, 0, INTERNAL_MEMORY_SIZE_PER_GROUP * sizeof(uint32_t));
     }
 }
 
 bool cluster_memory::do_read(uint32_t addr, uint32_t& data) {
-    data = _mem[addr];
+    data = _mem[_cursor]; // get current sub result for update
     return true;
 }
 
 bool cluster_memory::do_write(uint32_t addr, uint32_t data) {
-    _mem[addr] = data;
+    _mem[_cursor++] = data; // store sub result and increment cursor
+    _cursor %= INTERNAL_MEMORY_SIZE_PER_GROUP; // wrap cursor
     return true;
 }
 
@@ -55,12 +56,15 @@ void cluster::activate(uint32_t command_type, uint32_t r, uint32_t c) {
 
     // latch configuration
     _command_type = command_type;
-    _max_r = r;
-    _max_c = c;
 
     // initialize FSM
-    _counter = 0;
-    _col_i = 0;
+    if (command_type == MM_CMD_KERN) {
+        _packet_dst = (uint64_t*)_kernel_mem;
+    }
+    else if (command_type == MM_CMD_SUBJ) {
+        // stitch incoming packets to buffered (kernel_dim - 1) pixels from previous dispatch
+        _packet_dst = (uint64_t*)(_dispatch_data + (_kern_dim - 1));
+    }
 }
 
 void cluster::disable() {
@@ -87,44 +91,34 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
     if ((addr & ADDR_MASK) < OFFSET_PAYLOAD) {
         return;
     }
+    
+    // route input data
+    *_packet_dst = packet;
 
     if (_command_type == MM_CMD_KERN) {
-        // store kernel data
-        *(uint64_t*)(_kernel_mem + _counter) = packet;
-        _counter += PACKET_BYTES;
+        // increment kernel cursor
+        _packet_dst += 1;
     }
     else if (_command_type == MM_CMD_SUBJ) {
-
-        // stitch incoming packet to buffered (kernel_dim - 1) pixels from previous dispatch
-        *((uint64_t*)(_dispatch_data + (_kern_dim - 1))) = packet;
-
         // iterate through data groups
         for (int group_i = 0; group_i < _n_groups; group_i++) {
 
             // iterate through kernel rows (start with last to not overwrite subresults)
             int core_i = 0;
-            for (int row_i = _n_cores-1; row_i >= 0; --row_i){
+            for (int row_i = _kern_dim-1; row_i >= 0; --row_i){
 
                 // load previous sub result to accumulate (only after first row)
                 uint32_t subres = 0;
                 if(row_i != 0) {
-                    subres_mem_ifs[row_i-1]->read(_col_i, subres);
+                    subres_mem_ifs[row_i-1]->read(0, subres);
                 }
 
                 // send current kernel row and data group to core to calculate
                 subres = core_ifs[core_i]->calculate_row_result(subres, _kernel_mem + (row_i * _kern_dim), _kern_dim, _dispatch_data + _start_group + group_i);
 
-                if (!(_counter % MAT_COLS)) {
-                    //printf("%d %d: ", _counter, row_i);
-                    for (int m = 0; m < _kern_dim; ++m) {
-                        //printf("%02x and %02x; ", _dispatch_data[_start_group + group_i + m], _kernel_mem[row_i * _kern_dim + m]);
-                    }
-                    //printf("=> %08x\n", subres);
-                }
-
                 if (row_i == (_kern_dim - 1)) {
                     // round and truncate total result
-                    //subres += (1 << 6); // +0.5 in SQ.7
+                    //subres += (1 << 6); // +0.5 in SQ0.7
                     //subres >>= 7;       // truncate to get 8 integer bits in LSB
 
                     // output total result
@@ -132,29 +126,16 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
                 }
                 else {
                     // write subresult to internal memory
-                    subres_mem_ifs[row_i]->write(_col_i, subres);
+                    subres_mem_ifs[row_i]->write(0, subres);
                 }
 
                 // move to next core
                 core_i = (core_i + 1) % _n_cores;
             }
-
-            // update current column id
-            _col_i += 1;
         }
 
-        // update state
-        _counter += _packet_size;
-
-        // update column id if end of row reached (_counter is a multiple of the packet size)
-        if ((_counter % (MAT_COLS + _packet_size)) == 0) {
-            _col_i = 0;
-            memset(_dispatch_data, 0, MAX_CLUSTER_INPUT_SIZE);
-        }
-        else {
-            // buffer current (kernel_dim - 1) last pixels
-            memcpy(_dispatch_data, _dispatch_data + _packet_size, (_kern_dim - 1));
-        }
+        // buffer current (kernel_dim - 1) last pixels
+        memcpy(_dispatch_data, _dispatch_data + _packet_size, (_kern_dim - 1));
     }
 }
 

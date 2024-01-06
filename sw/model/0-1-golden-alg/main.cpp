@@ -104,12 +104,12 @@ int sc_main(int argc, char* argv[]) {
         }
 
         // initialize each memory for each cluster
-        for (j = 0; j < n_cores_per_cluster-1; j++) {
-            cluster_mems[j + i * (n_cores_per_cluster - 1)] = new cluster_memory(("cluster" + std::to_string(i) + "mem" + std::to_string(j)).c_str(), n_groups_per_cluster);
-            clusters[i]->subres_mem_ifs[j](*cluster_mems[j + i * (n_cores_per_cluster - 1)]);
+        for (j = 0; j < kernel_dim-1; j++) {
+            cluster_mems[j + i * (kernel_dim - 1)] = new cluster_memory(("cluster" + std::to_string(i) + "mem" + std::to_string(j)).c_str(), false);
+            clusters[i]->subres_mem_ifs[j](*cluster_mems[j + i * (kernel_dim - 1)]);
         }
         // garbage memories
-        for (; j < MAX_N_CORES_PER_CLUSTER-1; j++) {
+        for (; j < MAX_KERN_DIM-1; j++) {
             clusters[i]->subres_mem_ifs[j](*dummy_cluster_mem);
         }
 
