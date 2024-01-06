@@ -98,10 +98,20 @@ void mat_mult_top::calculate_next_state() {
         _cur_ack.status = MM_STAT_OKAY;
 
         if (_cur_cmd.s_key != MM_S_KEY) _cur_ack.status |= MM_STAT_ERR_KEY;
-        
+
         // latch in acknowledge message
         _cur_ack.s_key = MM_S_KEY;
         _cur_ack.command = _cur_cmd.command;
+
+        // latch in register
+        if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {
+            _regs.cmd_type_reg.is_kern = true;
+            _regs.cmd_type_reg.is_subj = false;
+        }
+        else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
+            _regs.cmd_type_reg.is_kern = false;
+            _regs.cmd_type_reg.is_subj = true;
+        }
 
         // advance state
         _next_state = WAIT_CMD_SIZE;
@@ -112,13 +122,13 @@ void mat_mult_top::calculate_next_state() {
     {
         uint16_t rows = (uint16_t)(GET_CMD_SIZE_ROWS(_cur_cmd));
         uint16_t cols = (uint16_t)(GET_CMD_SIZE_COLS(_cur_cmd));
-        if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN &&
+        if (_regs.cmd_type_reg.is_kern &&
             ((rows != cols) ||      // kernel must be square
             ((rows & 0b1) == 0) ||  // kernel must have an odd dimension
             (rows > MAX_KERN_DIM))) // kernel size constraint
             _cur_ack.status |= MM_STAT_ERR_SIZE;
 
-        if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ &&
+        else if (_regs.cmd_type_reg.is_subj &&
             (cols & 0b111) != 0)    // subject columns must be divisible by 8
             _cur_ack.status |= MM_STAT_ERR_SIZE;
 
@@ -158,10 +168,10 @@ void mat_mult_top::calculate_next_state() {
         }
         else {
             // advance state
-            if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {
+            if (_regs.cmd_type_reg.is_kern) {
                 _next_state = WAIT_CMD_SKEY;
             }
-            else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
+            else if (_regs.cmd_type_reg.is_subj) {
                 _next_state = WAIT_CMD_SKEY;
             }
         }
@@ -174,12 +184,7 @@ void mat_mult_top::calculate_next_state() {
     {
         if (_regs.status_reg.ready) {
             // advance state
-            if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {
-                _next_state = WAIT_CMD_SKEY;
-            }
-            else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
-                _next_state = WAIT_CMD_SKEY;
-            }
+            _next_state = WAIT_CMD_SKEY;
         }
         break;
     }

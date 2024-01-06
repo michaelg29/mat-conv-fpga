@@ -23,7 +23,7 @@ bool mat_mult::receive_packet(uint64_t addr, uint64_t packet) {
     case WAIT_CMD_SIZE:
         // calculate expected elements
         _expected_el = (uint16_t)(GET_CMD_SIZE_ROWS(_cur_cmd)) * (uint16_t)(GET_CMD_SIZE_COLS(_cur_cmd));
-        if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {
+        if (_regs.cmd_type_reg.is_kern) {
             _kern_dim = GET_CMD_SIZE_ROWS(_cur_cmd);
             _hf_kern_dim = _kern_dim >> 1;
         }
@@ -36,7 +36,7 @@ bool mat_mult::receive_packet(uint64_t addr, uint64_t packet) {
         // complete payload reception
         if (_loaded_el >= _expected_el) {
             // start calculating when all elements loaded
-            if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
+            if (_regs.cmd_type_reg.is_subj) {
                 calculate();
             }
             _loaded_el = 0;
@@ -64,10 +64,10 @@ bool mat_mult::receive_packet(uint64_t addr, uint64_t packet) {
     }
     else if (_cur_state != WAIT_DATA && _next_state == WAIT_DATA) {
         // point to internal memory
-        if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {
+        if (_regs.cmd_type_reg.is_kern) {
             _cur_ptr = (uint64_t*)kern_mem;
         }
-        else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
+        else if (_regs.cmd_type_reg.is_subj) {
             _cur_ptr = (uint64_t*)subj_mem;
         }
     }

@@ -56,7 +56,6 @@ class mat_mult_ga : public mat_mult_top {
 
         // counters
         uint64_t _out_addr;
-        uint64_t _max_out_addr;
         int32_t _out_row;
         int32_t _out_col;
 

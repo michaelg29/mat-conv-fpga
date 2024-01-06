@@ -21,7 +21,13 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
     //and concatenated with other packets. Might want to add support for this (another optimization parameter).
     //Partially fixed
 
-    if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ){
+    if (_regs.cmd_type_reg.is_kern) {
+        // dispatch kernel values to clusters
+        for (int i = 0; i < _n_clusters; i++) {
+            cluster_ifs[i]->receive_packet(addr, packet, _results + (PACKET_BYTES - _hf_kern_dim) + (i * _n_groups_per_cluster));
+        }
+    }
+    else if (_regs.cmd_type_reg.is_subj){
         // dispatch input image data to clusters
         for (int i = 0; i < _n_clusters; i++) {
             cluster_ifs[i]->receive_packet(addr, packet, _results + (PACKET_BYTES - _hf_kern_dim) + (i * _n_groups_per_cluster));
@@ -32,19 +38,13 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
             write_results_buffer();
         }
     }
-    else if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_KERN) {
-        // dispatch kernel values to clusters
-        for (int i = 0; i < _n_clusters; i++) {
-            cluster_ifs[i]->receive_packet(addr, packet, _results + (PACKET_BYTES - _hf_kern_dim) + (i * _n_groups_per_cluster));
-        }
-    }
 
     // address check
     if ((addr & ADDR_MASK) >= (OFFSET_PAYLOAD)) {
         // increment counters
         _regs.status_reg.ready = false;
         _loaded_el += PACKET_BYTES;
-        if (GET_CMD_TYPE(_cur_cmd) == MM_CMD_SUBJ) {
+        if (_regs.cmd_type_reg.is_subj) {
             _out_col += PACKET_BYTES;
             if (_out_col == (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd)) {
                 // if last column, write last complete packet
@@ -103,7 +103,6 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
         _out_row = -_hf_kern_dim;
         _out_col = 0;
         _out_addr = (uint64_t)GET_CMD_OUT_ADDR(_cur_cmd);
-        _max_out_addr = _out_addr + GET_CMD_SIZE_ROWS(_cur_cmd) * GET_CMD_SIZE_COLS(_cur_cmd);
     }
 
     // advance to next state

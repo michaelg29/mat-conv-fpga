@@ -70,13 +70,22 @@ struct mat_mult_ack_t {
 // ===== REGISTER AND STATE DEFINITIONS =====
 // ==========================================
 
+/** Status register. */
 struct mat_mult_reg_status_reg_t {
     uint8_t error;
     bool ready;
 };
 
+/** Current command type register. */
+struct mat_mult_reg_cmd_type_reg_t {
+    bool is_kern;
+    bool is_subj;
+};
+
+/** Register collection. */
 struct mat_mult_reg_t {
     mat_mult_reg_status_reg_t status_reg;
+    mat_mult_reg_cmd_type_reg_t cmd_type_reg;
 };
 
 enum mat_mult_state_e {
