@@ -1,8 +1,14 @@
 
 #include <string>
+#include <iostream>
+#include <stdio.h>
 
 #ifndef SYSTEM_H
 #define SYSTEM_H
+
+// ======================
+// ===== PARAMETERS =====
+// ======================
 
 #define PIXEL_SIZE 1 // pixel size in bytes
 
@@ -36,11 +42,39 @@
 #define PACKET_BYTES (sizeof(uint64_t) / PIXEL_SIZE)
 #define MAX_CLUSTER_INPUT_SIZE (PACKET_BYTES + MAX_KERN_DIM - 1)
 
-bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize);
-bool memoryWrite(char **argv, unsigned char *mem);
-bool writeOutput(char **argv, unsigned char *mem);
+// ==================================
+// ===== SIMULATION TIME MACROS =====
+// ==================================
 
-void printMat(unsigned char *mem, int mat_n_cols, int base_addr, int r, int c, int n_r, int n_c);
+// clock period definitions
+#define CC_CORE_NS 4.0    // 250 MHz => 4ns
+#define CC_MAIN_NS 15.625 // 64 MHz => 15.625ns
+
+// clock cycle calculations
+#define CC_CORE(n) (n * CC_CORE_NS)
+#define CC_MAIN(n) (n * CC_MAIN_NS)
+
+// wait for the next rising edge
+#define POS_CORE() wait(CC_CORE_NS, SC_NS)
+#define POS_MAIN() wait(CC_MAIN_NS, SC_NS)
+// yield so all modules can capture the rising edge signals
+#define YIELD() wait(0, SC_NS)
+
+// ========================================
+// ===== UTILITY FUNCTIONS AND MACROS =====
+// ========================================
+
+// logging functions
+#define LOG(a) std::cout << sc_time_stamp() << " - " << a << std::endl;
+#define LOGF(a, ...) std::cout << sc_time_stamp() << " - "; printf(a, __VA_ARGS__); printf("\n")
+
+// parse command line arguments
+bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize);
+
+// visualize and output current memory
+bool memoryWrite(char **argv, unsigned char *mem);
 void memoryPrint(unsigned char *mem, int kernel_size);
+bool writeOutput(char **argv, unsigned char *mem);
+void printMat(unsigned char *mem, int mat_n_cols, int base_addr, int r, int c, int n_r, int n_c);
 
 #endif // SYSTEM_H
