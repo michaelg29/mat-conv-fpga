@@ -2,7 +2,7 @@
 #include "system.h"
 #include "memory_if.hpp"
 #include "cluster_if.h"
-#include "core_if.h"
+#include "core.h"
 
 #include "systemc.h"
 
@@ -31,7 +31,7 @@ class cluster_memory : public sc_module, public cluster_memory_if_t {
         /** Memory array. */
         uint32_t *_mem;
         
-        /** Current cursor and number of entries. */
+        /** Current cursor. */
         uint32_t _cursor;
 
 };

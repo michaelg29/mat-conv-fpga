@@ -72,7 +72,7 @@ int sc_main(int argc, char* argv[]) {
 
     // dummy components
     cluster *dummy_cluster = new cluster("dummy_cluster", 0, 0, 0, 0, 0);
-    core *dummy_core = new core("dummy_core");
+    core *dummy_core = new core("dummy_core", 0);
     for (int i = 0; i < MAX_N_CORES_PER_CLUSTER; i++) {
         dummy_cluster->core_ifs[i](*dummy_core);
     }
@@ -96,7 +96,7 @@ int sc_main(int argc, char* argv[]) {
         // initialize each core for each cluster
         int j = 0;
         for (; j < n_cores_per_cluster; j++) {
-            cores[j + i * n_cores_per_cluster] = new core(("cluster" + std::to_string(i) + "core" + std::to_string(j)).c_str());
+            cores[j + i * n_cores_per_cluster] = new core(("cluster" + std::to_string(i) + "core" + std::to_string(j)).c_str(), kernel_dim);
             clusters[i]->core_ifs[j](*cores[j + i * n_cores_per_cluster]);
         }
         // garbage cores

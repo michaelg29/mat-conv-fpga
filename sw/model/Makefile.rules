@@ -84,4 +84,4 @@ verif:
 .PHONY: clean
 
 clean:
-	rm -f $(wildcard *.o) $(wildcard ../src/*.o) $(EXE)
+	rm -f $(wildcard *.o) $(wildcard ../src/*.o) $(wildcard *.vcd) $(EXE)

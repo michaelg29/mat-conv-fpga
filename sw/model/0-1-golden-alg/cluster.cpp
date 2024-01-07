@@ -114,7 +114,7 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
                 }
 
                 // send current kernel row and data group to core to calculate
-                subres = core_ifs[core_i]->calculate_row_result(subres, _kernel_mem + (row_i * _kern_dim), _kern_dim, _dispatch_data + _start_group + group_i);
+                subres = core_ifs[core_i]->calculate_row_result(subres, _kernel_mem + (row_i * _kern_dim), _dispatch_data + _start_group + group_i);
 
                 if (row_i == (_kern_dim - 1)) {
                     // round and truncate total result
