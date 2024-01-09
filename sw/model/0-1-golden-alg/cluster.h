@@ -30,7 +30,7 @@ class cluster_memory : public sc_module, public cluster_memory_if_t {
 
         /** Memory array. */
         uint32_t *_mem;
-        
+
         /** Current cursor. */
         uint32_t _cursor;
 
@@ -61,11 +61,14 @@ class cluster : public sc_module, public cluster_if {
         /** Receive data to process (kernel values or input image data). */
         void receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr);
 
+        /** Not used in this implementation. */
+        bool get_results(uint8_t *res);
+
         /** Reset the cluster. */
         void reset();
 
     private:
-    
+
         // dispatch data
         uint8_t _dispatch_data[MAX_CLUSTER_INPUT_SIZE];
 

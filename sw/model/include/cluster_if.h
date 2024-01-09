@@ -27,6 +27,9 @@ class cluster_if : virtual public sc_interface {
         /** Receive data to process (kernel values or input image data). */
         virtual void receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) = 0;
 
+        /** Return the complete results for each group assigned to the cluster. */
+        virtual bool get_results(uint8_t *res) = 0;
+
         /** Reset the cluster. */
         virtual void reset() = 0;
 

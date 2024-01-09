@@ -91,7 +91,7 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
     if ((addr & ADDR_MASK) < OFFSET_PAYLOAD) {
         return;
     }
-    
+
     // route input data
     *_packet_dst = packet;
 
@@ -137,6 +137,10 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
         // buffer current (kernel_dim - 1) last pixels
         memcpy(_dispatch_data, _dispatch_data + _packet_size, (_kern_dim - 1));
     }
+}
+
+bool cluster::get_results(uint8_t *res) {
+    return false;
 }
 
 /**
