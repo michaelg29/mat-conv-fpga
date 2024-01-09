@@ -6,14 +6,15 @@
 #include "mat_mult_top.h"
 #include "system.h"
 
-mat_mult_cmd::mat_mult_cmd(sc_module_name name, uint8_t *memory, int kernel_size, bool extra_padding)
-    : sc_module(name), _memory(memory), _kernel_size(kernel_size), _extra_padding(extra_padding)
+mat_mult_cmd::mat_mult_cmd(sc_module_name name, uint8_t *memory, int kernel_size, bool extra_padding, bool do_wait)
+    : sc_module(name), _memory(memory), _kernel_size(kernel_size), _extra_padding(extra_padding), _do_wait(do_wait)
 {
     SC_THREAD(do_mat_mult);
 }
 
 void mat_mult_cmd::do_mat_mult() {
     std::cout << "Starting" << std::endl;
+    wait(CC_CORE(10), SC_NS);
     mm_if->reset();
     std::cout << "Done reset" << std::endl;
 
@@ -24,7 +25,9 @@ void mat_mult_cmd::do_mat_mult() {
     std::cout << "Done kernel" << std::endl;
 
     // wait until acknowledge verified
-    while (!_verif_ack) {}
+    while (!_verif_ack) {
+        if (_do_wait) POS_PROC();
+    }
 
     // send subject
     _verif_ack = false;
@@ -40,7 +43,9 @@ void mat_mult_cmd::do_mat_mult() {
     }
 
     // wait until acknowledge verified
-    while (!_verif_ack) {}
+    while (!_verif_ack) {
+        if (_do_wait) POS_PROC();
+    }
 }
 
 void mat_mult_cmd::raise_interrupt() {

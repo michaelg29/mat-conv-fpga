@@ -16,7 +16,7 @@
 
 
 mat_mult_if::mat_mult_if()
-    : _cur_trans_id(1)
+    : _cur_trans_id(0)
 {
 
 }
@@ -84,5 +84,5 @@ void mat_mult_if::reset() {
 }
 
 void mat_mult_if::private_reset() {
-    _cur_trans_id = 1;
+    _cur_trans_id = 0;
 }

@@ -35,12 +35,12 @@ class mat_mult_top : public mat_mult_if, public sc_module {
         void protected_reset();
 
         /**
-         * @brief Calculate the next state using the current state.
+         * @brief Calculate the next state (`_next_state`) using the current state (`_cur_state`).
          */
         void calculate_next_state();
 
         /**
-         * @brief Assign the _next_state to _cur_state.
+         * @brief Assign _next_state to _cur_state.
          */
         void advance_state();
 

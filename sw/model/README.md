@@ -25,6 +25,45 @@ This golden model implements the method of waiting for all the data to compute a
 
 This model builds on the previous by dividing the processing into multiple tasks. This models how each core behaves autonomously and with feedback and commands from the state machines.
 
+Each module instance has its own `SC_THREAD`, implemented through the class' defined `main` function. The general structure is as follows:
+```cpp
+void module::enable() {
+    _enabled = true;
+}
+
+int module::get_result() {
+    return _result;
+}
+
+void module::main() {
+    // local copies of interface variables
+    bool enabled;
+    
+    // local variables
+    int i;
+    
+    while (true) {
+        // capture values on posedge
+        enabled = _enabled;
+        YIELD();
+        
+        // compute and update
+        if (enabled) {
+            _result = i;
+            ext_if->call_if(); // external interface call
+            i++;
+        }
+        
+        // next posedge
+        POS_CORE();
+    }
+}
+```
+
+The module has defined interface functions, `enable` and `get_result`, modeling the signals that other classes can toggle. At the beginning of each rising edge of the simulated clock, the module captures the external interface signals locally. Through the call to `YIELD`, the module calls a `wait(0)` statement to ensure that all threads have caught up to the current cycle and captured their external interface signals. Then, the module can update its result value depending on the local copies. Following the per-cycle computation, the module will wait for the next cycle through the call to `POS_CORE()`.
+
+The goal is to synchronize all threads while ensuring that calls to interface functions do not overwrite external interface values. The call to `YIELD` forces all running threads at the current clock cycle to allow other threads to capture their values. Hence, even if a thread calls another thread's external interface function in that cycle, the receiver thread maintains the local value at the beginning of the clock cycle.
+
 ### `2-tlm`: The transaction-level model
 
 ### `3-bfm`: The bus functional model

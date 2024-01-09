@@ -47,16 +47,19 @@
 // ==================================
 
 // clock period definitions
-#define CC_CORE_NS 4.0    // 250 MHz => 4ns
-#define CC_MAIN_NS 15.625 // 64 MHz => 15.625ns
+#define CC_CORE_NS 4.0    // compute core clock 250 MHz => 4ns
+#define CC_MAIN_NS 15.625 // AXI bus clock 64 MHz => 15.625ns
+#define CC_PROC_NS 10.0   // process host clock 100 MHz => 10ns
 
 // clock cycle calculations
 #define CC_CORE(n) (n * CC_CORE_NS)
 #define CC_MAIN(n) (n * CC_MAIN_NS)
+#define CC_PROC(n) (n * CC_PROC_NS)
 
 // wait for the next rising edge
 #define POS_CORE() wait(CC_CORE_NS, SC_NS)
 #define POS_MAIN() wait(CC_MAIN_NS, SC_NS)
+#define POS_PROC() wait(CC_PROC_NS, SC_NS)
 // yield so all modules can capture the rising edge signals
 #define YIELD() wait(0, SC_NS)
 

@@ -36,8 +36,9 @@ class mat_mult_cmd : public sc_module, public cmd_host_if {
          * @param memory        Pointer to memory for the command host.
          * @param kernel_size   Size of the kernel.
          * @param extra_padding Whether to send the input matrix with extra rows of padding.
+         * @param do_wait       Wait simulation time before checking interrupt flag.
          */
-        mat_mult_cmd(sc_module_name name, uint8_t *memory, int kernel_size, bool extra_padding = false);
+        mat_mult_cmd(sc_module_name name, uint8_t *memory, int kernel_size, bool extra_padding = false, bool do_wait = false);
 
         /** Execute the command sequence. */
         void do_mat_mult();
@@ -49,6 +50,7 @@ class mat_mult_cmd : public sc_module, public cmd_host_if {
 
         /** Runtime configuration parameters. */
         bool _extra_padding;
+        bool _do_wait;
         uint8_t *_memory;
         int _kernel_size;
 
