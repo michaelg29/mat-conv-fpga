@@ -33,9 +33,21 @@ void core::calculate_row_result(uint32_t carry, uint8_t *kern_row, uint8_t *grou
     _enable = true;
 }
 
-uint32_t core::get_row_result() {
+bool core::get_row_result(uint32_t &res) {
     // output 18 bits
-    return _result & 0x3ffff;
+    res = _result & 0x3ffff;
+    return _res_valid;
+}
+
+void core::reset() {
+    if (_kern_dim) {
+        memset(_kern_row, 0, _kern_dim);
+        memset(_group, 0, _kern_dim);
+    }
+    
+    _enable = false;
+    _res_valid = false;
+    _result = 0;
 }
 
 void core::main() {
@@ -51,15 +63,20 @@ void core::main() {
         memcpy(group, _group, _kern_dim);
         YIELD();
 
-        // compute and modify
+        // compute and update
         if (enable) {
             for (int i = 0; i < _kern_dim; ++i) {
                 _result += (uint32_t)kern_row[i] * (uint32_t)group[i];
             }
+            _res_valid = true;
             _enable = false;
-            LOGF("[%s]: computed new result %08x", this->name(), _result);
+            //LOGF("[%s]: computed new result %08x", this->name(), _result);
+        }
+        else {
+            _res_valid = false;
         }
 
-        POS_CORE(); // next posedge
+        // next posedge
+        POS_CORE();
     }
 }

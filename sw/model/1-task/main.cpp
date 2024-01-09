@@ -1,8 +1,8 @@
 
 #include "system.h"
 #include "core.h"
-// #include "cluster.h"
-// #include "mat_mult_golden_alg.h"
+#include "cluster.h"
+#include "mat_mult_task.h"
 #include "mat_mult_if.h"
 #include "mat_mult_cmd.h"
 #include "sc_trace.hpp"
@@ -54,92 +54,83 @@ int sc_main(int argc, char* argv[]) {
     // =====================================
 
     // memory interface (top-level interface with the CPU)
-    // simple_memory_mod<uint64_t> *mem = new simple_memory_mod<uint64_t>("mem", memory, MEM_SIZE);
+    simple_memory_mod<uint64_t> *mem = new simple_memory_mod<uint64_t>("mem", memory, MEM_SIZE);
 
     // matrix multiplier (top-level)
-    // mat_mult_ga *matrix_multiplier = new mat_mult_ga("matrix_multiplier",
-                                                    // n_clusters,
-                                                    // n_cores_per_cluster,
-                                                    // kernel_dim,
-                                                    // payload_packet_size,
-                                                    // n_groups_per_cluster);
-    // matrix_multiplier->mem_if(*mem);
+    mat_mult_task *matrix_multiplier = new mat_mult_task("matrix_multiplier",
+                                                    n_clusters,
+                                                    n_cores_per_cluster,
+                                                    kernel_dim,
+                                                    payload_packet_size,
+                                                    n_groups_per_cluster);
+    matrix_multiplier->mem_if(*mem);
 
     // initialize clusters and cores
-    // cluster *clusters[n_clusters];
+    cluster *clusters[n_clusters];
     core *cores[n_clusters * n_cores_per_cluster];
-    // cluster_memory *cluster_mems[n_clusters * (n_cores_per_cluster - 1)];
+    cluster_memory *cluster_mems[n_clusters * (n_cores_per_cluster - 1)];
 
     // dummy components
-    // cluster *dummy_cluster = new cluster("dummy_cluster", 0, 0, 0, 0, 0);
-    // core *dummy_core = new core("dummy_core", 0);
-    // for (int i = 0; i < MAX_N_CORES_PER_CLUSTER; i++) {
-        // dummy_cluster->core_ifs[i](*dummy_core);
-    // }
-    // cluster_memory *dummy_cluster_mem = new cluster_memory("dummy_cluster_mem", 0);
-    // for (int i = 0; i < MAX_N_CORES_PER_CLUSTER-1; i++) {
-        // dummy_cluster->subres_mem_ifs[i](*dummy_cluster_mem);
-    // }
+    cluster *dummy_cluster = new cluster("dummy_cluster", 0, 0, 0, 0, 0);
+    core *dummy_core = new core("dummy_core", 0);
+    for (int i = 0; i < MAX_N_CORES_PER_CLUSTER; i++) {
+        dummy_cluster->core_ifs[i](*dummy_core);
+    }
+    cluster_memory *dummy_cluster_mem = new cluster_memory("dummy_cluster_mem", 0);
+    for (int i = 0; i < MAX_N_CORES_PER_CLUSTER-1; i++) {
+        dummy_cluster->subres_mem_ifs[i](*dummy_cluster_mem);
+    }
 
     // initialize each cluster
-    int i = 0;
+    int i, j;
     for (i = 0; i < n_clusters; i++) {
         // initialize each cluster
-        // clusters[i] = new cluster(("cluster" + std::to_string(i)).c_str(),
-                                    // i*n_groups_per_cluster, // start group offset
-                                    // n_groups_per_cluster,   // number of groups to process
-                                    // n_cores_per_cluster,    // number of cores
-                                    // kernel_dim,             // dimension of the kernel
-                                    // payload_packet_size     // number of bytes in each packet
-                                    // );
+        clusters[i] = new cluster(("cluster" + std::to_string(i)).c_str(),
+                                    i*n_groups_per_cluster, // start group offset
+                                    n_groups_per_cluster,   // number of groups to process
+                                    n_cores_per_cluster,    // number of cores
+                                    kernel_dim,             // dimension of the kernel
+                                    payload_packet_size     // number of bytes in each packet
+                                    );
 
         // initialize each core for each cluster
-        int j = 0;
-        for (; j < n_cores_per_cluster; j++) {
+        for (j = 0; j < n_cores_per_cluster; j++) {
             cores[j + i * n_cores_per_cluster] = new core(("cluster" + std::to_string(i) + "core" + std::to_string(j)).c_str(), kernel_dim);
-            // clusters[i]->core_ifs[j](*cores[j + i * n_cores_per_cluster]);
+            clusters[i]->core_ifs[j](*cores[j + i * n_cores_per_cluster]);
         }
         // garbage cores
-        // for (; j < MAX_N_CORES_PER_CLUSTER; j++) {
-            // clusters[i]->core_ifs[j](*dummy_core);
-        // }
+        for (; j < MAX_N_CORES_PER_CLUSTER; j++) {
+            clusters[i]->core_ifs[j](*dummy_core);
+        }
 
         // initialize each memory for each cluster
-        // for (j = 0; j < kernel_dim-1; j++) {
-            // cluster_mems[j + i * (kernel_dim - 1)] = new cluster_memory(("cluster" + std::to_string(i) + "mem" + std::to_string(j)).c_str(), false);
-            // clusters[i]->subres_mem_ifs[j](*cluster_mems[j + i * (kernel_dim - 1)]);
-        // }
+        for (j = 0; j < kernel_dim-1; j++) {
+            cluster_mems[j + i * (kernel_dim - 1)] = new cluster_memory(("cluster" + std::to_string(i) + "mem" + std::to_string(j)).c_str(), false);
+            clusters[i]->subres_mem_ifs[j](*cluster_mems[j + i * (kernel_dim - 1)]);
+        }
         // garbage memories
-        // for (; j < MAX_KERN_DIM-1; j++) {
-            // clusters[i]->subres_mem_ifs[j](*dummy_cluster_mem);
-        // }
+        for (; j < MAX_KERN_DIM-1; j++) {
+            clusters[i]->subres_mem_ifs[j](*dummy_cluster_mem);
+        }
 
         // connect each cluster to the matrix multiplier (top-level)
-        // matrix_multiplier->cluster_ifs[i](*clusters[i]);
+        matrix_multiplier->cluster_ifs[i](*clusters[i]);
     }
     // garbage clusters
-    // for (; i < MAX_N_CLUSTERS; i++) {
-        // matrix_multiplier->cluster_ifs[i](*dummy_cluster);
-    // }
+    for (; i < MAX_N_CLUSTERS; i++) {
+        matrix_multiplier->cluster_ifs[i](*dummy_cluster);
+    }
 
     // command issuer (CPU)
-    // mat_mult_cmd *cpu = new mat_mult_cmd("cpu", memory, kernel_dim, true);
-    // cpu->mm_if(*matrix_multiplier);
-    // matrix_multiplier->cmd_if(*cpu);
-    
-    uint8_t vals[5] = {0x1, 0x2, 0x3, 0x4, 0x5};
+    mat_mult_cmd *cpu = new mat_mult_cmd("cpu", memory, kernel_dim, true, true);
+    cpu->mm_if(*matrix_multiplier);
+    matrix_multiplier->cmd_if(*cpu);
 
     // =============================
     // ==== RUN THE SIMULATION =====
     // =============================
     sc_time startTime = sc_time_stamp();
-    sc_start(CC_CORE(4), SC_NS);
-    cores[0]->calculate_row_result(0, vals, vals);
-    sc_start(CC_CORE(1), SC_NS);
-    sc_start(CC_CORE(1), SC_NS);
-    uint32_t res = cores[0]->get_row_result();
-    LOGF("Captured result %08x", res);
-    sc_start(CC_CORE(4), SC_NS);
+    sc_start();
     sc_time stopTime = sc_time_stamp();
 
     cout << "Simulated for " << (stopTime - startTime) << endl;

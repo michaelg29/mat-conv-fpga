@@ -17,7 +17,10 @@ class core_if : virtual public sc_interface {
         virtual void calculate_row_result(uint32_t carry, uint8_t *kern_row, uint8_t *group) = 0;
 
         /** Return the result of the previous computation. */
-        virtual uint32_t get_row_result() = 0;
+        virtual bool get_row_result(uint32_t &res) = 0;
+
+        /** Reset the core. */
+        virtual void reset() = 0;
 
 };
 
@@ -36,15 +39,21 @@ class core : public sc_module, public core_if {
         void calculate_row_result(uint32_t carry, uint8_t *kern_row, uint8_t *group);
 
         /** Return the result of the previous computation. */
-        uint32_t get_row_result();
+        bool get_row_result(uint32_t &res);
+
+        /** Reset the core. */
+        void reset();
 
     private:
 
         /** Configuration. */
         uint8_t _kern_dim;
 
-        /** Buffers. */
+        /** Status signals. */
         bool _enable;
+        bool _res_valid;
+
+        /** Buffers. */
         uint8_t *_kern_row;
         uint8_t *_group;
         uint32_t _result;
