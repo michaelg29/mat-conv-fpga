@@ -23,9 +23,10 @@ class cluster_memory : public sc_module, public cluster_memory_if_t {
         bool do_read(uint32_t addr, uint32_t& data);
 
         bool do_write(uint32_t addr, uint32_t data);
-        
+
         /** Current cursor. */
-        uint32_t _cursor;
+        uint32_t _r_cursor;
+        uint32_t _w_cursor;
 
     private:
 
@@ -35,7 +36,7 @@ class cluster_memory : public sc_module, public cluster_memory_if_t {
         /** Memory array. */
         uint32_t *_mem;
 
-        
+
 
 };
 
@@ -81,22 +82,28 @@ class cluster : public sc_module, public cluster_if {
 
         // internal kernel storage as registers
         uint8_t _kernel_mem[KERN_SIZE_ROUNDED];
+        uint8_t _kernel_cursor;
         uint8_t _kern_dim;
 
         // per-image configuration
-        bool     _enabled;
-        uint32_t _command_type;
+        // bool     _enabled;
+        // uint32_t _command_type;
+        sc_signal<sc_logic> _enabled;
+        sc_signal<uint32_t> _command_type;
 
         /** Status signals. */
-        bool _res_valid;
-        bool _new_packet;
+        // bool _res_valid;
+        // bool _new_packet;
+        sc_signal<sc_logic> _res_valid;
+        sc_signal<sc_logic> _new_packet;
 
         /** Buffers. */
-        uint64_t _packet;
+        // uint64_t _packet;
+        sc_signal<uint64_t> _packet;
         uint8_t *_out;
 
         /** FSM. */
-        uint64_t *_packet_dst; // where to route packet data
+        // uint64_t *_packet_dst; // where to route packet data
 
         /** Main thread function. */
         void main();
