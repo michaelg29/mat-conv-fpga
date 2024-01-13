@@ -65,6 +65,9 @@ class cluster : public sc_module, public cluster_if {
         /** Receive data to process (kernel values or input image data). */
         void receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr);
 
+        /** Clear write signal. */
+        void clear_packet();
+
         /** Return the complete results for each group assigned to the cluster. */
         bool get_results(uint8_t *res);
 

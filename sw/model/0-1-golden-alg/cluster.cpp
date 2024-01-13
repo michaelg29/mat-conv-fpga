@@ -139,6 +139,8 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
     }
 }
 
+void cluster::clear_packet() {}
+
 bool cluster::get_results(uint8_t *res) {
     return false;
 }

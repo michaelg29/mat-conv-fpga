@@ -62,6 +62,7 @@ class cluster : public sc_module, public cluster_if {
         void receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr);
 
         /** Not used in this implementation. */
+        void clear_packet();
         bool get_results(uint8_t *res);
 
         /** Reset the cluster. */
