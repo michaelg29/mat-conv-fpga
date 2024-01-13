@@ -23,6 +23,9 @@ class cluster_memory : public sc_module, public cluster_memory_if_t {
         bool do_read(uint32_t addr, uint32_t& data);
 
         bool do_write(uint32_t addr, uint32_t data);
+        
+        /** Current cursor. */
+        uint32_t _cursor;
 
     private:
 
@@ -32,8 +35,7 @@ class cluster_memory : public sc_module, public cluster_memory_if_t {
         /** Memory array. */
         uint32_t *_mem;
 
-        /** Current cursor. */
-        uint32_t _cursor;
+        
 
 };
 
@@ -48,7 +50,7 @@ class cluster : public sc_module, public cluster_if {
         sc_port<core_if> core_ifs[MAX_N_CORES_PER_CLUSTER];
 
         // internal memory interface
-        sc_port<cluster_memory_if_t> subres_mem_ifs[MAX_KERN_DIM-1];
+        sc_port<cluster_memory> subres_mem_ifs[MAX_KERN_DIM-1];
 
         /** Constructor. */
         SC_HAS_PROCESS(cluster);

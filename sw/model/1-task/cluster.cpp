@@ -86,15 +86,24 @@ void cluster::disable() {
   */
 void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
     // address check
-    if ((addr & ADDR_MASK) >= OFFSET_PAYLOAD) {
+    if ((addr & ADDR_MASK) >= OFFSET_PAYLOAD && _enabled) {
         // log request
         _new_packet = true;
         _packet = packet;
+
+        *_packet_dst = packet;
+        LOGF("[%s] Recv %016lx %016lx", this->name(), addr, packet);
     }
 }
 
 bool cluster::get_results(uint8_t *res) {
     memcpy(res, _out, _n_groups);
+    if (_res_valid) {
+        LOGF("[%s] Returning group %d: %02x to %016lx", this->name(), _start_group, _out[0], (uint64_t)(void*)res);
+    }
+    else {
+        LOGF("[%s] no results", this->name());
+    }
     return _res_valid;
 }
 
@@ -117,6 +126,7 @@ void cluster::main() {
     uint32_t command_type;
     uint64_t packet;
     uint64_t *packet_dst;
+    uint8_t dispatch_data[MAX_CLUSTER_INPUT_SIZE];
 
     // local variables
     int group_i;
@@ -144,14 +154,16 @@ void cluster::main() {
                 for (row_i = _kern_dim-1; row_i >= 0; --row_i){
                     // output result from previous computation
                     if (core_ifs[core_i]->get_row_result(subres)) {
-                        LOGF("[%s] core %d (row %d) produced subres %08x", this->name(), core_i, row_i, subres);
+                        //LOGF("[%s] core %d (row %d) produced subres %08x", this->name(), core_i, row_i, subres);
                         if (row_i == (_kern_dim - 1)) {
                             // output total result
                             _out[group_i] = (uint8_t)subres; // implicit mask with 0xff
                             _res_valid = true;
+                            LOGF("[%score%d] (row %d) result %08x", this->name(), core_i, row_i, subres);
                         }
                         else {
                             // write subresult to internal memory
+                            LOGF("[%score%d] (row %d) stored subresult (%d/%d) %08x", this->name(), core_i, row_i, subres_mem_ifs[row_i]->_cursor, INTERNAL_MEMORY_SIZE_PER_GROUP, subres);
                             subres_mem_ifs[row_i]->write(0, subres);
                         }
                     }
@@ -163,14 +175,14 @@ void cluster::main() {
 
             // route input data
             if (new_packet) {
-                *packet_dst = packet;
+                // *packet_dst = packet;
+                memcpy(dispatch_data, _dispatch_data, MAX_CLUSTER_INPUT_SIZE);
 
                 if (command_type == MM_CMD_KERN) {
                     // increment kernel cursor
                     _packet_dst = packet_dst + 1;
                 }
                 else if (command_type == MM_CMD_SUBJ) {
-                    // iterate through data groups
                     for (group_i = 0; group_i < _n_groups; group_i++) {
                         // iterate through kernel rows (start with last to not overwrite subresults)
                         core_i = 0;
@@ -178,10 +190,15 @@ void cluster::main() {
                             // load previous sub result to accumulate (only after first row)
                             if(row_i != 0) {
                                 subres_mem_ifs[row_i-1]->read(0, subres);
+                                LOGF("[%score%d] (row %d) loaded subresult (%d/%d) %08x", this->name(), core_i, row_i, subres_mem_ifs[row_i-1]->_cursor, INTERNAL_MEMORY_SIZE_PER_GROUP, subres);
+                            }
+                            else {
+                                subres = 0;
+                                LOGF("[%score%d] (row %d) loaded subresult (%d) %08x", this->name(), core_i, row_i, 0, subres);
                             }
 
                             // send current kernel row and data group to core to calculate
-                            core_ifs[core_i]->calculate_row_result(subres, _kernel_mem + (row_i * _kern_dim), _dispatch_data + _start_group + group_i);
+                            core_ifs[core_i]->calculate_row_result(subres, _kernel_mem + (row_i * _kern_dim), dispatch_data + _start_group + group_i);
 
                             // move to next core
                             core_i = (core_i + 1) % _n_cores;
@@ -189,7 +206,11 @@ void cluster::main() {
                     }
 
                     // buffer current (kernel_dim - 1) last pixels
-                    memcpy(_dispatch_data, _dispatch_data + _packet_size, (_kern_dim - 1));
+                    LOGF("[%s] data: %02x %02x %02x %02x %02x", this->name(),
+                        _dispatch_data[_start_group+0], _dispatch_data[_start_group+1], _dispatch_data[_start_group+2], _dispatch_data[_start_group+3], _dispatch_data[_start_group+4]);
+                    memcpy(_dispatch_data, dispatch_data + _packet_size, (_kern_dim - 1));
+                    LOGF("[%s] shifted data: %02x %02x %02x %02x %02x", this->name(),
+                        _dispatch_data[_start_group+0], _dispatch_data[_start_group+1], _dispatch_data[_start_group+2], _dispatch_data[_start_group+3], _dispatch_data[_start_group+4]);
                 }
 
                 _new_packet = false;

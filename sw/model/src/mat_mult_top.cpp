@@ -36,7 +36,7 @@ void mat_mult_top::calculate_next_state() {
 
         // advance state
         _next_state = WAIT_CMD_SIZE;
-        std::cout << "WAIT_CMD_SKEY " << _cur_ack.status << std::endl;
+        LOGF("WAIT_CMD_SKEY: received %08x, %08x, new status %d", _cur_cmd.s_key, _cur_cmd.command, _cur_ack.status);
         break;
     }
     case WAIT_CMD_SIZE:
@@ -61,7 +61,7 @@ void mat_mult_top::calculate_next_state() {
 
         // advance state
         _next_state = WAIT_CMD_TID;
-        std::cout << "WAIT_CMD_SIZE " << _cur_ack.status << std::endl;
+        LOGF("WAIT_CMD_SIZE: received %08x, %08x, new status %d", _cur_cmd.size, _cur_cmd.tx_addr, _cur_ack.status);
         break;
     }
     case WAIT_CMD_TID:
@@ -71,7 +71,7 @@ void mat_mult_top::calculate_next_state() {
 
         // advance state
         _next_state = WAIT_CMD_EKEY;
-        std::cout << "WAIT_CMD_TID " << _cur_ack.status << std::endl;
+        LOGF("WAIT_CMD_TID: received %08x, %08x, new status %d", _cur_cmd.trans_id, _cur_cmd.reserved, _cur_ack.status);
         break;
     }
     case WAIT_CMD_EKEY:
@@ -97,8 +97,7 @@ void mat_mult_top::calculate_next_state() {
             }
         }
 
-        std::cout << "WAIT_CMD_EKEY " << _cur_ack.status << std::endl;
-
+        LOGF("WAIT_CMD_EKEY: received %08x, %08x, new status %d", _cur_cmd.e_key, _cur_cmd.chksum, _cur_ack.status);
         break;
     }
     case WAIT_DATA:

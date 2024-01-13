@@ -21,15 +21,28 @@ bool mat_mult_task::receive_packet(uint64_t addr, uint64_t packet) {
     _addr = addr;
     _packet = packet;
 
-    //LOGF("Recv %016lx %016lx", addr, packet);
-
     // dispatch values to clusters
     for (int i = 0; i < _n_clusters; i++) {
         //cluster_ifs[i]->receive_packet(addr, packet, _results + (PACKET_BYTES - _hf_kern_dim) + (i * _n_groups_per_cluster));
         cluster_ifs[i]->receive_packet(addr, packet, nullptr);
     }
+    _loaded_el += PACKET_BYTES;
 
     POS_CORE();
+
+    if (_regs.cmd_type_reg.is_subj && _cur_state == WAIT_DATA) {
+        if (_loaded_el && ((_loaded_el % (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd)) == 0)) {
+            _new_packet = true;
+            _addr = addr;
+            _packet = 0;
+
+            for (int i = 0; i < _n_clusters; i++) {
+                cluster_ifs[i]->receive_packet(addr, 0, nullptr);
+            }
+
+            POS_CORE();
+        }
+    }
 
     return true;
 }
@@ -44,7 +57,6 @@ void mat_mult_task::protected_reset() {
     _cur_ptr = (uint64_t*)&_cur_cmd.s_key;
     _loaded_el = 0;
     _expected_el = 0;
-    _written_el = 0;
 
     // reset registers
     _regs.status_reg.ready = true;
@@ -58,13 +70,11 @@ void mat_mult_task::write_results_buffer() {
     // get data from buffer
     _out_data = *(uint64_t*)_results;
 
-    //LOGF("%016lx, %016lx", _out_addr, _out_data);
-
     // write data with mask
-    if (_out_col >= PACKET_BYTES && _out_row >= 0) {
+    if (_out_col >= 0 && _out_row >= 0) {
+        LOGF("[%s] Writing %016lx to %016lx, ", this->name(), _out_data, _out_addr);
         mem_if->write(_out_addr, _out_data);
         _out_addr += PACKET_BYTES;
-        _written_el += PACKET_BYTES;
     }
 
     // shift
@@ -96,8 +106,8 @@ void mat_mult_task::main() {
             // address check
             if ((addr & ADDR_MASK) >= (OFFSET_PAYLOAD)) {
                 // increment counters
+                //_loaded_el += PACKET_BYTES;
                 _regs.status_reg.ready = false;
-                _loaded_el += PACKET_BYTES;
             }
             else {
                 // write data in packet to destination
@@ -108,33 +118,6 @@ void mat_mult_task::main() {
                     _expected_el = (uint16_t)(GET_CMD_SIZE_ROWS(_cur_cmd)) * (uint16_t)(GET_CMD_SIZE_COLS(_cur_cmd));
                 }
             }
-
-            // determine next state
-            calculate_next_state();
-
-            // advance pointer
-            _cur_ptr += 1;
-            if (_next_state == WAIT_CMD_SKEY) {
-                // reset for new command
-                _cur_ptr = (uint64_t*)&_cur_cmd.s_key;
-            }
-
-            // activate clusters if necessary
-            if (_cur_state != WAIT_DATA && _next_state == WAIT_DATA) {
-                LOG("ACTIVATE CLUSTERS");
-                for (int i = 0; i < _n_clusters; ++i) {
-                    cluster_ifs[i]->activate(GET_CMD_TYPE(_cur_cmd), GET_CMD_SIZE_ROWS(_cur_cmd), GET_CMD_SIZE_COLS(_cur_cmd));
-                }
-                _loaded_el = 0;
-                _out_row = -_hf_kern_dim;
-                _out_col = 0;
-                _out_addr = (uint64_t)GET_CMD_OUT_ADDR(_cur_cmd);
-            }
-
-            // advance to next state
-            advance_state();
-
-            _new_packet = false;
         }
 
         // ======================
@@ -146,7 +129,6 @@ void mat_mult_task::main() {
                     LOGF("Received all payload %d/%d", _loaded_el, _expected_el);
                     _loaded_el = 0;
                     _expected_el = 0;
-                    _written_el = 0;
                     _regs.status_reg.ready = true;
                     for (i = 0; i < _n_clusters; ++i) {
                         cluster_ifs[i]->disable();
@@ -157,38 +139,30 @@ void mat_mult_task::main() {
                 }
             }
             else if (_regs.cmd_type_reg.is_subj) {
-                res_valid = true;
+                res_valid = false;
                 out_ptr = _results + (PACKET_BYTES - _hf_kern_dim);
                 for (i = 0; i < _n_clusters; ++i, out_ptr += _n_groups_per_cluster) {
                     if (cluster_ifs[i]->get_results(out_ptr)) {
-                        break;
-                    }
-                    else {
-                        res_valid = false;
+                        //LOGF("[%s] Cluster %d cannot write.", this->name(), i);
+                        res_valid = true;
                     }
                 }
 
                 if (res_valid) {
                     write_results_buffer();
+                    LOGF("Written (%d/%d, %d)", _out_row, (int32_t)GET_CMD_SIZE_ROWS(_cur_cmd), _out_col);
 
                     _out_col += PACKET_BYTES;
-                    if (_out_col == (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd)) {
-                        // if last column, write last complete packet
-                        for (i = 0; i < _n_clusters; i++) {
-                            cluster_ifs[i]->receive_packet(addr, 0, nullptr);
-                        }
-                        write_results_buffer();
-
+                    if (_out_col > (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd) - _hf_kern_dim) {
                         // new row
                         _out_row++;
-                        _out_col = 0;
+                        _out_col = -(int32_t)PACKET_BYTES;
                     }
 
-                    if (_written_el >= _expected_el) {
-                        LOGF("Received and wrote all payload %d,%d/%d", _loaded_el, _written_el, _expected_el);
+                    if (_out_row >= (int32_t)GET_CMD_SIZE_ROWS(_cur_cmd) - _hf_kern_dim) {
+                        LOGF("Received and wrote all payload %d/%d", _loaded_el, _expected_el);
                         _loaded_el = 0;
                         _expected_el = 0;
-                        _written_el = 0;
                         _regs.status_reg.ready = true;
                         for (i = 0; i < _n_clusters; ++i) {
                             cluster_ifs[i]->disable();
@@ -198,6 +172,8 @@ void mat_mult_task::main() {
                         write_ack();
                     }
                 }
+                
+                //LOGF("[%s]: writing to %016lx", this->name(), _out_addr);
                 /*// store output pixels
                 if (_cur_state == WAIT_DATA) {
                     write_results_buffer();
@@ -233,6 +209,35 @@ void mat_mult_task::main() {
                 }*/
             }
         }
+
+        // determine next state
+        if (new_packet || res_valid) {
+            calculate_next_state();
+        }
+
+        // advance pointer
+        _cur_ptr += 1;
+        if (_next_state == WAIT_CMD_SKEY) {
+            // reset for new command
+            _cur_ptr = (uint64_t*)&_cur_cmd.s_key;
+        }
+
+        // activate clusters if necessary
+        if (_cur_state != WAIT_DATA && _next_state == WAIT_DATA) {
+            LOG("ACTIVATE CLUSTERS");
+            for (int i = 0; i < _n_clusters; ++i) {
+                cluster_ifs[i]->activate(GET_CMD_TYPE(_cur_cmd), GET_CMD_SIZE_ROWS(_cur_cmd), GET_CMD_SIZE_COLS(_cur_cmd));
+            }
+            _loaded_el = 0;
+            _out_row = -_hf_kern_dim;
+            _out_col = -(int32_t)PACKET_BYTES;
+            _out_addr = (uint64_t)GET_CMD_OUT_ADDR(_cur_cmd);
+        }
+
+        _new_packet = false;
+
+        // advance to next state
+        advance_state();
 
         // next posedge
         POS_CORE();

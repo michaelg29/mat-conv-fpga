@@ -49,7 +49,6 @@ class mat_mult_task : public mat_mult_top {
         uint64_t *_cur_ptr;
         uint32_t _expected_el;
         uint32_t _loaded_el;
-        uint32_t _written_el;
 
         // counters
         uint64_t _out_addr;
