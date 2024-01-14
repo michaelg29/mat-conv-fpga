@@ -104,7 +104,6 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
         // *_packet_dst = packet;
 
         if (_command_type == MM_CMD_KERN) {
-            LOGF("New kernel elements for cursor %d", _kernel_cursor);
             *((uint64_t*)(_kernel_mem + _kernel_cursor)) = packet;
             _kernel_cursor += PACKET_BYTES;
         }
@@ -115,7 +114,7 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
         _new_packet.write(SC_LOGIC_1);
         _packet.write(packet);
 
-        LOGF("[%s] Recv %016lx %016lx", this->name(), addr, packet);
+        // LOGF("[%s] Recv %016lx %016lx", this->name(), addr, packet);
     }
 }
 
@@ -126,10 +125,10 @@ void cluster::clear_packet() {
 bool cluster::get_results(uint8_t *res) {
     memcpy(res, _out, _n_groups);
     if (_res_valid.read().to_bool()) {
-        LOGF("[%s] Returning group %d: %02x to %016lx", this->name(), _start_group, _out[0], (uint64_t)(void*)res);
+        // LOGF("[%s] Returning group %d: %02x to %016lx", this->name(), _start_group, _out[0], (uint64_t)(void*)res);
     }
     else {
-        LOGF("[%s] no results", this->name());
+        // LOGF("[%s] no results", this->name());
     }
     return _res_valid.read().to_bool();
 }
@@ -192,16 +191,16 @@ void cluster::main() {
                             _out[group_i] = (uint8_t)subres; // implicit mask with 0xff
                             // _res_valid = true;
                             _res_valid.write(SC_LOGIC_1);
-                            LOGF("[%score%d] (row %d) result %08x", this->name(), core_i, row_i, subres);
+                            // LOGF("[%score%d] (row %d) result %08x", this->name(), core_i, row_i, subres);
                         }
                         else {
                             // write subresult to internal memory
-                            LOGF("[%score%d] (row %d) stored subresult (%d/%d) %08x", this->name(), core_i, row_i, subres_mem_ifs[row_i]->_w_cursor+1, INTERNAL_MEMORY_SIZE_PER_GROUP, subres);
+                            // LOGF("[%score%d] (row %d) stored subresult (%d/%d) %08x", this->name(), core_i, row_i, subres_mem_ifs[row_i]->_w_cursor+1, INTERNAL_MEMORY_SIZE_PER_GROUP, subres);
                             subres_mem_ifs[row_i]->write(0, subres);
                         }
                     }
                     else {
-                        LOGF("[%score%d] no subresult", this->name(), core_i);
+                        // LOGF("[%score%d] no subresult", this->name(), core_i);
                     }
 
                     // move to next core
@@ -228,11 +227,11 @@ void cluster::main() {
                             // load previous sub result to accumulate (only after first row)
                             if(row_i != 0) {
                                 subres_mem_ifs[row_i-1]->read(0, subres);
-                                LOGF("[%score%d] (row %d) loaded subresult (%d/%d) %08x", this->name(), core_i, row_i, subres_mem_ifs[row_i-1]->_r_cursor+1, INTERNAL_MEMORY_SIZE_PER_GROUP, subres);
+                                // LOGF("[%score%d] (row %d) loaded subresult (%d/%d) %08x", this->name(), core_i, row_i, subres_mem_ifs[row_i-1]->_r_cursor+1, INTERNAL_MEMORY_SIZE_PER_GROUP, subres);
                             }
                             else {
                                 subres = 0;
-                                LOGF("[%score%d] (row %d) loaded subresult %08x", this->name(), core_i, row_i, subres);
+                                // LOGF("[%score%d] (row %d) loaded subresult %08x", this->name(), core_i, row_i, subres);
                             }
 
                             // send current kernel row and data group to core to calculate
@@ -246,11 +245,11 @@ void cluster::main() {
                 }
 
                 // buffer current (kernel_dim - 1) last pixels
-                LOGF("[%s] data: %02x %02x %02x %02x %02x", this->name(),
-                    _dispatch_data[_start_group+0], _dispatch_data[_start_group+1], _dispatch_data[_start_group+2], _dispatch_data[_start_group+3], _dispatch_data[_start_group+4]);
+                // LOGF("[%s] data: %02x %02x %02x %02x %02x", this->name(),
+                    // _dispatch_data[_start_group+0], _dispatch_data[_start_group+1], _dispatch_data[_start_group+2], _dispatch_data[_start_group+3], _dispatch_data[_start_group+4]);
                 memcpy(_dispatch_data, dispatch_data + _packet_size, (_kern_dim - 1));
-                LOGF("[%s] shifted data: %02x %02x %02x %02x %02x", this->name(),
-                    _dispatch_data[_start_group+0], _dispatch_data[_start_group+1], _dispatch_data[_start_group+2], _dispatch_data[_start_group+3], _dispatch_data[_start_group+4]);
+                // LOGF("[%s] shifted data: %02x %02x %02x %02x %02x", this->name(),
+                    // _dispatch_data[_start_group+0], _dispatch_data[_start_group+1], _dispatch_data[_start_group+2], _dispatch_data[_start_group+3], _dispatch_data[_start_group+4]);
 
                 // _new_packet = false;
             }

@@ -83,11 +83,11 @@ void core::main() {
             for (int i = 0; i < _kern_dim; ++i) {
                 result += (uint32_t)kern_row[i] * (uint32_t)group[i];
             }
-            LOGF("[%s]: computed new result %08x = %08x + (%02x %02x %02x %02x %02x).(%02x %02x %02x %02x %02x)",
-                this->name(), result, carry,
-                kern_row[0], kern_row[1], kern_row[2], kern_row[3], kern_row[4],
-                group[0], group[1], group[2], group[3], group[4]
-                );
+            // LOGF("[%s]: computed new result %08x = %08x + (%02x %02x %02x %02x %02x).(%02x %02x %02x %02x %02x)",
+                // this->name(), result, carry,
+                // kern_row[0], kern_row[1], kern_row[2], kern_row[3], kern_row[4],
+                // group[0], group[1], group[2], group[3], group[4]
+                // );
             // _res_valid = true;
             // _enable = false;
             // _result = result;

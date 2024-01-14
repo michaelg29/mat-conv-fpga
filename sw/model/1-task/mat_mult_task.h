@@ -8,6 +8,10 @@
 #ifndef MAT_MULT_TASK_H
 #define MAT_MULT_TASK_H
 
+#define IN_FIFO_BUF_N_BITS 4
+#define IN_FIFO_BUF_SIZE (1 << IN_FIFO_BUF_N_BITS)
+#define IN_FIFO_PTR_MASK (IN_FIFO_BUF_SIZE - 1)
+
 /**
  * @brief Task-level implementation of matrix convolution using the designed algorithm.
  */
@@ -52,25 +56,37 @@ class mat_mult_task : public mat_mult_top {
 
         // counters
         uint64_t _out_addr;
-        int32_t _out_row;
-        int32_t _out_col;
+        // int32_t _out_row;
+        // int32_t _out_col;
+        uint32_t _out_row;
+        uint32_t _out_col;
 
         // output data
         uint64_t _out_data;
-        
+
         // buffers
-        bool _new_packet;
-        uint64_t _addr;
-        uint64_t _packet;
+        // bool _new_packet;
+        // uint64_t _addr;
+        // uint64_t _packet;
+        sc_signal<sc_logic> _new_packet;
+        sc_signal<uint64_t> _addr;
+        sc_signal<uint64_t> _packet;
+
+        // input packet FIFO buffers
+        int32_t _in_fifo_head;
+        int32_t _in_fifo_tail;
+        uint64_t _in_fifo_packet[IN_FIFO_BUF_SIZE];
+        uint64_t _in_fifo_addr[IN_FIFO_BUF_SIZE];
 
         // internal clusters
         uint32_t _n_clusters = 0;
         uint8_t _results[PACKET_BYTES * 2]; // store the output pixels from the current batch (has a size of _packet_size)
 
         bool receive_packet(uint64_t addr, uint64_t packet);
+        void dispatch_packet(uint64_t addr, uint64_t packet);
         void protected_reset();
         void write_results_buffer();
-        
+
         /** Main thread function. */
         void main();
 
