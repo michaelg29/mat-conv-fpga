@@ -72,14 +72,16 @@ The goal is to synchronize all threads while ensuring that calls to interface fu
 
 ## Running instructions
 
-`make run [MEM_FILE=<MEM_FILE>] [KERNEL_SIZE=<KERNEL_SIZE>] [DO_RANDOM=<0|1>]`
+`make run [KERNEL_SIZE=<KERNEL_SIZE>] [DO_RANDOM=<0|1>]`
 
-The program loads in a matrix of size 1920x1080, starting at `0`, and a kernel of size `KERNEL_SIZE`x`KERNEL_SIZE`, starting at `1920x1080`, both from `MEMORY_FILE`. It then convolves the two, and writes the output to `MEMORY_FILE`. To randomize the memory file (needed on the initial run), specify `DO_RANDOM=1`.
+The program loads in a matrix of size 1080x1920 from `INPUT_FILE`, starting at `0`, and a kernel of size `KERNEL_SIZE`x`KERNEL_SIZE` from `KERNEL_FILE`. It then convolves the two, and writes the output to `OUTPUT_FILE`. To randomize the memory file (needed on the initial run), specify `DO_RANDOM=1`.
 
 ### Validation
 
 To validate the outputs in the mem_init file, execute the Python script as follows:
 
-`python3 ./../cmp.py <mem_file> <kern_size> [step_size]`
+`make verif`
+`python ../scripts/cmp.py <INPUT_FILE> <SUBJ_ROWS> <SUBJ_COLS> <KERNEL_FILE> <KERNEL_SIZE> <KERNEL_ENCODING> <OUTPUT_FILE> <STEP_SIZE> <DO_ROUNDING>`
+`python ../scripts/cmp.py ../input 1080 1920 ../kernel 5 RAW ../output 1 1`
 
-The script reads memory from `mem_file`. It performs the matrix convolution using a kernel of size `kern_size`, just as the golden model does. To make the validation faster, set `step_size` to specify how many elements to skip in between checks.
+The script `cmp.py` reads the input matrix (size `SUBJ_ROWS`x`SUBJ_COLS`) from the file `INPUT_FILE`, the kernel (size `KERNEL_SIZE`x`KERNEL_SIZE`) from the file `KERNEL_FILE`, and the output matrix (size `SUBJ_ROWS`x`SUBJ_COLS`) from the file `OUTPUT_FILE`. The script will validate all border elements, but step through the rest of the matrix with size `STEP_SIZE`. For different kernel encodings, change the `KERNEL_ENCODING` argument (see the script for possible values). To perform rounding in the validation, set `DO_ROUNDING` to 1.

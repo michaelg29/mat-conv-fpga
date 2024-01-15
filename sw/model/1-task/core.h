@@ -50,8 +50,6 @@ class core : public sc_module, public core_if {
         uint8_t _kern_dim;
 
         /** Status signals. */
-        // bool _enable;
-        // bool _res_valid;
         sc_signal<sc_logic> _rst;
         sc_signal<sc_logic> _enable;
         sc_signal<sc_logic> _res_valid;
@@ -59,7 +57,6 @@ class core : public sc_module, public core_if {
         /** Buffers. */
         uint8_t *_kern_row;
         uint8_t *_group;
-        // uint32_t _result;
         sc_signal<uint32_t> _carry;
         sc_signal<uint32_t> _result;
 

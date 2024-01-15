@@ -42,50 +42,50 @@ class mat_mult_task : public mat_mult_top {
 
     private:
 
-        // configuration
+        /** Configuration. */
         uint8_t _kern_dim;
         uint8_t _hf_kern_dim;
         uint32_t _packet_size;
         uint32_t _n_groups_per_cluster;
         uint32_t _n_cores_per_cluster;
+        uint32_t _n_clusters;
 
-        // state variables
+        /** Input FSM. */
         uint64_t *_cur_ptr;
         uint32_t _expected_el;
         uint32_t _loaded_el;
 
-        // counters
+        /** Output FSM. */
         uint64_t _out_addr;
-        // int32_t _out_row;
-        // int32_t _out_col;
         uint32_t _out_row;
         uint32_t _out_col;
 
-        // output data
-        uint64_t _out_data;
-
-        // buffers
-        // bool _new_packet;
-        // uint64_t _addr;
-        // uint64_t _packet;
+        /** Input signals. */
         sc_signal<sc_logic> _new_packet;
         sc_signal<uint64_t> _addr;
         sc_signal<uint64_t> _packet;
 
-        // input packet FIFO buffers
+        /** Input packet FIFO buffers. */
         int32_t _in_fifo_head;
         int32_t _in_fifo_tail;
         uint64_t _in_fifo_packet[IN_FIFO_BUF_SIZE];
         uint64_t _in_fifo_addr[IN_FIFO_BUF_SIZE];
 
-        // internal clusters
-        uint32_t _n_clusters = 0;
+        /** Output buffers. */
         uint8_t _results[PACKET_BYTES * 2]; // store the output pixels from the current batch (has a size of _packet_size)
 
+        /** mat_mult_top.receive_packet */
         bool receive_packet(uint64_t addr, uint64_t packet);
-        void dispatch_packet(uint64_t addr, uint64_t packet);
         void protected_reset();
+
+        /** Dispatch a 64-bit packet to the internal FSM and clusters. */
+        void dispatch_packet(uint64_t addr, uint64_t packet);
+
+        /** Write the results to the command host. */
         void write_results_buffer();
+
+        /** Complete payload reception if the module received all packets. */
+        void check_complete_reception();
 
         /** Main thread function. */
         void main();

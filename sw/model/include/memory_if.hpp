@@ -20,12 +20,21 @@ class memory_if : virtual public sc_interface {
 
         memory_if(sc_module_name name, uint32_t mem_size) : _name(name), _mem_size(mem_size)
         {
-            _reads = new uint32_t[mem_size];
-            _writes = new uint32_t[mem_size];
+            if (mem_size) {
+                _reads = new uint32_t[mem_size];
+                _writes = new uint32_t[mem_size];
 
-            sc_tracer::trace(_raddr, _name, "raddr");
-            sc_tracer::trace(_waddr, _name, "waddr");
-            sc_tracer::trace(_mem_size, _name, "size");
+                sc_tracer::trace(_raddr, _name, "raddr");
+                sc_tracer::trace(_waddr, _name, "waddr");
+                sc_tracer::trace(_mem_size, _name, "size");
+            }
+        }
+
+        ~memory_if() {
+            if (_mem_size) {
+                delete _reads;
+                delete _writes;
+            }
         }
 
         /**

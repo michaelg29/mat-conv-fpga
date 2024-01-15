@@ -71,6 +71,14 @@
 #define LOG(a) std::cout << sc_time_stamp() << " - " << a << std::endl;
 #define LOGF(a, ...) std::cout << sc_time_stamp() << " - "; printf(a, __VA_ARGS__); printf("\n")
 
+#ifdef DO_DEBUG
+    #define DEBUG(a) std::cout << sc_time_stamp() << " - " << a << std::endl;
+    #define DEBUGF(a, ...) std::cout << sc_time_stamp() << " - "; printf(a, __VA_ARGS__); printf("\n")
+#else
+    #define DEBUG(a)
+    #define DEBUGF(a, ...)
+#endif
+
 // parse command line arguments
 bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize);
 
