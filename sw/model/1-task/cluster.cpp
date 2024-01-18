@@ -100,7 +100,7 @@ void cluster::disable() {
   */
 void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
     // address check
-    if ((addr & ADDR_MASK) >= OFFSET_PAYLOAD && _enabled.read().to_bool()) {
+    if ((addr & ADDR_MASK) < OFFSET_COMMAND && _enabled.read().to_bool()) {
         if (_command_type == MM_CMD_KERN) {
             *((uint64_t*)(_kernel_mem + _kernel_cursor)) = packet;
             _kernel_cursor += PACKET_BYTES;

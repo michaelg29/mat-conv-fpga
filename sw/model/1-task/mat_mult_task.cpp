@@ -138,7 +138,7 @@ void mat_mult_task::main() {
             _in_fifo_head++;
 
             // address check
-            if ((addr & ADDR_MASK) >= (OFFSET_PAYLOAD)) {
+            if ((addr & ADDR_MASK) < OFFSET_COMMAND) {
                 // increment counters
                 _regs.status_reg.ready = false;
             }

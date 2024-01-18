@@ -39,8 +39,9 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
         }
     }
 
-    // address check
-    if ((addr & ADDR_MASK) >= (OFFSET_PAYLOAD)) {
+    // activate for address
+    addr &= ADDR_MASK;
+    if (addr < OFFSET_COMMAND) {
         // increment counters
         _regs.status_reg.ready = false;
         _loaded_el += PACKET_BYTES;

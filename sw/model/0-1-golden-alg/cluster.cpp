@@ -88,7 +88,8 @@ void cluster::receive_packet(uint64_t addr, uint64_t packet, uint8_t *out_ptr) {
     }
 
     // activate for address
-    if ((addr & ADDR_MASK) < OFFSET_PAYLOAD) {
+    addr &= ADDR_MASK;
+    if (addr >= OFFSET_COMMAND) {
         return;
     }
 

@@ -58,7 +58,7 @@ void mat_mult_if::send_cmd(uint8_t *ext_mem, unsigned int cmd_type, unsigned int
     _packets = (uint64_t*)(ext_mem + in_addr);
     for (int i = 0; i < n; ++i) {
         // generate address to wrap
-        uint64_t addr = (uint64_t)(i & 0b11); // wrap every 4 packets
+        uint64_t addr = (uint64_t)(i & 0xf); // wrap every 16 packets
         addr <<= 3; // shift to 64-bit boundary
         addr += OFFSET_PAYLOAD; // add offset
 

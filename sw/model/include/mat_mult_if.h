@@ -103,11 +103,11 @@ enum mat_mult_state_e {
 // ===== INTERFACE DEFINITION =====
 // ================================
 
-#define ADDR_MASK      0x3F
-#define OFFSET_COMMAND 0x00
-#define OFFSET_PAYLOAD 0x20
+#define ADDR_MASK      0xFF
+#define OFFSET_PAYLOAD 0x00
+#define OFFSET_COMMAND 0x80
+#define SIZE_PAYLOAD   0x80 // wrapped size
 #define SIZE_COMMAND   0x20
-#define SIZE_PAYLOAD   0x20 // wrapped size
 
 /**
  * Interface with the matrix multiplier module to issue commands.
