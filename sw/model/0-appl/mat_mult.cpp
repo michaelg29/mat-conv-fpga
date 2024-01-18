@@ -22,11 +22,16 @@ bool mat_mult::receive_packet(uint64_t addr, uint64_t packet) {
     switch (_cur_state) {
     case WAIT_CMD_SIZE:
         // calculate expected elements
-        _expected_el = (uint16_t)(GET_CMD_SIZE_ROWS(_cur_cmd)) * (uint16_t)(GET_CMD_SIZE_COLS(_cur_cmd));
         if (_regs.cmd_type_reg.is_kern) {
+            _expected_el = (uint32_t)(GET_CMD_SIZE_NELS(_cur_cmd));
             _kern_dim = GET_CMD_SIZE_ROWS(_cur_cmd);
             _hf_kern_dim = _kern_dim >> 1;
         }
+        else if (_regs.cmd_type_reg.is_subj) {
+            _expected_el = (uint32_t)(GET_CMD_SIZE_SUBJ_NELS(_cur_cmd));
+        }
+        
+        LOGF("[%s] Expected elements %d", this->name(), _expected_el);
         break;
 
     case WAIT_DATA:
@@ -35,6 +40,7 @@ bool mat_mult::receive_packet(uint64_t addr, uint64_t packet) {
         
         // complete payload reception
         if (_loaded_el >= _expected_el) {
+            LOGF("Loaded %d/%d", _loaded_el, _expected_el);
             // start calculating when all elements loaded
             if (_regs.cmd_type_reg.is_subj) {
                 calculate();
@@ -94,13 +100,13 @@ void mat_mult::protected_reset() {
 
 void mat_mult::calculate() {
     // bounds
-    uint16_t rows = (uint16_t)(GET_CMD_SIZE_ROWS(_cur_cmd));
-    uint16_t cols = (uint16_t)(GET_CMD_SIZE_COLS(_cur_cmd));
+    uint16_t rows = (uint16_t)(GET_CMD_SIZE_SUBJ_ROWS(_cur_cmd));
+    uint16_t cols = (uint16_t)(GET_CMD_SIZE_SUBJ_COLS(_cur_cmd));
 
     // calculations
     uint64_t data = 0;
     uint64_t addr = ((uint64_t)GET_CMD_OUT_ADDR(_cur_cmd));
-    std::cout << "Writing to " << addr << ", matrix is " << rows << "x" << cols << std::endl;
+    LOGF("[%s] writing to %016lx, matrix is %dx%d", this->name(), addr, rows, cols);
     for (uint16_t r = 0; r < rows; r++) {
         for (uint16_t c = 0; c < cols; c++) {
             // accumulate result
@@ -131,5 +137,5 @@ void mat_mult::calculate() {
         }
     }
 
-    std::cout << "Done multiplying" << std::endl;
+    LOGF("[%s] Done multiplying", this->name());
 }

@@ -41,19 +41,24 @@ void mat_mult_top::calculate_next_state() {
     }
     case WAIT_CMD_SIZE:
     {
-        uint16_t rows = (uint16_t)(GET_CMD_SIZE_ROWS(_cur_cmd));
-        uint16_t cols = (uint16_t)(GET_CMD_SIZE_COLS(_cur_cmd));
-        if (_regs.cmd_type_reg.is_kern &&
-            ((rows != cols) ||      // kernel must be square
-            ((rows & 0b1) == 0) ||  // kernel must have an odd dimension
-            (rows > MAX_KERN_DIM))) // kernel size constraint
-            _cur_ack.status |= MM_STAT_ERR_SIZE;
+        uint16_t rows;
+        uint16_t cols;
 
-        else if (_regs.cmd_type_reg.is_subj &&
-            (cols & 0b111) != 0)    // subject columns must be divisible by 8
-            _cur_ack.status |= MM_STAT_ERR_SIZE;
+        if (_regs.cmd_type_reg.is_kern) {
+            rows = (uint16_t)(GET_CMD_SIZE_ROWS(_cur_cmd));
+            cols = (uint16_t)(GET_CMD_SIZE_COLS(_cur_cmd));
 
-        std::cout << rows << "x" << cols << std::endl;
+            if ((rows != cols) ||      // kernel must be square
+                ((rows & 0b1) == 0) || // kernel must have an odd dimension
+                (rows > MAX_KERN_DIM)) // kernel size constraint
+                _cur_ack.status |= MM_STAT_ERR_SIZE;
+        }
+        else if (_regs.cmd_type_reg.is_subj) {
+            rows = (uint16_t)(GET_CMD_SIZE_SUBJ_ROWS(_cur_cmd));
+            cols = (uint16_t)(GET_CMD_SIZE_SUBJ_COLS(_cur_cmd));
+        }
+
+        LOGF("[mat_mult_top] Expecting matrix of size %dx%d", rows, cols);
 
         // latch in acknowledge message
         _cur_ack.size = _cur_cmd.size;

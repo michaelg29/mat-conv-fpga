@@ -50,7 +50,7 @@ bool mat_mult_task::receive_packet(uint64_t addr, uint64_t packet) {
 
     if (_regs.cmd_type_reg.is_subj && _cur_state == WAIT_DATA) {
         // insert packet at end of row
-        if (_loaded_el && ((_loaded_el % (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd)) == 0)) {
+        if (_loaded_el && ((_loaded_el % (uint32_t)GET_CMD_SIZE_SUBJ_COLS(_cur_cmd)) == 0)) {
             dispatch_packet(addr, 0);
             POS_CORE();
         }
@@ -148,7 +148,12 @@ void mat_mult_task::main() {
 
                 // calculate expected elements
                 if (_cur_state == WAIT_CMD_SIZE) {
-                    _expected_el = (uint16_t)(GET_CMD_SIZE_ROWS(_cur_cmd)) * (uint16_t)(GET_CMD_SIZE_COLS(_cur_cmd));
+                    if (_regs.cmd_type_reg.is_kern) {
+                        _expected_el = (uint32_t)GET_CMD_SIZE_NELS(_cur_cmd);
+                    }
+                    else if (_regs.cmd_type_reg.is_subj) {
+                        _expected_el = (uint32_t)GET_CMD_SIZE_SUBJ_NELS(_cur_cmd);
+                    }
                 }
             }
         }
@@ -171,10 +176,10 @@ void mat_mult_task::main() {
 
                 if (res_valid) {
                     write_results_buffer();
-                    DEBUGF("Written (%d/%d, %d)", _out_row, (int32_t)GET_CMD_SIZE_ROWS(_cur_cmd), _out_col);
+                    DEBUGF("Written (%d/%d, %d)", _out_row, (uint32_t)GET_CMD_SIZE_SUBJ_COLS(_cur_cmd), _out_col);
 
                     _out_col += PACKET_BYTES;
-                    if (_out_col > (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd)) {
+                    if (_out_col > (uint32_t)GET_CMD_SIZE_SUBJ_COLS(_cur_cmd)) {
                         // new row
                         _out_row++;
                         _out_col = 0;
@@ -203,7 +208,12 @@ void mat_mult_task::main() {
         if (_cur_state != WAIT_DATA && _next_state == WAIT_DATA) {
             LOG("ACTIVATE CLUSTERS");
             for (int i = 0; i < _n_clusters; ++i) {
-                cluster_ifs[i]->activate(GET_CMD_TYPE(_cur_cmd), GET_CMD_SIZE_ROWS(_cur_cmd), GET_CMD_SIZE_COLS(_cur_cmd));
+                if (_regs.cmd_type_reg.is_kern) {
+                    cluster_ifs[i]->activate(GET_CMD_TYPE(_cur_cmd), GET_CMD_SIZE_ROWS(_cur_cmd), GET_CMD_SIZE_COLS(_cur_cmd));
+                }
+                else if (_regs.cmd_type_reg.is_subj) {
+                    cluster_ifs[i]->activate(GET_CMD_TYPE(_cur_cmd), GET_CMD_SIZE_SUBJ_ROWS(_cur_cmd), GET_CMD_SIZE_SUBJ_COLS(_cur_cmd));
+                }
             }
 
             // initialize FSM

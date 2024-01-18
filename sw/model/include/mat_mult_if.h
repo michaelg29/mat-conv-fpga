@@ -28,8 +28,12 @@
 #define GET_CMD_OUT_ADDR(cmd) (cmd.command & 0x3FFFFFFF) << 3
 
 // size field values
-#define GET_CMD_SIZE_ROWS(cmd) ((cmd.size >> 16) & 0xFFFF)
-#define GET_CMD_SIZE_COLS(cmd) ((cmd.size >> 0) & 0xFFFF)
+#define GET_CMD_SIZE_COLS(cmd) ((cmd.size >>  0) & 0x1F)
+#define GET_CMD_SIZE_NELS(cmd) ((cmd.size >> 16) & 0xFFFF)
+#define GET_CMD_SIZE_ROWS(cmd) ((cmd.size >>  5) & 0x3FF)
+#define GET_CMD_SIZE_SUBJ_COLS(cmd) ((GET_CMD_SIZE_COLS(cmd)) << 7)
+#define GET_CMD_SIZE_SUBJ_NELS(cmd) ((GET_CMD_SIZE_NELS(cmd)) << 8)
+#define GET_CMD_SIZE_SUBJ_ROWS(cmd) ((GET_CMD_SIZE_ROWS(cmd)) << 1)
 
 // calculate the checksum of a command packet
 #define CALC_CMD_CHKSUM(cmd) \

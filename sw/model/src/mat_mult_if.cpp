@@ -11,8 +11,10 @@
     ((type & 0b1) << 30) | ((out_addr & 0xffffffff) >> 3)
 
 // generate size field
-#define GEN_SIZE(rows, cols) \
-    ((rows & 0xffff) << 16) | (cols & 0xffff)
+#define GEN_KERN_SIZE(rows, cols) \
+    ((((rows * cols) & 0xffff) << 16) | ((rows & 0x7ff) << 5) | (cols & 0x1f))
+#define GEN_SUBJ_SIZE(rows, cols) \
+    (((((rows >> 1) * (cols >> 7)) & 0xffff) << 16) | (((rows >> 1) & 0x7ff) << 5)  | ((cols >> 7) & 0x1f))
 
 
 mat_mult_if::mat_mult_if()
@@ -25,14 +27,19 @@ void mat_mult_if::send_cmd(uint8_t *ext_mem, unsigned int cmd_type, unsigned int
     // construct command
     _cmd.s_key    = MM_S_KEY;
     _cmd.command  = GEN_COMMAND(cmd_type, out_addr);
-    _cmd.size     = GEN_SIZE(rows, cols);
+    if (cmd_type == MM_CMD_KERN) {
+        _cmd.size = GEN_KERN_SIZE(rows, cols);
+    }
+    else if (cmd_type == MM_CMD_SUBJ) {
+        _cmd.size = GEN_SUBJ_SIZE(rows, cols);
+    }
     _cmd.tx_addr  = tx_addr;
     _cmd.trans_id = _cur_trans_id;
     _cmd.reserved = 0;
     _cmd.e_key    = MM_E_KEY;
     _cmd.chksum   = CALC_CMD_CHKSUM(_cmd);
 
-    std::cout << "Commanding to write to " << out_addr << std::endl;
+    LOGF("[mat_mult_if] Commanding to write to %d", out_addr);
 
     // send command
     _packets = (uint64_t*)&_cmd;
@@ -65,9 +72,9 @@ int mat_mult_if::verify_ack(uint8_t *ext_mem, unsigned int tx_addr) {
     memcpy(&_ack, ext_mem + _cmd.tx_addr, sizeof(_ack));
 
     // verify acknowledge packet
-    std::cout << "Ack trans_id is " << _ack.trans_id << " for transaction " << _cmd.trans_id << " and status is " << _ack.status << std::endl;
+    LOGF("[mat_mult_if] Ack trans_id is %d for transaction %d and status is %d", _ack.trans_id, _cmd.trans_id, _ack.status);
     if (!CMP_CMD_ACK(_cmd, _ack)) {
-        std::cerr << "ERROR>>> Acknowledge packet does not match command." << std::endl;
+        LOG("[mat_mult_if] ERROR>>> Acknowledge packet does not match command.");
         return MM_STAT_ERR_OTHER;
     }
 

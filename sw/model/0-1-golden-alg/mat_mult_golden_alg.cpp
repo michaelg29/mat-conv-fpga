@@ -46,7 +46,7 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
         _loaded_el += PACKET_BYTES;
         if (_regs.cmd_type_reg.is_subj) {
             _out_col += PACKET_BYTES;
-            if (_out_col == (uint32_t)GET_CMD_SIZE_COLS(_cur_cmd)) {
+            if (_out_col == (uint32_t)GET_CMD_SIZE_SUBJ_COLS(_cur_cmd)) {
                 // if last column, write last complete packet
                 for (int i = 0; i < _n_clusters; i++) {
                     cluster_ifs[i]->receive_packet(addr, 0, _results + (PACKET_BYTES - _hf_kern_dim) + (i * _n_groups_per_cluster));
@@ -79,7 +79,12 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
 
         // calculate expected elements
         if (_cur_state == WAIT_CMD_SIZE) {
-            _expected_el = (uint16_t)(GET_CMD_SIZE_ROWS(_cur_cmd)) * (uint16_t)(GET_CMD_SIZE_COLS(_cur_cmd));
+            if (_regs.cmd_type_reg.is_kern) {
+                _expected_el = (uint32_t)GET_CMD_SIZE_NELS(_cur_cmd);
+            }
+            if (_regs.cmd_type_reg.is_subj) {
+                _expected_el = (uint32_t)GET_CMD_SIZE_SUBJ_NELS(_cur_cmd);
+            }
         }
     }
 
@@ -97,7 +102,12 @@ bool mat_mult_ga::receive_packet(uint64_t addr, uint64_t packet) {
     if (_cur_state != WAIT_DATA && _next_state == WAIT_DATA) {
         cout << "ACTIVATE CLUSTERS" << endl;
         for (int i = 0; i < _n_clusters; ++i) {
-            cluster_ifs[i]->activate(GET_CMD_TYPE(_cur_cmd), GET_CMD_SIZE_ROWS(_cur_cmd), GET_CMD_SIZE_COLS(_cur_cmd));
+            if (_regs.cmd_type_reg.is_kern) {
+                cluster_ifs[i]->activate(GET_CMD_TYPE(_cur_cmd), GET_CMD_SIZE_ROWS(_cur_cmd), GET_CMD_SIZE_COLS(_cur_cmd));
+            }
+            else if (_regs.cmd_type_reg.is_subj) {
+                cluster_ifs[i]->activate(GET_CMD_TYPE(_cur_cmd), GET_CMD_SIZE_SUBJ_ROWS(_cur_cmd), GET_CMD_SIZE_SUBJ_COLS(_cur_cmd));
+            }
         }
         _loaded_el = 0;
         _out_row = -_hf_kern_dim;
