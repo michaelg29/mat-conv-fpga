@@ -5,11 +5,11 @@ use ieee.numeric_std.all;
 use ieee.math_real.all;
 
 -- register package
-library mat_mult_reg_library;
+library mat_conv_reg_pkg;
 
 -- top-level entity
--- designed to multiply square matrices (with power-of-2 dimensions) with a maximum dimension of 1024x1024
-entity mat_mult_top is
+-- Module to convolve a matrix (max 2^11-1 * 2^11-1) with a square kernel matrix (max 5x5).
+entity mat_conv_top is
   generic (
     M_ADDR_WIDTH : integer := 64;
     M_DATA_WIDTH : integer := 64;
@@ -136,9 +136,9 @@ entity mat_mult_top is
     -----------------------
     i_macclk     : in  std_logic
   );
-end mat_mult_top;
+end mat_conv_top;
 
-architecture rtl of mat_mult_top is
+architecture rtl of mat_conv_top is
 
 begin
 

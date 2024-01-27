@@ -3,7 +3,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 
 -- Register definitions
-package mat_mult_reg_pkg is
+package mat_conv_reg_pkg is
 
   ----------------------------------
   ------- register definitions -----
@@ -113,4 +113,4 @@ package mat_mult_reg_pkg is
     repetition_ctl : reg_resp_t;
   end record;
     
-end package mat_mult_reg_pkg;
+end package mat_conv_reg_pkg;

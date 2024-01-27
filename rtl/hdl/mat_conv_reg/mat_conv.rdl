@@ -1,14 +1,14 @@
 // python3 -m pip install peakrdl
-// python3 -m peakrdl html mat_mult.rdl -o html/
-// python3 -m peakrdl uvm mat_mult.rdl -o mat_mult_uvm_pkg.sv
+// python3 -m peakrdl html mat_conv.rdl -o html/
+// python3 -m peakrdl uvm mat_conv.rdl -o mat_mult_uvm_pkg.sv
 
-addrmap mat_mult {
+addrmap mat_conv {
 
   default accesswidth = 32;
   default regwidth = 32;
 
   name = "Matrix multiplier";
-  desc = "Module to convolve a matrix (max 2^16x2^16) with a square kernel matrix (max 5x5).";
+  desc = "Module to convolve a matrix (max 2^11-1 * 2^11-1) with a square kernel matrix (max 5x5).";
 
   reg {
     name = "Module ID";
