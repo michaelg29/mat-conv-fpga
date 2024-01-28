@@ -11,7 +11,7 @@ import uvm_pkg::*;
 // generics
 localparam integer ADDR_WIDTH = 5;
 localparam integer W_EL = 8;
-localparam integer N_IN_EL = 8;
+localparam integer N_IN_EL = 1;
 localparam integer W_IN = W_EL * N_IN_EL;
 
 // clock and reset
@@ -36,10 +36,11 @@ wire             wvalid;
 wire             werr;
 
 // DUT instantiation
-fifo_async_multw #(
+//fifo_async_multw #(
+fifo_async #(
   .ADDR_WIDTH(ADDR_WIDTH),
   .W_EL(W_EL),
-  .N_IN_EL(N_IN_EL),
+  //.N_IN_EL(N_IN_EL),
   .PRIORITY_W(2'b10)
 ) DUT (
   .i_rst_n  (rst_n),
@@ -69,9 +70,6 @@ end
 
 initial begin
 
-  logic [W_EL-1:0] wdata_arr[8];
-  wdata_arr = '{8'hBE, 8'hEF, 8'hCA, 8'hFE, 8'hDE, 8'hEF, 8'h12, 8'h34};
-
   #(1ps);
 
 	// code that executes only once
@@ -83,7 +81,7 @@ initial begin
     
   fork
     begin // writer
-      wdata <= 64'hBEEFCAFEDEEF1234;
+      wdata <= 8'hBE;
       wen <= 1'b1;
       #(1*WCLK_PER);
       wen <= 1'b0;
