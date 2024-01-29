@@ -107,20 +107,33 @@ architecture rtl of input_fsm is
 
 begin
 
+  ------------------
+  -- Main Process --
+  ------------------
   p_main : process(i_macclk)
   begin
     if (i_macclk'event and i_macclk = '1') then
       if (i_rst_n = '0') then
         -- active-low reset external signals
+        o_write_blank_en <= '0';
+        o_ignore         <= '0';
+        o_cmd_data       <= (others => '0');
+        o_cmd_data_id    <= (others => '0');
+        o_cmd_data_valid <= '0';
+        o_eor            <= '0';
+        o_cmd_kern       <= '0';
+        o_cmd_subj       <= '0';
+        o_cmd_valid      <= '0';
+        o_cmd_err        <= '0';
 
         -- active-low reset internal signals
-        input_fsm_state <= WAIT_CMD_SKEY;
-        cur_cmd_chksum  <= (others => '0');
-        cur_cmd_status  <= MC_STAT_OKAY;
-        new_cmd_chksum  <= (others => '0');
-        new_cmd_status  <= MC_STAT_OKAY;
-        cur_cmd_kern    <= '0';
-        cur_cmd_subj    <= '0';
+        input_fsm_state  <= WAIT_CMD_SKEY;
+        cur_cmd_chksum   <= (others => '0');
+        cur_cmd_status   <= MC_STAT_OKAY;
+        new_cmd_chksum   <= (others => '0');
+        new_cmd_status   <= MC_STAT_OKAY;
+        cur_cmd_kern     <= '0';
+        cur_cmd_subj     <= '0';
       else
         -- apply checksum and status changes
         cur_cmd_chksum <= cur_cmd_chksum xor new_cmd_chksum;
@@ -128,6 +141,8 @@ begin
 
         if (is_command_pkt(i_new_pkt, i_waddr) = '1') then
           new_cmd_chksum <= i_wdata(31 downto 0) xor i_wdata(63 downto 32);
+        else
+          new_cmd_chksum <= (others => '0');
         end if;
 
         -- calculate new state
