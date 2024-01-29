@@ -33,6 +33,7 @@ fi
 
 cat dependencies.txt |
 while read path; do
+    ([ -z "$path" ] || [ -z "${path%%#*}" ]) && continue
     name="${path##*/}_library"
     echo "Compiling ${name} located at ${path}"
     if [ -f ${path}/filelist.txt ]; then
