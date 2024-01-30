@@ -1,145 +1,98 @@
 
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
-use ieee.math_real.all;
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
 
-library mac_library;
-use mac_library.mac_pkg.all;
 
-library fifo_library;
 
-entity core is
-  generic (
-    -- size of dot product
-    N       : integer := 16;
-    -- bit-width of each element
-    W_EL    : integer := 8;
-    -- number of elements that can be written at once
-    N_IN_EL : integer := 8
-  );
-  port (
-    -- Asynchronous
-    i_rst_n  : in  std_logic;
-    
-    -- Bus clock domain
-    i_bclk   : in  std_logic;
-    i_asel   : in  std_logic;
-    i_bsel   : in  std_logic;
-    i_bdata  : in  std_logic_vector(W_EL*N_IN_EL-1 downto 0);
-    o_res    : out std_logic_vector(W_EL-1 downto 0);
-    o_done   : out std_logic;
-    
-    -- Multiplier clock domain
-    i_macclk : in  std_logic 
-  );
-end core;
 
-architecture rtl of core is
-    
-  constant W_IN   : integer := W_EL * N_IN_EL;
-  constant N_BITS : integer := integer(ceil(log2(real(N/N_IN_EL))));
- 
-  signal counter   : unsigned(N_BITS downto 0) := (others => '0');
-  signal inc       : unsigned(0 downto 0);
+entity core is port ( i_clk, i_en, i_rst_n : in std_logic;
+                      i_k0, i_k1, i_k2, i_k3, i_k4, i_s0, i_s1, i_s2, i_s3, i_s4 : in signed(7 downto 0); 
+                      i_sub: in signed(17 downto 0);
+                      o_valid : out std_logic;
+                      o_res: out signed(17 downto 0)); 
+end core; 
 
-  signal en        : std_logic;
-  signal acc       : std_logic := '0';
-  signal a         : std_logic_vector(W_EL-1 downto 0);
-  signal b         : std_logic_vector(W_EL-1 downto 0);
-  signal aempty    : std_logic;
-  signal bempty    : std_logic;
+architecture core_arch of core is 
 
-  signal mac_res   : std_logic_vector(W_EL-1 downto 0);
-  
-begin
-  
-  -- output status
-  inc <= "1" when counter(N_BITS) = '0' else "0";
-  o_done <= counter(N_BITS);
 
-  -- internal counter
-  p_count : process (i_macclk)
-  begin
-    if (i_macclk'event and i_macclk = '1') then
-      if (i_rst_n = '0') then
-        counter <= (others => '0');
-        acc     <= '0';
-        en      <= '0';
-      else
-        -- internal enable
-        en <= not(aempty or bempty);
-        if (en = '1') then
-          counter <= counter + inc;
-          acc     <= '1';
-        else
-          counter <= counter;
-          acc     <= acc;
+component math_block is port ( A1, B1, A2, B2 : in signed(8 downto 0); 
+                                C, D: in signed(43 downto 0);
+                                clk : in std_logic;
+                                P: out signed(43 downto 0)); 
+end component; 
+
+signal k4_p_reg, s4_p_reg : signed(8 downto 0); --pipelining regs for 2nd mathblock
+--signal mult : signed(17 downto 0);
+
+
+
+signal MAC0_A1, MAC0_B1, MAC0_A2, MAC0_B2 : signed(8 downto 0); 
+signal MAC0_C, MAC0_P : signed(43 downto 0);
+
+signal MAC1_A1, MAC1_B1, MAC1_A2, MAC1_B2 : signed(8 downto 0); 
+signal MAC1_P : signed(43 downto 0);
+
+signal MAC2_A2, MAC2_B2 : signed(8 downto 0); 
+signal MAC2_P : signed(43 downto 0);
+
+
+  begin 
+
+
+  MAC0 : math_block port map ( A1 => MAC0_A1, B1 => MAC0_B1, A2 => MAC0_A2, B2 => MAC0_B2, 
+                               C => MAC0_C, D => (others => '0'), clk => i_clk, P => MAC0_P);
+
+  MAC1 : math_block port map ( A1 => MAC1_A1, B1 => MAC1_B1, A2 => MAC1_A2, B2 => MAC1_B2, 
+                               C => (2 => '1', others => '0'), D => (others => '0'), clk => i_clk, P => MAC1_P);--ADD ROUNDING INTO PORT C
+
+  MAC2 : math_block port map ( A1 => (others => '0'), B1=> (others => '0'), A2 => MAC2_A2, B2 => MAC2_B2, 
+                               C => MAC0_P, D => MAC1_P, clk => i_clk, P => MAC2_P);
+
+
+
+  process(i_clk)
+    begin
+      if(rising_edge(i_clk)) then 
+        if(i_rst_n = '0') then
+          k4_p_reg <= (others => '0');
+          s4_p_reg <= (others => '0');
+          MAC0_A1 <= (others => '0');
+          MAC0_B1 <= (others => '0');
+          MAC0_A2 <= (others => '0');
+          MAC0_B2 <= (others => '0');
+          MAC0_C <= (others => '0');          
+          MAC1_A1 <= (others => '0');
+          MAC1_B1 <= (others => '0');
+          MAC1_A2 <= (others => '0');
+          MAC1_B2 <= (others => '0');        
+          MAC2_A2 <= (others => '0');
+          MAC2_B2 <= (others => '0');
+          o_res <= (others => '0');
+          o_valid <= '0';
+
+        elsif(i_en = '1') then
+
+          MAC0_A1 <= i_k0(7) & i_k0;
+          MAC0_B1 <= i_s0(7) & i_s0;
+          MAC0_A2 <= i_k1(7) & i_k1;
+          MAC0_B2 <= i_s1(7) & i_s1;
+          MAC0_C <= resize(i_sub, 44);
+          
+          MAC1_A1 <= i_k2(7) & i_k2;
+          MAC1_B1 <= i_s2(7) & i_s2;
+          MAC1_A2 <= i_k3(7) & i_k3;
+          MAC1_B2 <= i_s3(7) & i_s3;
+          
+          MAC2_A2 <= k4_p_reg;
+          MAC2_B2 <= s4_p_reg;
+          k4_p_reg <= i_k4(7) & i_k4;
+          s4_p_reg <= i_s4(7) & i_s4;
+
+          o_res <= MAC2_P(20 downto 3); --(28 down to 11) should be the real result since math blocks in DOTP mode output on the upper 36 bits          
+          o_valid <= '1';
         end if;
       end if;
-    end if;
   end process;
-  
-  -- FIFO A
-  fifo_a : entity fifo_library.fifo_async_multw
-    generic map (
-      ADDR_WIDTH => N_BITS,
-      W_EL       => W_EL,
-      N_IN_EL    => N_IN_EL
-    ) port map (
-      i_rst_n  => i_rst_n,
-      
-      i_rclk   => i_macclk,
-      i_ren    => en,
-      o_rdata  => a,
-      o_empty  => aempty,
-      o_rvalid => open,
-      o_rerr   => open,
-      
-      i_wclk   => i_bclk,
-      i_wdata  => i_bdata,
-      i_wen    => i_asel,
-      o_full   => open,
-      o_wvalid => open,
-      o_werr   => open
-    );
-    
-  -- FIFO B
-  fifo_b : entity fifo_library.fifo_async_multw
-    generic map (
-      ADDR_WIDTH => N_BITS,
-      W_EL       => W_EL,
-      N_IN_EL    => N_IN_EL
-    ) port map (
-      i_rst_n  => i_rst_n,
-      
-      i_rclk   => i_macclk,
-      i_ren    => en,
-      o_rdata  => b,
-      o_empty  => bempty,
-      o_rvalid => open,
-      o_rerr   => open,
-      
-      i_wclk   => i_bclk,
-      i_wdata  => i_bdata,
-      i_wen    => i_bsel,
-      o_full   => open,
-      o_wvalid => open,
-      o_werr   => open
-    );
 
-  -- computational element
-  core_mac : entity mac_library.mac
-    generic map (
-      W => W_EL
-    ) port map (
-      i_clk  => i_macclk,
-      i_mult => en,
-      i_acc  => acc,
-      i_a    => a,
-      i_b    => b,
-      o_f    => mac_res
-    );
-  o_res <= (others => '0') when i_rst_n = '0' else mac_res;
-
-end rtl;
+end core_arch;
