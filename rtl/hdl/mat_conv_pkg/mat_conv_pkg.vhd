@@ -10,8 +10,8 @@ package mat_conv_pkg is
   ------------------------------------------
 
   -- expected values
-  constant MC_CMD_SKEY      : std_logic_vector(31 downto 0) := x"CAFECAFE";
-  constant MC_CMD_EKEY      : std_logic_vector(31 downto 0) := x"DEADBEEF";
+  constant MC_CMD_S_KEY     : std_logic_vector(31 downto 0) := x"CAFECAFE";
+  constant MC_CMD_E_KEY     : std_logic_vector(31 downto 0) := x"DEADBEEF";
   constant MC_CMD_CMD_KERN  : std_logic := '0';
   constant MC_CMD_CMD_SUBJ  : std_logic := '1';
   
