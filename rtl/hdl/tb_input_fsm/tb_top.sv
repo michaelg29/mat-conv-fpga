@@ -17,6 +17,7 @@ import uvm_pkg::*;
 localparam time MACCLK_PER = `MACCLK_PER_PS * 1ps;
 logic w_macclk_dut = 1'b1;
 logic rst_n = 1'b0;
+logic por_n = 1'b1;
 
 // input signals
 logic [63:0] wdata           = '0;
@@ -50,8 +51,9 @@ input_fsm #(
 ) DUT (
   // clock and reset interface
   .i_macclk(w_macclk_dut),
-  .i_rst_n (rst_n),
-  
+  .i_rst_n(rst_n),
+  .i_por_n(por_n),
+
   // signals to and from Input FIFO
   .i_wdata(wdata),
   .i_waddr(waddr),
@@ -93,32 +95,71 @@ initial begin
   #(MACCLK_PER+1ps);
   rst_n <= 1'b1;
   $display("Done with startup");
-  
+
+  // valid kernel command
   #(MACCLK_PER);
-  wdata <= 64'h00000000CAFECAFE;
+  wdata <= 64'h00000000CAFECAFE; // S_KEY, CMD
   waddr <= 8'h80;
   new_pkt <= '1;
   #(MACCLK_PER);
+  wdata <= 64'hABCD000000100055; // SIZE, TX_ADDR
+  waddr <= waddr + 8;
+  #(MACCLK_PER);
+  wdata <= 64'h0000000000000000; // Reserved, TRANS_ID
+  waddr <= waddr + 8;
+  #(MACCLK_PER);
+  wdata <= 64'hBF8E7444DEADBEEF; // E_KEY, CHKSUM
+  waddr <= waddr + 8;
+  #(MACCLK_PER);
   new_pkt <= '0;
   #(4*MACCLK_PER);
-  
+
+  // reset
   #(MACCLK_PER);
   rst_n <= 1'b0;
   #(MACCLK_PER);
   rst_n <= 1'b1;
-  
+
+  // valid subject command
   #(MACCLK_PER);
-  wdata <= 64'h40000000BEEFCAFE;
+  wdata <= 64'h6AF38000CAFECAFE; // S_KEY, CMD
   waddr <= 8'h80;
   new_pkt <= '1;
   #(MACCLK_PER);
+  wdata <= 64'hABCD00001FB343AF; // SIZE, TX_ADDR
+  waddr <= waddr + 8;
+  #(MACCLK_PER);
+  wdata <= 64'h0000000100000000; // Reserved, TRANS_ID
+  waddr <= waddr + 8;
+  #(MACCLK_PER);
+  wdata <= 64'hCADEB7BFDEADBEEF; // E_KEY, CHKSUM
+  waddr <= waddr + 8;
+  #(MACCLK_PER);
   new_pkt <= '0;
   #(4*MACCLK_PER);
-  
+
+  // reset
   #(MACCLK_PER);
   rst_n <= 1'b0;
   #(MACCLK_PER);
-  
+  rst_n <= 1'b1;
+
+  // invalid kernel command
+  #(MACCLK_PER);
+  wdata <= 64'h00000000BEEFCAFE; // S_KEY, CMD
+  waddr <= 8'h80;
+  new_pkt <= '1;
+  #(MACCLK_PER);
+  wdata <= 64'hABCD0000002000A5; // SIZE, TX_ADDR
+  waddr <= waddr + 8;
+  #(MACCLK_PER);
+  new_pkt <= '0;
+  #(4*MACCLK_PER);
+
+  #(MACCLK_PER);
+  rst_n <= 1'b0;
+  #(MACCLK_PER);
+
   $display("Exiting");
   $stop();
 end
