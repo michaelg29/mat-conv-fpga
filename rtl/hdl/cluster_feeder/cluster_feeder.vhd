@@ -37,7 +37,7 @@ architecture Behavioral of cluster_feeder is
 -- 2-to-1 Mux declaration
 component cluster_feeder_mux is
 	port(sel, clk: in std_logic;
-		A, B: in STD_LOGIC_VECTOR (7 downto 0);
+		i_zero,i_one: in STD_LOGIC_VECTOR (7 downto 0);
 		o_pixel: out STD_LOGIC_VECTOR (7 downto 0));
 end component;
 
@@ -48,43 +48,92 @@ component cluster_feeder_flipflop is
         o_pixel: out std_logic_vector (7 downto 0));
 end component;
 
+-- signal for shift register outputs in serializing pipeline
 signal shiftreg_7_out, shiftreg_6_out, shiftreg_5_out,
 shiftreg_4_out, shiftreg_3_out,shiftreg_2_out,
 shiftreg_1_out, shiftreg_0_out: std_logic_vector (7 downto 0);
 
+-- signal for mux outputs in the serializing pipeline
 signal shiftreg_mux7_out, shiftreg_mux6_out, shiftreg_mux5_out,
 shiftreg_mux4_out, shiftreg_mux3_out, shiftreg_mux2_out,
 shiftreg_mux1_out: std_logic_vector (7 downto 0);
 
+-- singal for the select mux outputs interfacing the serializing pipeline
 signal pipeline_sel_mux0_out, pipeline_sel_mux1_out,
 pipeline_sel_mux2_out: std_logic_vector (7 downto 0);
 
+-- signal for output of the mux of the pixel shifter
+signal i_ser_mux1, i_ser_mux2, i_ser_mux3,
+i_ser_mux4: std_logic_vector(7 downto 0);
+
 begin
 
-    -- 3 Mux to for pipelining the last 3 pixels before serializing pipeline
+    -- 3 select mux to for pipelining the last 3 pixels before serializing pipeline
     pipeline_sel_mux0: cluster_feeder_mux
-    port map(sel =>i_sel, clk => i_clk, A => )
+    port map(sel =>i_sel, clk => i_clk, i_zero => i_pixel_0, i_one => i_pixel_5, o_pixel => pipeline_sel_mux0_out);
+    pipeline_sel_mux1: cluster_feeder_mux
+    port map(sel =>i_sel, clk => i_clk, i_zero => i_pixel_1, i_one => i_pixel_6, o_pixel => pipeline_sel_mux1_out);
+    pipeline_sel_mux2: cluster_feeder_mux
+    port map(sel =>i_sel, clk => i_clk, i_zero => i_pixel_2, i_one => i_pixel_7, o_pixel => pipeline_sel_mux2_out);
 
     -- Serializing Pipeline
     shiftreg7: cluster_feeder_flipflop
     port map(clk =>i_clk, i_pixel => i_pixel_7, o_pixel => shiftreg_7_out);
     shiftreg_mux7: cluster_feeder_mux
-    port map(sel=>i_new, clk => i_clk, A => i_pixel_6, B => shiftreg_7_out, o_pixel => shiftreg_mux7_out);
+    port map(sel=>i_new, clk => i_clk, i_zero => shiftreg_7_out, i_one => i_pixel_6, o_pixel => shiftreg_mux7_out);
     
     shiftreg6: cluster_feeder_flipflop
     port map(clk =>i_clk, i_pixel => shiftreg_mux7_out, o_pixel => shiftreg_6_out);
     shiftreg_mux6: cluster_feeder_mux
-    port map(sel=>i_new, clk => i_clk, A => i_pixel_5, B => shiftreg_6_out, o_pixel => shiftreg_mux6_out);
+    port map(sel=>i_new, clk => i_clk, i_zero => shiftreg_6_out, i_one => i_pixel_5, o_pixel => shiftreg_mux6_out);
 
+    shiftreg5: cluster_feeder_flipflop
+    port map(clk =>i_clk, i_pixel => shiftreg_mux6_out, o_pixel => shiftreg_5_out);
+    shiftreg_mux5: cluster_feeder_mux
+    port map(sel=>i_new, clk => i_clk, i_zero => shiftreg_5_out, i_one => i_pixel_4, o_pixel => shiftreg_mux5_out);
 
-    --Pixel Shifter Mux Instantiation
+    shiftreg4: cluster_feeder_flipflop
+    port map(clk =>i_clk, i_pixel => shiftreg_mux5_out, o_pixel => shiftreg_4_out);
+    shiftreg_mux4: cluster_feeder_mux
+    port map(sel=>i_new, clk => i_clk, i_zero => shiftreg_4_out, i_one => i_pixel_3, o_pixel => shiftreg_mux4_out);
+
+    shiftreg3: cluster_feeder_flipflop
+    port map(clk =>i_clk, i_pixel => shiftreg_mux4_out, o_pixel => shiftreg_3_out);
+    shiftreg_mux3: cluster_feeder_mux
+    port map(sel=>i_new, clk => i_clk, i_zero => shiftreg_3_out, i_one => pipeline_sel_mux2_out, o_pixel => shiftreg_mux3_out);
     
+    shiftreg2: cluster_feeder_flipflop
+    port map(clk =>i_clk, i_pixel => shiftreg_mux3_out, o_pixel => shiftreg_2_out);
+    shiftreg_mux2: cluster_feeder_mux
+    port map(sel=>i_new, clk => i_clk, i_zero => shiftreg_2_out, i_one => pipeline_sel_mux1_out, o_pixel => shiftreg_mux2_out);
 
+    shiftreg1: cluster_feeder_flipflop
+    port map(clk =>i_clk, i_pixel => shiftreg_mux2_out, o_pixel => shiftreg_1_out);
+    shiftreg_mux1: cluster_feeder_mux
+    port map(sel=>i_new, clk => i_clk, i_zero => shiftreg_1_out, i_one => pipeline_sel_mux0_out, o_pixel => shiftreg_mux1_out);
+    
+    shiftreg0: cluster_feeder_flipflop
+    port map(clk =>i_clk, i_pixel => shiftreg_mux1_out, o_pixel => shiftreg_0_out);
+    
+    --Pixel Shifter Mux Instantiation
+    ser_mux0: cluster_feeder_mux
+    port map(sel => i_sel, clk => i_clk, i_zero=>shiftreg_0_out, i_one => i_pixel_4, o_pixel => i_ser_mux1);
+    
+    ser_mux1: cluster_feeder_mux
+    port map(sel => i_sel, clk => i_clk, i_zero=>i_ser_mux1, i_one => i_pixel_3, o_pixel => i_ser_mux2);
+    
+    ser_mux2: cluster_feeder_mux
+    port map(sel => i_sel, clk => i_clk, i_zero=>i_ser_mux2, i_one => i_pixel_2, o_pixel => i_ser_mux3);
 
-    process(i_clk)
-    begin
-        if(rising_edge(i_clk)) then
-        end if;
+    ser_mux3: cluster_feeder_mux
+    port map(sel => i_sel, clk => i_clk, i_zero=>i_ser_mux3, i_one => i_pixel_1, o_pixel => i_ser_mux4);
 
-    end process;
+    ser_mux4: cluster_feeder_mux
+    port map(sel => i_sel, clk => i_clk, i_zero=>i_ser_mux4, i_one => i_pixel_0, o_pixel => o_pixel_0);
+
+   o_pixel_1 <= i_ser_mux4;
+   o_pixel_2 <= i_ser_mux3;
+   o_pixel_3 <= i_ser_mux2;
+   o_pixel_4 <= i_ser_mux1;
+    
 end Behavioral;

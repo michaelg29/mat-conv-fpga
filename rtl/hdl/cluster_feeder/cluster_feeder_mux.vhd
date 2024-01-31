@@ -12,7 +12,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 entity cluster_feeder_mux is 
 	port(sel, clk: in STD_LOGIC;
-		A, B: in STD_LOGIC_VECTOR (7 downto 0);
+		i_zero, i_one: in STD_LOGIC_VECTOR (7 downto 0);
 		o_pixel: out STD_LOGIC_VECTOR (7 downto 0));
 end cluster_feeder_mux;
 
@@ -23,9 +23,9 @@ begin
 	
 	if(rising_edge(clk)) then
 	if (sel = '1') then
-	o_pixel <= A;
+	o_pixel <= i_one;
 	elsif (sel = '0') then
-	o_pixel <= B;
+	o_pixel <= i_zero;
 	end if;
 end if;
 end process;
