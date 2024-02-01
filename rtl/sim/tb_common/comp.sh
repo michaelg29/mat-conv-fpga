@@ -23,7 +23,7 @@ while read line; do
 done
 
 if [ ! -d ${LIB_UVM} ]; then
-    echo "Compiling UVM"
+    echo -e "\n\n=====\nCOMPILING UVM\n=====\n\n"
     eval `dirname "$0"`/comp_uvm.sh
     if [ "$?" -ne 0 ]; then
         echo "UVM compile errors"
@@ -34,8 +34,11 @@ fi
 cat dependencies.txt |
 while read path; do
     ([ -z "$path" ] || [ -z "${path%%#*}" ]) && continue
+    echo -e "\n\n=====\nCOMPILING ${path##*/}\n=====\n\n"
+    
     name="${path##*/}_library"
     echo "Compiling ${name} located at ${path}"
+    
     if [ -f ${path}/filelist.txt ]; then
         vlib libs/${name}
         cat ${path}/filelist.txt |
@@ -56,6 +59,8 @@ while read path; do
                 echo "Compile errors in ${file}"
                 exit 1 # break out of loop with error
             fi
+            
+            echo -e "\n"
         done
         if [ "$?" -ne 0 ]; then
             echo "Compile errors in ${path}"
