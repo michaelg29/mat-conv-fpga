@@ -33,9 +33,11 @@ Running the simulation generates a waveform in `vsim.wlf`. To view that waveform
 
 ### CMC licenses
 
-Before running vsim, make sure that the proper licenses for Questa Standard Edition are installed. Follow instructions to install [CADPass](https://account.cmc.ca/WhatWeOffer/Products/CMC-00200-07055.aspx), then login and keep the application running. Ensure the environment variable `LM_LICENSE_FILE` is set for the current user, it should look something like `XXXX@a2.cmc.ca`.
+Before running vsim, make sure that the proper licenses for Questa Standard Edition are installed. Follow instructions to install [CADPass](https://account.cmc.ca/WhatWeOffer/Products/CMC-00200-07055.aspx), then login and verify the licenses. Ensure the environment variable `LM_LICENSE_FILE` is set for the current user, it should look something like `XXXX@a2.cmc.ca`.
 
 If not, open up the CADPass client, select `My Info` on the left hand side, press `Show License details` to open up a new window. Then, navigate to `Intel FPGA Development Tools` > `LM_LICENSE_FILE` to get the value that it should be. Then set that as the computer's environment variable `LM_LICENSE_FILE`.
+
+To be able to run vsim, ensure the appgate SDP application running. It must have an internet connection to be able to connect to the license server.
 
 ### Known issues
 
