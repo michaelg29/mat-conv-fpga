@@ -31,13 +31,19 @@ To run a simulation of the single top-level module, execute `./sim.sh`. To custo
 
 Running the simulation generates a waveform in `vsim.wlf`. To view that waveform, run `./view.sh`. To customize the pre-set view, update `wave.do`. You can also save the current waveform you are viewing in Modelsim by selecting `File > Save Format` or (`ctrl+S`).
 
+### CMC licenses
+
+Before running vsim, make sure that the proper licenses for Questa Standard Edition are installed. Follow instructions to install [CADPass](https://account.cmc.ca/WhatWeOffer/Products/CMC-00200-07055.aspx), then login and keep the application running. Ensure the environment variable `LM_LICENSE_FILE` is set for the current user, it should look something like `XXXX@a2.cmc.ca`.
+
+If not, open up the CADPass client, select `My Info` on the left hand side, press `Show License details` to open up a new window. Then, navigate to `Intel FPGA Development Tools` > `LM_LICENSE_FILE` to get the value that it should be. Then set that as the computer's environment variable `LM_LICENSE_FILE`.
+
 ### Known issues
 
 If there are compilation errors, please triple check the environment variables first.
 
-#### fatal error: vpi_user.h: No such file or directory
+#### UVM Errors with GCC
 
-This happens when trying to compile UVM. This may be from the compiler looking to an old version of GCC. To resolve this, ensure first that gcc is installed on the machine and is present in the `PATH` variable. Then, go to the `MODELSIM_HOME` directory and rename the GCC directories:
+This happens when trying to compile or run UVM. This may be from the compiler looking to an old version of GCC. To resolve this, ensure first that gcc is installed on the machine and is present in the `PATH` variable. Then, go to the `MODELSIM_HOME` directory and rename the GCC directories:
 
 ```
 pushd ${MODELSIM_HOME}
@@ -45,6 +51,8 @@ mv gcc-4.7.4-linux/ _gcc-4.7.4-linux
 mv gcc-4.5.0-linux/ _gcc-4.5.0-linux
 mv gcc-4.3.3-linux/ _gcc-4.3.3-linux
 ```
+
+This forces Modelsim to look at the GCC version installed on your machine as opposed to the one that comes with Modelsim.
 
 #### Other missing packages
 
