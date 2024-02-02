@@ -1,20 +1,20 @@
 
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 
---library matrix_multiplier_library;
---use matrix_multiplier_library.all;
-
 use work.mat_conv_axi_pkg.all;
 
-entity axi_master is
+---------------------
+-- AXI TRANSMITTER --
+---------------------
+entity axi_transmitter is
   port (
+    -- clock and reset interface
     i_aclk              : in  std_logic;
     i_areset_n          : in  std_logic;
 
-
+    -- interface with internal controller
     i_payload_request   : in  std_logic;
     o_payload_done      : out std_logic;
     i_header_request    : in  std_logic;
@@ -22,50 +22,59 @@ entity axi_master is
     i_header            : in  TYPE_ARRAY_OF_32BITS(9 downto 0);
     o_header_ack        : out std_logic;
 
-    i_payload_fifo_count: in  std_logic_vector(9 downto 0);
+    -- interface with output FIFO
+    i_payload_fifo_cnt  : in  std_logic_vector(9 downto 0);
     o_payload_read      : out std_logic;
     i_payload_data      : in  std_logic_vector(63 downto 0);
 
-    -- AXI Master Interface (TX)
-    o_m_axi_awid      : out std_logic_vector(3 downto 0);
-    o_m_axi_awaddr    : out std_logic_vector(31 downto 0);
-    o_m_axi_awlen     : out std_logic_vector(3 downto 0);
-    o_m_axi_awsize    : out std_logic_vector(2 downto 0);
-    o_m_axi_awburst   : out std_logic_vector(1 downto 0);
-    o_m_axi_awlock    : out std_logic;
-    o_m_axi_awcache   : out std_logic_vector(3 downto 0);
-    o_m_axi_awprot    : out std_logic_vector(2 downto 0);
-    o_m_axi_awvalid   : out std_logic;
-    i_m_axi_awready   : in  std_logic;
-    o_m_axi_wdata     : out std_logic_vector(63 downto 0);
-    o_m_axi_wstrb     : out std_logic_vector(7 downto 0);
-    o_m_axi_wlast     : out std_logic;
-    o_m_axi_wvalid    : out std_logic;
-    i_m_axi_wready    : in  std_logic;
-    i_m_axi_bid       : in  std_logic_vector(3 downto 0);
-    i_m_axi_bresp     : in  std_logic_vector(1 downto 0);
-    i_m_axi_bvalid    : in  std_logic;
-    o_m_axi_bready    : out std_logic;
-    o_m_axi_arid      : out std_logic_vector(3 downto 0);
-    o_m_axi_araddr    : out std_logic_vector(31 downto 0);
-    o_m_axi_arlen     : out std_logic_vector(3 downto 0);
-    o_m_axi_arsize    : out std_logic_vector(2 downto 0);
-    o_m_axi_arburst   : out std_logic_vector(1 downto 0);
-    o_m_axi_arlock    : out std_logic;
-    o_m_axi_arcache   : out std_logic_vector(3 downto 0);
-    o_m_axi_arprot    : out std_logic_vector(2 downto 0);
-    o_m_axi_arvalid   : out std_logic;
-    i_m_axi_arready   : in  std_logic;
-    i_m_axi_rid       : in  std_logic_vector(3 downto 0);
-    i_m_axi_rdata     : in  std_logic_vector(63 downto 0);
-    i_m_axi_rresp     : in  std_logic_vector(1 downto 0);
-    i_m_axi_rlast     : in  std_logic;
-    i_m_axi_rvalid    : in  std_logic;
-    o_m_axi_rready    : out std_logic
-  );
-end axi_master;
+    -- write address channel
+    o_tx_axi_awid       : out std_logic_vector(3 downto 0);
+    o_tx_axi_awaddr     : out std_logic_vector(31 downto 0);
+    o_tx_axi_awlen      : out std_logic_vector(3 downto 0);
+    o_tx_axi_awsize     : out std_logic_vector(2 downto 0);
+    o_tx_axi_awburst    : out std_logic_vector(1 downto 0);
+    o_tx_axi_awlock     : out std_logic;
+    o_tx_axi_awcache    : out std_logic_vector(3 downto 0);
+    o_tx_axi_awprot     : out std_logic_vector(2 downto 0);
+    o_tx_axi_awvalid    : out std_logic;
+    i_tx_axi_awready    : in  std_logic;
 
-architecture arch_imp of axi_master is
+    -- write data channel
+    o_tx_axi_wdata      : out std_logic_vector(63 downto 0);
+    o_tx_axi_wstrb      : out std_logic_vector(7 downto 0);
+    o_tx_axi_wlast      : out std_logic;
+    o_tx_axi_wvalid     : out std_logic;
+    i_tx_axi_wready     : in  std_logic;
+
+    -- write response channel
+    i_tx_axi_bid        : in  std_logic_vector(3 downto 0);
+    i_tx_axi_bresp      : in  std_logic_vector(1 downto 0);
+    i_tx_axi_bvalid     : in  std_logic;
+    o_tx_axi_bready     : out std_logic;
+
+    -- read address channel (unused)
+    o_tx_axi_arid       : out std_logic_vector(3 downto 0);
+    o_tx_axi_araddr     : out std_logic_vector(31 downto 0);
+    o_tx_axi_arlen      : out std_logic_vector(3 downto 0);
+    o_tx_axi_arsize     : out std_logic_vector(2 downto 0);
+    o_tx_axi_arburst    : out std_logic_vector(1 downto 0);
+    o_tx_axi_arlock     : out std_logic;
+    o_tx_axi_arcache    : out std_logic_vector(3 downto 0);
+    o_tx_axi_arprot     : out std_logic_vector(2 downto 0);
+    o_tx_axi_arvalid    : out std_logic;
+    i_tx_axi_arready    : in  std_logic;
+
+    -- read data channel (unused)
+    i_tx_axi_rid        : in  std_logic_vector(3 downto 0);
+    i_tx_axi_rdata      : in  std_logic_vector(63 downto 0);
+    i_tx_axi_rresp      : in  std_logic_vector(1 downto 0);
+    i_tx_axi_rlast      : in  std_logic;
+    i_tx_axi_rvalid     : in  std_logic;
+    o_tx_axi_rready     : out std_logic
+  );
+end axi_transmitter;
+
+architecture arch_imp of axi_transmitter is
 
   ---------------------------------------------------------------------------------------------------
   -- Local Constant declarations
@@ -109,7 +118,7 @@ begin
 
   axi_wdata <= header((2*header_count) + 1) & header(2*header_count) when request_header = '1' else i_payload_data;
 
-  o_payload_read <= request_payload and i_m_axi_wready and axi_wvalid;
+  o_payload_read <= request_payload and i_tx_axi_wready and axi_wvalid;
 
   p_main: process (i_aclk)
   begin
@@ -204,7 +213,7 @@ begin
           when SEND_PAYLOAD =>
             if (request_payload_p = '1') then
               axi_wvalid   <= '1';
-            elsif ((payload_count = 0) and (i_m_axi_wready = '1')) then
+            elsif ((payload_count = 0) and (i_tx_axi_wready = '1')) then
               axi_wvalid   <= '0';
             end if;
 
@@ -212,7 +221,6 @@ begin
               if (only_one_payload = '0') then
                 if (payload_size_rest = 0 ) then
                   axi_master_fsm_state   <= REQ_HEADER;
-
 
                   o_payload_done         <= '1';
                   request_payload        <= '0';
@@ -238,16 +246,16 @@ begin
                 end if;
               end if;
 
-            elsif (i_m_axi_wready = '1') then
+            elsif (i_tx_axi_wready = '1') then
               payload_count <= payload_count - 1;
             end if;
 
             if (only_one_payload = '1' ) then
               axi_wlast     <= '1';
-              if (i_m_axi_wready = '1') then
+              if (i_tx_axi_wready = '1') then
                 only_one_payload <= '0';
               end if;
-            elsif ((payload_count = 1) and (i_m_axi_wready = '1')) then
+            elsif ((payload_count = 1) and (i_tx_axi_wready = '1')) then
               axi_wlast     <= '1';
             else
               axi_wlast     <= '0';
@@ -257,21 +265,21 @@ begin
 
             if (request_header_p = '1') then
               axi_wvalid   <= '1';
-            elsif ((header_count = 4) and (i_m_axi_wready = '1')) then
+            elsif ((header_count = 4) and (i_tx_axi_wready = '1')) then
               axi_wvalid   <= '0';
             end if;
 
-            if ((header_count = 4) and (i_m_axi_wready = '1')) then
+            if ((header_count = 4) and (i_tx_axi_wready = '1')) then
               o_header_ack          <= '1';
               axi_master_fsm_state  <= IDLE;
               header_request        <= '0';
-            elsif (i_m_axi_wready = '1') then
+            elsif (i_tx_axi_wready = '1') then
               header_count <= header_count + 1;
             end if;
 
-            if ((header_count = 3) and (i_m_axi_wready = '1')) then
+            if ((header_count = 3) and (i_tx_axi_wready = '1')) then
               axi_wlast     <= '1';
-            elsif (i_m_axi_wready = '1') then
+            elsif (i_tx_axi_wready = '1') then
               axi_wlast     <= '0';
             end if;
 
@@ -296,11 +304,9 @@ begin
       -- Always take latest status info
       header(7)             <= i_header(7); -- update Status
 
-
-
       if ((request_header_p = '1') or (request_payload_p = '1')) then
         axi_awvalid   <= '1';
-      elsif ((i_m_axi_awready = '1') and (axi_awvalid = '1')) then
+      elsif ((i_tx_axi_awready = '1') and (axi_awvalid = '1')) then
           axi_awvalid   <= '0';
       end if;
 
@@ -309,32 +315,32 @@ begin
 
 
   -- I/O Connections assignments
-  o_m_axi_awid    <= (others=>'0');
-  o_m_axi_awaddr  <= axi_awaddr;
-  o_m_axi_awlen   <= axi_awlen;
-  o_m_axi_awsize  <= "011";
-  o_m_axi_awburst <= "01";
-  o_m_axi_awlock  <= '0';
-  o_m_axi_awcache <= "0010";
-  o_m_axi_awprot  <= "000";
-  o_m_axi_awvalid <= axi_awvalid;
-  o_m_axi_wdata   <= axi_wdata;
-  o_m_axi_wstrb   <= (others=>'1');
-  o_m_axi_wlast   <= axi_wlast;
-  o_m_axi_wvalid  <= axi_wvalid;
-  o_m_axi_bready  <= '1';
+  o_tx_axi_awid    <= (others=>'0');
+  o_tx_axi_awaddr  <= axi_awaddr;
+  o_tx_axi_awlen   <= axi_awlen;
+  o_tx_axi_awsize  <= "011";
+  o_tx_axi_awburst <= "01";
+  o_tx_axi_awlock  <= '0';
+  o_tx_axi_awcache <= "0010";
+  o_tx_axi_awprot  <= "000";
+  o_tx_axi_awvalid <= axi_awvalid;
+  o_tx_axi_wdata   <= axi_wdata;
+  o_tx_axi_wstrb   <= (others=>'1');
+  o_tx_axi_wlast   <= axi_wlast;
+  o_tx_axi_wvalid  <= axi_wvalid;
+  o_tx_axi_bready  <= '1';
 
-  -- The AXI master reads are not supported
-  o_m_axi_arid    <= (others=>'0');
-  o_m_axi_araddr  <= (others=>'0');
-  o_m_axi_arlen   <= (others=>'0');
-  o_m_axi_arsize  <= (others=>'0');
-  o_m_axi_arburst <= "01";
-  o_m_axi_arlock  <= '0';
-  o_m_axi_arcache <= "0010";
-  o_m_axi_arprot  <= "000";
-  o_m_axi_arvalid <= '0';
-  o_m_axi_rready  <= '0';
+  -- The AXI transmitter reads are not supported
+  o_tx_axi_arid    <= (others=>'0');
+  o_tx_axi_araddr  <= (others=>'0');
+  o_tx_axi_arlen   <= (others=>'0');
+  o_tx_axi_arsize  <= (others=>'0');
+  o_tx_axi_arburst <= "01";
+  o_tx_axi_arlock  <= '0';
+  o_tx_axi_arcache <= "0010";
+  o_tx_axi_arprot  <= "000";
+  o_tx_axi_arvalid <= '0';
+  o_tx_axi_rready  <= '0';
   ----------------------
 
 end arch_imp;
