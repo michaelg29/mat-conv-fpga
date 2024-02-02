@@ -13,10 +13,10 @@ end testbench_math_block;
 architecture tb of testbench_math_block is
 
 --Device Under Test component
-component math_block is port ( A1, B1, A2, B2 : in signed(8 downto 0); 
-                                C, D: in signed(43 downto 0);
-                                clk : in std_logic;
-                                P: out signed(43 downto 0)); 
+component math_block is port (  i_a1, i_b1, i_a2, i_b2 : in signed(8 downto 0); 
+                                i_c, i_d: in signed(43 downto 0);
+                                i_clk : in std_logic;
+                                o_p: out signed(43 downto 0));  
 end component; 
 
 signal A1, B1, A2, B2 : signed(8 downto 0); 
@@ -27,8 +27,8 @@ signal P : signed(43 downto 0);
 begin
 
 	--Connect DUT
-    DUT: math_block port map ( A1 => A1, B1 => B1, A2 => A2, B2 => B2, 
-                               C => C, D => D, clk => clk, P => P);
+    DUT: math_block port map ( i_a1 => A1, i_b1 => B1, i_a2 => A2, i_b2 => B2, 
+                               i_c => C, i_d => D, i_clk => clk, o_P => P);
 
     clk_process: process
 		begin

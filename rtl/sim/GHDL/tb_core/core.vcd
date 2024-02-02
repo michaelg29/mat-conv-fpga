@@ -1,5 +1,5 @@
 $date
-  Fri Feb 02 12:19:45 2024
+  Fri Feb 02 12:38:56 2024
 $end
 $version
   GHDL v0
@@ -64,34 +64,34 @@ $var reg 9 N mac2_a2[8:0] $end
 $var reg 9 O mac2_b2[8:0] $end
 $var reg 44 P mac2_p[43:0] $end
 $scope module mac0 $end
-$var reg 9 Q a1[8:0] $end
-$var reg 9 R b1[8:0] $end
-$var reg 9 S a2[8:0] $end
-$var reg 9 T b2[8:0] $end
-$var reg 44 U c[43:0] $end
-$var reg 44 V d[43:0] $end
-$var reg 1 W clk $end
-$var reg 44 X p[43:0] $end
+$var reg 9 Q i_a1[8:0] $end
+$var reg 9 R i_b1[8:0] $end
+$var reg 9 S i_a2[8:0] $end
+$var reg 9 T i_b2[8:0] $end
+$var reg 44 U i_c[43:0] $end
+$var reg 44 V i_d[43:0] $end
+$var reg 1 W i_clk $end
+$var reg 44 X o_p[43:0] $end
 $upscope $end
 $scope module mac1 $end
-$var reg 9 Y a1[8:0] $end
-$var reg 9 Z b1[8:0] $end
-$var reg 9 [ a2[8:0] $end
-$var reg 9 \ b2[8:0] $end
-$var reg 44 ] c[43:0] $end
-$var reg 44 ^ d[43:0] $end
-$var reg 1 _ clk $end
-$var reg 44 ` p[43:0] $end
+$var reg 9 Y i_a1[8:0] $end
+$var reg 9 Z i_b1[8:0] $end
+$var reg 9 [ i_a2[8:0] $end
+$var reg 9 \ i_b2[8:0] $end
+$var reg 44 ] i_c[43:0] $end
+$var reg 44 ^ i_d[43:0] $end
+$var reg 1 _ i_clk $end
+$var reg 44 ` o_p[43:0] $end
 $upscope $end
 $scope module mac2 $end
-$var reg 9 a a1[8:0] $end
-$var reg 9 b b1[8:0] $end
-$var reg 9 c a2[8:0] $end
-$var reg 9 d b2[8:0] $end
-$var reg 44 e c[43:0] $end
-$var reg 44 f d[43:0] $end
-$var reg 1 g clk $end
-$var reg 44 h p[43:0] $end
+$var reg 9 a i_a1[8:0] $end
+$var reg 9 b i_b1[8:0] $end
+$var reg 9 c i_a2[8:0] $end
+$var reg 9 d i_b2[8:0] $end
+$var reg 44 e i_c[43:0] $end
+$var reg 44 f i_d[43:0] $end
+$var reg 1 g i_clk $end
+$var reg 44 h o_p[43:0] $end
 $upscope $end
 $upscope $end
 $upscope $end

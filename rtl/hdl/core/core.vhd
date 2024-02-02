@@ -16,10 +16,10 @@ end core;
 architecture core_arch of core is 
 
 
-component math_block is port ( A1, B1, A2, B2 : in signed(8 downto 0); 
-                                C, D: in signed(43 downto 0);
-                                clk : in std_logic;
-                                P: out signed(43 downto 0)); 
+component math_block is port (  i_a1, i_b1, i_a2, i_b2 : in signed(8 downto 0); 
+                                i_c, i_d: in signed(43 downto 0);
+                                i_clk : in std_logic;
+                                o_p: out signed(43 downto 0));
 end component; 
 
 signal k4_p_reg, s4_p_reg : signed(8 downto 0); --pipelining regs for 2nd mathblock
@@ -40,14 +40,14 @@ signal MAC2_P : signed(43 downto 0);
   begin 
 
 
-  MAC0 : math_block port map ( A1 => MAC0_A1, B1 => MAC0_B1, A2 => MAC0_A2, B2 => MAC0_B2, 
-                               C => MAC0_C, D => (others => '0'), clk => i_clk, P => MAC0_P);
+  MAC0 : math_block port map ( i_a1 => MAC0_A1, i_b1 => MAC0_B1, i_a2 => MAC0_A2, i_b2 => MAC0_B2, 
+                               i_c => MAC0_C, i_d => (others => '0'), i_clk => i_clk, o_p => MAC0_P);
 
-  MAC1 : math_block port map ( A1 => MAC1_A1, B1 => MAC1_B1, A2 => MAC1_A2, B2 => MAC1_B2, 
-                               C => (2 => '1', others => '0'), D => (others => '0'), clk => i_clk, P => MAC1_P);--ADD ROUNDING INTO PORT C
+  MAC1 : math_block port map ( i_a1 => MAC1_A1, i_b1 => MAC1_B1, i_a2 => MAC1_A2, i_b2 => MAC1_B2, 
+                               i_c => (2 => '1', others => '0'), i_d => (others => '0'), i_clk => i_clk, o_p => MAC1_P);--ADD ROUNDING INTO PORT C
 
-  MAC2 : math_block port map ( A1 => (others => '0'), B1=> (others => '0'), A2 => MAC2_A2, B2 => MAC2_B2, 
-                               C => MAC0_P, D => MAC1_P, clk => i_clk, P => MAC2_P);
+  MAC2 : math_block port map ( i_a1 => (others => '0'), i_b1=> (others => '0'), i_a2 => MAC2_A2, i_b2 => MAC2_B2, 
+                               i_c => MAC0_P, i_d => MAC1_P, i_clk => i_clk, o_p => MAC2_P);
 
 
 

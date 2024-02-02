@@ -1,5 +1,5 @@
 $date
-  Tue Jan 30 11:33:52 2024
+  Fri Feb 02 12:33:58 2024
 $end
 $version
   GHDL v0
@@ -23,14 +23,14 @@ $var reg 44 & d[43:0] $end
 $var reg 1 ' clk $end
 $var reg 44 ( p[43:0] $end
 $scope module dut $end
-$var reg 9 ) a1[8:0] $end
-$var reg 9 * b1[8:0] $end
-$var reg 9 + a2[8:0] $end
-$var reg 9 , b2[8:0] $end
-$var reg 44 - c[43:0] $end
-$var reg 44 . d[43:0] $end
-$var reg 1 / clk $end
-$var reg 44 0 p[43:0] $end
+$var reg 9 ) i_a1[8:0] $end
+$var reg 9 * i_b1[8:0] $end
+$var reg 9 + i_a2[8:0] $end
+$var reg 9 , i_b2[8:0] $end
+$var reg 44 - i_c[43:0] $end
+$var reg 44 . i_d[43:0] $end
+$var reg 1 / i_clk $end
+$var reg 44 0 o_p[43:0] $end
 $upscope $end
 $upscope $end
 $enddefinitions $end
