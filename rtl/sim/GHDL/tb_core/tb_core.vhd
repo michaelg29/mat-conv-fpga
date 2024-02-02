@@ -79,12 +79,24 @@ begin
 
         i_k4 <= to_signed(127, 8);-- 0.9921875 in signed Q0.7
         i_s4 <= to_signed(10, 8);
+        wait for 8 ns;
+
+        
+        i_sub <= to_signed(127, 18);
         wait for 24 ns;
         
         ---Clear inputs
-        i_rst_n <= '0';
-        i_en <= '0';
-        
+        i_k0 <= (others => '0');
+        i_k1 <= (others => '0');
+        i_k2 <= (others => '0');
+        i_k3 <= (others => '0');
+        i_k4 <= (others => '0');          
+        i_s0 <= (others => '0');
+        i_s1 <= (others => '0');
+        i_s2 <= (others => '0');
+        i_s3 <= (others => '0');        
+        i_s4 <= (others => '0');
+        i_sub <= (others => '0');        
         wait;
 	end process;
 end tb;
