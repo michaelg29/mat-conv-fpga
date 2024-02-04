@@ -15,7 +15,7 @@ entity axi_receiver is
   port (
     -- clock and reset interface
     i_aclk                : in  std_logic;
-    i_areset_n            : in  std_logic;
+    i_arst_n              : in  std_logic;
 
     -- write address channel
     i_rx_axi_awid         : in  std_logic_vector(3 downto 0);
@@ -28,20 +28,20 @@ entity axi_receiver is
     i_rx_axi_awprot       : in  std_logic_vector(2 downto 0);
     i_rx_axi_awvalid      : in  std_logic;
     o_rx_axi_awready      : out std_logic;
-    
+
     -- write data channel
     i_rx_axi_wdata        : in  std_logic_vector(63 downto 0);
     i_rx_axi_wstrb        : in  std_logic_vector(7 downto 0);
     i_rx_axi_wlast        : in  std_logic;
     i_rx_axi_wvalid       : in  std_logic;
     o_rx_axi_wready       : out std_logic;
-    
+
     -- write response channel
     o_rx_axi_bid          : out std_logic_vector(3 downto 0);
     o_rx_axi_bresp        : out std_logic_vector(1 downto 0);
     o_rx_axi_bvalid       : out std_logic;
     i_rx_axi_bready       : in  std_logic;
-    
+
     -- read address channel (unused)
     i_rx_axi_arid         : in  std_logic_vector(3 downto 0);
     i_rx_axi_araddr       : in  std_logic_vector(31 downto 0);
@@ -53,7 +53,7 @@ entity axi_receiver is
     i_rx_axi_arprot       : in  std_logic_vector(2 downto 0);
     i_rx_axi_arvalid      : in  std_logic;
     o_rx_axi_arready      : out std_logic;
-    
+
     -- read data channel (unused)
     o_rx_axi_rid          : out std_logic_vector(3 downto 0);
     o_rx_axi_rdata        : out std_logic_vector(63 downto 0);
@@ -67,22 +67,31 @@ entity axi_receiver is
     o_rx_valid            : out std_logic;
     o_rx_addr             : out std_logic_vector(G_ADDR_PKT_WIDTH-1 downto 0);
     o_rx_data             : out std_logic_vector(G_DATA_PKT_WIDTH downto 0);
-    
+
     -- interface with internal controller
-    i_rx_drop_pkts        : in std_logic
+    i_rx_drop_pkts        : in  std_logic;
+    i_write_blank_en      : in  std_logic;
+    o_write_blank_ack     : out std_logic
   );
 end axi_receiver;
 
 architecture arch_imp of axi_receiver is
 
   -- AXI signals
-  signal axi_awready    : std_logic;
-  signal axi_wready     : std_logic;
-  signal axi_bresp      : std_logic_vector(1 downto 0);
-  signal axi_bvalid     : std_logic;
+  signal axi_awready      : std_logic;
+  signal axi_wready       : std_logic;
+  signal axi_bresp        : std_logic_vector(1 downto 0);
+  signal axi_bvalid       : std_logic;
 
   -- The axi_awv_awr_flag flag marks the presence of write address valid
   signal axi_awv_awr_flag : std_logic;
+  
+  -- registers for CDC
+  signal rx_drop_pkts_cdc : std_logic;
+  signal write_blank_cdc  : std_logic;
+
+  -- write blank logic
+  signal write_blank_en   : std_logic;
 
 begin
   -- I/O Connections assignments
@@ -108,7 +117,7 @@ begin
   p_awready: process (i_aclk)
   begin
     if rising_edge(i_aclk) then
-      if i_areset_n = '0' then
+      if i_arst_n = '0' then
         axi_awready <= '0';
         axi_awv_awr_flag <= '0';
       else
@@ -131,7 +140,7 @@ begin
   p_wready: process (i_aclk)
   begin
     if rising_edge(i_aclk) then
-      if i_areset_n = '0' then
+      if i_arst_n = '0' then
         axi_wready <= '0';
       else
         if i_rx_fifo_af = '1' then
@@ -155,7 +164,7 @@ begin
   p_response: process (i_aclk)
   begin
     if rising_edge(i_aclk) then
-      if i_areset_n = '0' then
+      if i_arst_n = '0' then
         axi_bvalid  <= '0';
         axi_bresp  <= "00"; --need to work more on the responses
         -- ADD SLVERR ("10") on
@@ -178,19 +187,39 @@ begin
   p_output: process (i_aclk)
   begin
     if rising_edge(i_aclk) then
-      if i_areset_n = '0' then
-        o_rx_valid  <= '0';
-        o_rx_addr   <= (others=>'0');
-        o_rx_data   <= (others=>'0');
+      if i_arst_n = '0' then
+        o_rx_valid       <= '0';
+        o_rx_addr        <= (others=>'0');
+        o_rx_data        <= (others=>'0');
+        rx_drop_pkts_cdc <= '0';
+        write_blank_cdc  <= '0';
+        write_blank_en   <= '0';
       else
-        -- latch write address
-        if (i_rx_axi_awvalid = '1') then
-          o_rx_addr   <= i_rx_axi_awaddr(G_ADDR_PKT_WIDTH-1 downto 0);
+        -- perform CDC on control signals from Input FSM
+        rx_drop_pkts_cdc <= i_rx_drop_pkts;
+        write_blank_cdc  <= i_write_blank_en;
+      
+        -- output write data
+        if (write_blank_en = '1') then
+          -- output blank packet
+          o_rx_valid        <= '1';
+          o_rx_data         <= (others => '0');
+          o_rx_addr         <= "00000001";
+          o_write_blank_ack <= '1';
+          write_blank_en    <= '0';
+        else
+          o_rx_valid        <= axi_wready and i_rx_axi_wvalid and not(rx_drop_pkts_cdc);
+          o_rx_data         <= i_rx_axi_wdata(G_DATA_PKT_WIDTH-1 downto 0);
+
+          -- latch write address
+          if (i_rx_axi_awvalid = '1') then
+            o_rx_addr   <= i_rx_axi_awaddr(G_ADDR_PKT_WIDTH-1 downto 0);
+          end if;
+
+          -- write blank packet in next CC if enabled and end of burst
+          write_blank_en    <= write_blank_cdc and i_rx_axi_wlast;
+          o_write_blank_ack <= '0';
         end if;
-        
-        -- latch write data
-        o_rx_valid  <= axi_wready and i_rx_axi_wvalid and not(i_rx_drop_pkts);
-        o_rx_data   <= i_rx_axi_wdata(G_DATA_PKT_WIDTH-1 downto 0);
       end if;
     end if;
   end process p_output;
