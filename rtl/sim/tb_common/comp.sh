@@ -1,13 +1,45 @@
 #!/bin/bash
 
+# path variables
 MODELSIM_HOME=${MODELSIM_HOME:="/home/`whoami`/intelFPGA/20.1/modelsim_ase"}
 UVM_HOME=${UVM_HOME:="/home/`whoami`/intelFPGA/20.1/modelsim_ase/verilog_src/uvm-1.2"}
 LIB_UVM="libs/uvm-1.2"
 export LIB_UVM=${LIB_UVM}
 
-./clean.sh
+libs=
+
+# parse arguments
+while :; do
+    case $1 in
+        --lib=?*)
+            lib="${1#*=}" # delete "--lib="
+            libs="${libs} ${lib}"
+            ;;
+        -?*)
+            printf "WARN: Unknown option (ignored): %s\n" "$1" >&2
+            ;;
+        *)               # Default case: No more options, so break out of the loop.
+            break
+    esac
+
+    shift
+done
+
+# clean libraries
+[ -z "${libs}" ] && ./clean.sh
 mkdir -p libs
 
+# construct libs list
+if [ -z "${libs}" ]; then
+    cat dependencies.txt |
+    while read path; do
+        libs="${libs} ${path}"
+    done
+fi
+
+echo "Compiling libs: $libs"
+
+# construct modelsim.ini
 echo "" > modelsim.ini
 cat ${MODELSIM_HOME}/modelsim.ini |
 while read line; do
@@ -22,6 +54,7 @@ while read line; do
     fi
 done
 
+# compile UVM
 if [ ! -d ${LIB_UVM} ]; then
     echo -e "\n\n=====\nCOMPILING UVM\n=====\n\n"
     eval `dirname "$0"`/comp_uvm.sh
@@ -31,14 +64,14 @@ if [ ! -d ${LIB_UVM} ]; then
     fi
 fi
 
-cat dependencies.txt |
-while read path; do
+# compile all libraries
+for path in "${libs[@]}"; do
     ([ -z "$path" ] || [ -z "${path%%#*}" ]) && continue
     echo -e "\n\n=====\nCOMPILING ${path##*/}\n=====\n\n"
-    
+
     name="${path##*/}_library"
     echo "Compiling ${name} located at ${path}"
-    
+
     if [ -f ${path}/filelist.txt ]; then
         vlib libs/${name}
         cat ${path}/filelist.txt |
@@ -59,7 +92,7 @@ while read path; do
                 echo "Compile errors in ${file}"
                 exit 1 # break out of loop with error
             fi
-            
+
             echo -e "\n"
         done
         if [ "$?" -ne 0 ]; then
