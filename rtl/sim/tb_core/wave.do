@@ -9,8 +9,11 @@ add wave -noupdate /tb_top/i_clk
 add wave -noupdate /tb_top/i_pixels
 add wave -noupdate /tb_top/i_kernels
 add wave -noupdate /tb_top/i_sub
-add wave -noupdate /tb_top/DUT/i_*
-add wave -noupdate /tb_top/DUT/o_*
+add wave -noupdate /tb_top/oreg
+add wave -noupdate /tb_top/kreg1
+add wave -noupdate /tb_top/kreg2
+add wave -noupdate /tb_top/DUT/i_sub
+add wave -noupdate /tb_top/DUT/o_res
 add wave -noupdate /tb_top/DUT/MAC*
 add wave -noupdate /tb_top/DUT/o_res
 TreeUpdate [SetDefaultTree]
