@@ -23,6 +23,9 @@ You can then add the path to the binaries in the ~/.profile file.
 By default, the path is ~/intelFPGA/20.1/modelsim_ase/bin
 
 
+You also need to install the following dependencies for UVM (otherwise errors will ensue):
+* sudo apt-get install gcc g++ gcc-multilib g++-multilib
+
 
 
 # RTL Coding
