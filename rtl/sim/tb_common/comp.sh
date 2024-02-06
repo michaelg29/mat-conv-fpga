@@ -29,16 +29,6 @@ done
 [ -z "${libs}" ] && ./clean.sh
 mkdir -p libs
 
-# construct libs list
-if [ -z "${libs}" ]; then
-    cat dependencies.txt |
-    while read path; do
-        libs="${libs} ${path}"
-    done
-fi
-
-echo "Compiling libs: $libs"
-
 # construct modelsim.ini
 echo "" > modelsim.ini
 cat ${MODELSIM_HOME}/modelsim.ini |
@@ -64,11 +54,12 @@ if [ ! -d ${LIB_UVM} ]; then
     fi
 fi
 
-# compile all libraries
-for path in "${libs[@]}"; do
+# function to compile library at path
+function do_compile {
+    path=$1
     ([ -z "$path" ] || [ -z "${path%%#*}" ]) && continue
     echo -e "\n\n=====\nCOMPILING ${path##*/}\n=====\n\n"
-
+    
     name="${path##*/}_library"
     echo "Compiling ${name} located at ${path}"
 
@@ -103,4 +94,18 @@ for path in "${libs[@]}"; do
         echo "Could not find ${path}/filelist.txt, exiting."
         exit 1
     fi
-done
+}
+
+# compile all libraries
+if [ -z "${libs}" ]; then
+    echo "Compiling libs in dependencies.txt"
+    cat dependencies.txt |
+    while read path; do
+        do_compile $path
+    done
+else
+    echo "Compiling libs: $libs"
+    for path in "${libs[@]}"; do
+        do_compile $path
+    done
+fi
