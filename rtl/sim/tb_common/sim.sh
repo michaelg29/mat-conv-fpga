@@ -25,4 +25,24 @@ done
 lib_list="-sv_lib ${UVM_HOME}/lib/uvm_dpi -L libs/uvm-1.2 "`cat /tmp/lib_list$$ `
 last_lib=${lib_list##*-L}
 
-vsim -c ${last_lib}.${TB_TOP} -do run.do ${lib_list} -voptargs=+acc -work ${last_lib}
+echo -n "" > .log
+
+# run simulation
+command="vsim -c ${last_lib}.${TB_TOP} -do run.do ${lib_list} -voptargs=+acc -work ${last_lib}"
+eval $command | {
+    while read -r line; do
+        echo $line
+        echo $line >> .log
+    done
+}
+
+# analyze log
+n_uvm_error=`grep -rn "UVM_ERROR" ./.log | wc -l`
+n_uvm_warning=`grep -rn "UVM_WARNING" ./.log | wc -l`
+echo -e "\n\n"
+echo "Number of UVM_ERROR messages: $n_uvm_error"
+echo "Number of UVM_WARNING messages: $n_uvm_warning"
+
+[ $n_uvm_error -gt 0 ] && echo "Exiting with error" && exit 1
+
+echo "Exiting" && exit 0
