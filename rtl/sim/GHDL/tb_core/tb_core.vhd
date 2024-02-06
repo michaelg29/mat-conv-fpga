@@ -14,15 +14,15 @@ architecture tb of testbench_core is
 
 --Device Under Test component
 component core is port ( i_clk, i_en: in std_logic;
-                      i_k0, i_k1, i_k2, i_k3, i_k4, i_s0, i_s1, i_s2, i_s3, i_s4 : in signed(7 downto 0); 
-                      i_sub: in signed(17 downto 0);
-                      o_res: out signed(17 downto 0)); 
+                      i_k0, i_k1, i_k2, i_k3, i_k4, i_s0, i_s1, i_s2, i_s3, i_s4 : in std_logic_vector(7 downto 0); 
+                      i_sub: in std_logic_vector(17 downto 0);
+                      o_res: out std_logic_vector(17 downto 0)); 
 end component; 
 
 signal i_clk, i_en : std_logic;
-signal i_k0, i_k1, i_k2, i_k3, i_k4, i_s0, i_s1, i_s2, i_s3, i_s4 : signed(7 downto 0); 
-signal i_sub : signed(17 downto 0);
-signal o_res : signed(17 downto 0);
+signal i_k0, i_k1, i_k2, i_k3, i_k4, i_s0, i_s1, i_s2, i_s3, i_s4 : std_logic_vector(7 downto 0); 
+signal i_sub : std_logic_vector(17 downto 0);
+signal o_res : std_logic_vector(17 downto 0);
 
 begin
 
@@ -57,28 +57,28 @@ begin
         wait for 16 ns;
 
         i_en <= '1';
-        i_k0 <= to_signed(127, 8);-- 0.9921875 in signed Q0.7
-        i_s0 <= to_signed(10, 8);
+        i_k0 <= std_logic_vector(to_signed(127, 8));-- 0.9921875 in signed Q0.7
+        i_s0 <= std_logic_vector(to_signed(10, 8));
         wait for 8 ns;
 
-        i_k1 <= to_signed(127, 8);-- 0.9921875 in signed Q0.7
-        i_s1 <= to_signed(10, 8);
+        i_k1 <= std_logic_vector(to_signed(127, 8));-- 0.9921875 in signed Q0.7
+        i_s1 <= std_logic_vector(to_signed(10, 8));
         wait for 8 ns;
 
-        i_k2 <= to_signed(127, 8);-- 0.9921875 in signed Q0.7
-        i_s2 <= to_signed(10, 8);
+        i_k2 <= std_logic_vector(to_signed(127, 8));-- 0.9921875 in signed Q0.7
+        i_s2 <= std_logic_vector(to_signed(10, 8));
         wait for 8 ns;
 
-        i_k3 <= to_signed(127, 8);-- 0.9921875 in signed Q0.7
-        i_s3 <= to_signed(10, 8);
+        i_k3 <= std_logic_vector(to_signed(127, 8));-- 0.9921875 in signed Q0.7
+        i_s3 <= std_logic_vector(to_signed(10, 8));
         wait for 8 ns;
 
-        i_k4 <= to_signed(127, 8);-- 0.9921875 in signed Q0.7
-        i_s4 <= to_signed(10, 8);
+        i_k4 <= std_logic_vector(to_signed(127, 8));-- 0.9921875 in signed Q0.7
+        i_s4 <= std_logic_vector(to_signed(10, 8));
         wait for 8 ns;
 
         
-        i_sub <= to_signed(127, 18);
+        i_sub <= std_logic_vector(to_signed(127, 18));
         wait for 24 ns;
         
         ---Clear inputs
