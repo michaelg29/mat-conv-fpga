@@ -5,9 +5,16 @@ add wave -noupdate /tb_top/w_macclk_dut
 add wave -noupdate /tb_top/rst_n
 add wave -noupdate /tb_top/DUT/aempty
 add wave -noupdate /tb_top/DUT/bempty
-add wave -noupdate /tb_top/DUT/en
-add wave -noupdate /tb_top/DUT/acc
-add wave -noupdate /tb_top/DUT/counter
+add wave -noupdate /tb_top/i_clk
+add wave -noupdate /tb_top/i_pixels
+add wave -noupdate /tb_top/i_kernels
+add wave -noupdate /tb_top/i_sub
+add wave -noupdate /tb_top/oreg
+add wave -noupdate /tb_top/kreg1
+add wave -noupdate /tb_top/kreg2
+add wave -noupdate /tb_top/DUT/i_sub
+add wave -noupdate /tb_top/DUT/o_res
+add wave -noupdate /tb_top/DUT/MAC*
 add wave -noupdate /tb_top/DUT/o_res
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {55726 ps} 0}

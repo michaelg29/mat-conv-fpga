@@ -1,4 +1,3 @@
-../../hdl/mac
-../../hdl/fifo
+../../hdl/math_block
 ../../hdl/core
 ../../hdl/tb_core

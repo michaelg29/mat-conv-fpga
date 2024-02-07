@@ -1,1 +1,4 @@
+*.vcd
+*.cf
 *.log
+*.vstf

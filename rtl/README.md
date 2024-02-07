@@ -1,3 +1,32 @@
+# ModelSim installation
+
+## Linux
+### Ubuntu 22.04 LTS
+As found here: https://stackoverflow.com/questions/76335589/modelsim-install-in-ubuntu-22-04
+
+Run the following commands to install the dependencies for ModelSim:
+* sudo dpkg --add-architecture i386
+* sudo apt-get update
+* sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386 lib32ncurses6 libxft2 libxft2:i386 libxext6 libxext6:i386
+
+
+Download the ModelSim Linux installer from: https://www.intel.com/content/www/us/en/software-kit/750666/modelsim-intel-fpgas-standard-edition-software-version-20-1-1.html
+
+Make the installer an executable with the following command:
+* chmod +x ModelSimSetup-20.1.1.720-linux.run
+
+Run the installer:
+* ./ModelSimSetup-20.1.1.720-linux.run
+
+
+You can then add the path to the binaries in the ~/.profile file.
+By default, the path is ~/intelFPGA/20.1/modelsim_ase/bin
+
+
+You also need to install the following dependencies for UVM (otherwise errors will ensue):
+* sudo apt-get install gcc g++ gcc-multilib g++-multilib
+
+
 
 # RTL Coding
 
