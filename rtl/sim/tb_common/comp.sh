@@ -1,13 +1,35 @@
 #!/bin/bash
 
+# path variables
 MODELSIM_HOME=${MODELSIM_HOME:="/home/`whoami`/intelFPGA/20.1/modelsim_ase"}
 UVM_HOME=${UVM_HOME:="/home/`whoami`/intelFPGA/20.1/modelsim_ase/verilog_src/uvm-1.2"}
 LIB_UVM="libs/uvm-1.2"
 export LIB_UVM=${LIB_UVM}
 
-./clean.sh
+libs=
+
+# parse arguments
+while :; do
+    case $1 in
+        --lib=?*)
+            lib="${1#*=}" # delete "--lib="
+            libs="${libs} ${lib}"
+            ;;
+        -?*)
+            printf "WARN: Unknown option (ignored): %s\n" "$1" >&2
+            ;;
+        *)               # Default case: No more options, so break out of the loop.
+            break
+    esac
+
+    shift
+done
+
+# clean libraries
+[ -z "${libs}" ] && ./clean.sh
 mkdir -p libs
 
+# construct modelsim.ini
 echo "" > modelsim.ini
 cat ${MODELSIM_HOME}/modelsim.ini |
 while read line; do
@@ -22,8 +44,9 @@ while read line; do
     fi
 done
 
+# compile UVM
 if [ ! -d ${LIB_UVM} ]; then
-    echo "Compiling UVM"
+    echo -e "\n\n=====\nCOMPILING UVM\n=====\n\n"
     eval `dirname "$0"`/comp_uvm.sh
     if [ "$?" -ne 0 ]; then
         echo "UVM compile errors"
@@ -31,11 +54,15 @@ if [ ! -d ${LIB_UVM} ]; then
     fi
 fi
 
-cat dependencies.txt |
-while read path; do
+# function to compile library at path
+function do_compile {
+    path=$1
     ([ -z "$path" ] || [ -z "${path%%#*}" ]) && continue
+    echo -e "\n\n=====\nCOMPILING ${path##*/}\n=====\n\n"
+    
     name="${path##*/}_library"
     echo "Compiling ${name} located at ${path}"
+
     if [ -f ${path}/filelist.txt ]; then
         vlib libs/${name}
         cat ${path}/filelist.txt |
@@ -56,6 +83,8 @@ while read path; do
                 echo "Compile errors in ${file}"
                 exit 1 # break out of loop with error
             fi
+
+            echo -e "\n"
         done
         if [ "$?" -ne 0 ]; then
             echo "Compile errors in ${path}"
@@ -65,4 +94,18 @@ while read path; do
         echo "Could not find ${path}/filelist.txt, exiting."
         exit 1
     fi
-done
+}
+
+# compile all libraries
+if [ -z "${libs}" ]; then
+    echo "Compiling libs in dependencies.txt"
+    cat dependencies.txt |
+    while read path; do
+        do_compile $path
+    done
+else
+    echo "Compiling libs: $libs"
+    for path in "${libs[@]}"; do
+        do_compile $path
+    done
+fi

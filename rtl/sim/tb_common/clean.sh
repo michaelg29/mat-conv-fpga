@@ -2,6 +2,8 @@
 
 LIB_UVM=${LIB_UVM:=""}
 
+! [ -d ./libs ] && echo "No libraries to clean" && exit 0
+
 echo "Cleaning libraries directory"
 ls -1 --group-directories-first libs |
 while read dir; do
