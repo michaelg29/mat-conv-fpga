@@ -28,6 +28,8 @@ architecture rtl of krf is
 
     begin
 
+    --using this in the event that a i_rst rising edge occurs at the same time as a clock rising edge:
+    --we want to latch the data immediatly, and not at the next clock cycle
     fsm_clk <= i_clk and i_valid and i_rst;
 
     o_kr_0 <= reg_0;
