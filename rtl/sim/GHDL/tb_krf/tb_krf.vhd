@@ -78,12 +78,11 @@ begin
         wait for 4 ns;
 
         rst <= '0';
+        valid <= '0';
         wait for 4 ns;
 
         rst <= '1';
-        data <= x"FFFFFFFFFFFFFFFF";
-        wait for 4 ns;
-        
+        valid <= '1';
         data <= x"AAAAAAAAAABBBBBB";
         wait for 4 ns;
 

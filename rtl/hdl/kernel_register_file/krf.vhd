@@ -24,8 +24,11 @@ architecture rtl of krf is
     signal krf_fsm_state : KRF_FSM_STATE_T;
     signal reg_0, reg_1, reg_2, reg_3, reg_4 : std_logic_vector(39 downto 0);
 
+    signal fsm_clk: std_logic;
+
     begin
 
+    fsm_clk <= i_clk and i_valid and i_rst;
 
     o_kr_0 <= reg_0;
     o_kr_1 <= reg_1;
@@ -33,12 +36,12 @@ architecture rtl of krf is
     o_kr_3 <= reg_3;
     o_kr_4 <= reg_4;
 
-    process(i_clk, i_rst)
+    process(fsm_clk, i_rst)
         begin
 --TODO: TMR. RTG4_FPGA_Fabric_User_Guide_UG0574_V6, 3.1.2 STMR-D Flip-Flop, USE LIBERO TOOL
             if rising_edge(i_rst) then
                 krf_fsm_state <= RESET;
-            elsif (rising_edge(i_clk) and i_valid = '1' and i_rst = '1') then
+            elsif rising_edge(fsm_clk) then
                 case (krf_fsm_state) is
 
                     when RESET =>
