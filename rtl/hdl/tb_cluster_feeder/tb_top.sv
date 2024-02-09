@@ -134,19 +134,21 @@ module tb_top
             i_sel = 1'b1; // parallel load
             i_new = 1'b1; // pipeline shall load
             @(posedge i_clk);
+            i_sel = 1'b0; // switch to serial load
+            i_new = 1'b0; // pipeline shall shift
 
             for (int i = 0 ; i < KERNEL_SIZE ; i++) begin
                 @(posedge i_clk); // 1 clock cycle to output the data
+                @(negedge i_clk); // let data appear at output
+                $display("o_pixels = 0x%X ; expected = 0x%X", o_pixels, i_pixels[i+:5]);
 
                 // check pixels
-                //if(i_pixels[KERNEL_SIZE-1 + i*8 : i*8] != o_pixels) begin
-                if(i_pixels[KERNEL_SIZE-1:0] != o_pixels) begin
+                // variable part select
+                if(i_pixels[i+:5] != o_pixels) begin
                     $display("Test 1 failed at i = %d",i);
+                    $display("o_pixels = 0x%X ; expected = 0x%X", o_pixels, i_pixels[i+:5]);
                     $finish(2);
                 end
-
-                i_sel = 1'b0; // switch to serial load
-                i_new = 1'b0; // pipeline shall shift
             end
                 
             $display("Test 1 passed");
