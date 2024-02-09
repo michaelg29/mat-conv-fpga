@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-//`include "uvm_macros.svh"
+`include "uvm_macros.svh"
 
 
 module tb_top
@@ -10,6 +10,8 @@ module tb_top
         parameter MAX_PIXEL_VAL = 10,
         parameter int TESTS_TO_RUN[3] = '{1,2,3} // IDs of tasks to run
     );
+
+    import uvm_pkg::*;
 
     // Signals
     reg i_clk;
@@ -134,6 +136,7 @@ module tb_top
             i_sel = 1'b1; // parallel load
             i_new = 1'b1; // pipeline shall load
             @(posedge i_clk);
+            @(negedge i_clk);
             i_sel = 1'b0; // switch to serial load
             i_new = 1'b0; // pipeline shall shift
 
@@ -145,8 +148,8 @@ module tb_top
                 // check pixels
                 // variable part select
                 if(i_pixels[i+:5] != o_pixels) begin
-                    $display("Test 1 failed at i = %d",i);
-                    $display("o_pixels = 0x%X ; expected = 0x%X", o_pixels, i_pixels[i+:5]);
+                    `uvm_error("tb_top", $sformatf("Test 1 failed at i = %d\r\no_pixels = 0x%X ; expected = 0x%X",i,o_pixels, i_pixels[i+:5]))
+                    @(negedge i_clk); // let data appear at output
                     $finish(2);
                 end
             end
