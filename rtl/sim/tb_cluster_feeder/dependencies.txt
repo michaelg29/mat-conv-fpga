@@ -1,1 +1,2 @@
 ../../hdl/cluster_feeder
+../../hdl/tb_cluster_feeder
