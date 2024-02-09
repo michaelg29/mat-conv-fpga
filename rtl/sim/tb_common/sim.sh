@@ -25,24 +25,51 @@ done
 lib_list="-sv_lib ${UVM_HOME}/lib/uvm_dpi -L libs/uvm-1.2 "`cat /tmp/lib_list$$ `
 last_lib=${lib_list##*-L}
 
-echo -n "" > .log
-
-# run simulation
-command="vsim -c ${last_lib}.${TB_TOP} -do run.do ${lib_list} -voptargs=+acc -work ${last_lib} -gPIPELINE=0"
-eval $command | {
-    while read -r line; do
-        echo $line
-        echo $line >> .log
-    done
+# function to run testbench with arguments
+function do_run {
+    args=$1
 }
 
-# analyze log
-n_uvm_error=`grep -rn "UVM_ERROR" ./.log | wc -l`
-n_uvm_warning=`grep -rn "UVM_WARNING" ./.log | wc -l`
-echo -e "\n\n"
-echo "Number of UVM_ERROR messages: $n_uvm_error"
-echo "Number of UVM_WARNING messages: $n_uvm_warning"
+# function to compile library at path
+function do_compile {
+    name=$1
+    args=$2
+    logname="./logs/${name}.log"
 
-[ $n_uvm_error -gt 0 ] && echo "Exiting with error" && exit 1
+    echo "Executing test ${name} with args ${args}"
+
+    echo -n "" > ${logname}
+
+    # run simulation
+    command="vsim -c ${last_lib}.${TB_TOP} -do run.do ${lib_list} -voptargs=+acc -work ${last_lib} ${args}"
+    eval $command | {
+        while read -r line; do
+            echo $line
+            echo $line >> ${logname}
+        done
+    }
+
+    # analyze log
+    n_uvm_error=`grep -rn "UVM_ERROR" ${logname} | wc -l`
+    n_uvm_warning=`grep -rn "UVM_WARNING" ${logname} | wc -l`
+    echo -e "\n\n"
+    echo "Number of UVM_ERROR messages: $n_uvm_error"
+    echo "Number of UVM_WARNING messages: $n_uvm_warning"
+    echo -e "\n\n"
+}
+
+# run all testcases
+mkdir -p ./logs
+if [ -f args.ini ]; then
+    cat args.ini |
+    while read line; do
+        name="${line%%:*}"
+        args="${line##*:}"
+        do_compile "${name}" "${args}"
+    done
+else
+    do_compile "tc" ""
+    [ $? -gt 0 ] && echo "Exiting with error" && exit 1
+fi
 
 echo "Exiting" && exit 0
