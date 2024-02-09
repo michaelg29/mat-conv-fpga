@@ -28,7 +28,7 @@ last_lib=${lib_list##*-L}
 echo -n "" > .log
 
 # run simulation
-command="vsim -c ${last_lib}.${TB_TOP} -do run.do ${lib_list} -voptargs=+acc -work ${last_lib}"
+command="vsim -c ${last_lib}.${TB_TOP} -do run.do ${lib_list} -voptargs=+acc -work ${last_lib} -gPIPELINE=0"
 eval $command | {
     while read -r line; do
         echo $line
