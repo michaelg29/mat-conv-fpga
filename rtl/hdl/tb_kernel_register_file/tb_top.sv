@@ -100,17 +100,27 @@ module tb_top
     /*
         Check the current KRF output to the input values
     */
-    function int krf_convert;
+    function logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] krf_convert;
         input [3:0][FIFO_WIDTH-1:0][7:0] i_krf_total;
 
-
         logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] krf_total_cvrt;
-        krf_total_cvrt[0] = i_krf_total[0][4:0];
-        krf_total_cvrt[1] = '{i_krf_total[0][FIFO_WIDTH-1:5], i_krf_total[1][1:0]};
-        krf_total_cvrt[2] = i_krf_total[1][FIFO_WIDTH-2:2];
-        krf_total_cvrt[3] = '{i_krf_total[1][FIFO_WIDTH-1:FIFO_WIDTH-1], i_krf_total[2][KERNEL_SIZE-2:0]};
-        krf_total_cvrt[4] = i_krf_total[1][FIFO_WIDTH-2:2];
 
+        krf_total_cvrt[0] = i_krf_total[0][7:3];
+        //$display("0:i_krf_total = 0x%X ; convert = 0x%X",i_krf_total[0][7:3], krf_total_cvrt[0]);
+
+        krf_total_cvrt[1] = {i_krf_total[0][2:0], i_krf_total[1][7:6]};
+        //$display("1:i_krf_total = 0x%X ; convert = 0x%X",{i_krf_total[0][2:0], i_krf_total[1][7:6]}, krf_total_cvrt[1]);
+
+        krf_total_cvrt[2] = i_krf_total[1][5:1];
+        //$display("2:i_krf_total = 0x%X ; convert = 0x%X",i_krf_total[1][5:1], krf_total_cvrt[2]);
+
+
+        krf_total_cvrt[3] = {i_krf_total[1][0:0], i_krf_total[2][7:4]};
+        //$display("3:i_krf_total = 0x%X ; convert = 0x%X",{i_krf_total[1][0:0], i_krf_total[2][7:4]}, krf_total_cvrt[3]);
+
+
+        krf_total_cvrt[4] = {i_krf_total[2][3:0], i_krf_total[3][7:7]};
+        //$display("4:i_krf_total = 0x%X ; convert = 0x%X",{i_krf_total[2][3:0], i_krf_total[3][7:7]}, krf_total_cvrt[4]);
         return krf_total_cvrt;
     endfunction
 
@@ -155,26 +165,26 @@ module tb_top
             i_rst = 1'b1; //reset state machine -> ready to program
             @(negedge i_clk);
 
-            for (int i = 0 ; i < KERNEL_SIZE ; i++) begin
+            for (int i = 0 ; i < 4 ; i++) begin
 
                 // Load a row
-                i_kernels = 64'hBEEF50B3BEEF50B3;
+                i_kernels = 64'hBEEF50B3CAFE66C2; //first BEEF is top-left two bytes, last B3 is third value of second row
                 i_krf_total[i] = i_kernels;
-
                 krf_total_cvrt = krf_convert(i_krf_total);
+
                 i_valid = 1'b1;
                 @(negedge i_clk);
                 i_valid = 1'b0; // check output and make no new row is loaded
 
                 @(posedge i_clk); // 1 clock cycle to output the data
                 @(negedge i_clk); // let data appear at output
-                $display("o_kernels = 0x%X ; expected = 0x%X",o_kernels, krf_total_cvrt);
 
                 // check pixels
                 // variable part select
                 if(krf_total_cvrt != o_kernels) begin
                     `uvm_error("tb_top", $sformatf("Test 1 failed at i = %d",i));
-                    `uvm_error("tb_top", $sformatf("o_kernels = 0x%X ; expected = 0x%X",o_kernels, krf_total_cvrt));
+                    $display("o_kernels = 0x%X ; expected = 0x%X",o_kernels, krf_total_cvrt);
+                    $display("i_k: 0x%X ; i_t: 0x%X",i_kernels, i_krf_total);
                     @(negedge i_clk); // let data appear at output
                     $finish(2);
                 end
