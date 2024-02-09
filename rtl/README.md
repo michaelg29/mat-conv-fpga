@@ -36,6 +36,17 @@ The folder `hdl` contains all the VHDL and SV design files. Each subfolder repre
 
 The folder `sim` contains the scripts needed to compile and simulate the testbenches and their DUT modules. To create a new testbench to be able to compile designs, copy the `tb_template` directory and rename it to the new testbench (i.e. `cp tb_template tb_<MY_TESTBENCH>`). Before running, update the file `dependencies.txt`, which provides paths to the directories containing the relevant design files. These paths must be relative to the directory in `sim`. The order matters, much like with `filelist.txt`. The files `run.do` and `wave.do` are modifiable, and can be customized to suit the specific simulation and waveform needs.
 
+## Coding style
+
+### UVM reporting
+
+The testbench modules use UVM reporting for errors and information. This is through the macros below. Here, `tb_top` is the name of the module attached to the log, `sformatf` allows a printf-style output, and `UVM_NONE` is the severity level. The script `sim.sh` will detect instances of `uvm_error`, and will exit the script with an error code when it finds those messages. This is useful for final reporting.
+
+```
+`uvm_info("tb_top", $sformatf("oreg[20:3]: %d ; oreg: %d ; o_res: %d",oreg[20:3], oreg, o_res), UVM_NONE);
+`uvm_error("tb_top", $sformatf("Test failed for i: %d; j: %d; k: %d", i, j, k));
+```
+
 ## Required environment
 
 To run the scripts, the following environment variables must be present. It is easiest to set this in the `.bashrc` file.
