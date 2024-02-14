@@ -5,28 +5,23 @@
 As found here: https://stackoverflow.com/questions/76335589/modelsim-install-in-ubuntu-22-04
 
 Run the following commands to install the dependencies for ModelSim:
-* sudo dpkg --add-architecture i386
-* sudo apt-get update
-* sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386 lib32ncurses6 libxft2 libxft2:i386 libxext6 libxext6:i386
-
+* `sudo dpkg --add-architecture i386`
+* `sudo apt-get update`
+* `sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386 lib32ncurses6 libxft2 libxft2:i386 libxext6 libxext6:i386`
 
 Download the ModelSim Linux installer from: https://www.intel.com/content/www/us/en/software-kit/750666/modelsim-intel-fpgas-standard-edition-software-version-20-1-1.html
 
 Make the installer an executable with the following command:
-* chmod +x ModelSimSetup-20.1.1.720-linux.run
+* `chmod +x ModelSimSetup-20.1.1.720-linux.run`
 
 Run the installer:
-* ./ModelSimSetup-20.1.1.720-linux.run
-
+* `./ModelSimSetup-20.1.1.720-linux.run`
 
 You can then add the path to the binaries in the ~/.profile file.
 By default, the path is ~/intelFPGA/20.1/modelsim_ase/bin
 
-
 You also need to install the following dependencies for UVM (otherwise errors will ensue):
-* sudo apt-get install gcc g++ gcc-multilib g++-multilib
-
-
+* `sudo apt-get install gcc g++ gcc-multilib g++-multilib`
 
 # RTL Coding
 
@@ -35,6 +30,17 @@ You also need to install the following dependencies for UVM (otherwise errors wi
 The folder `hdl` contains all the VHDL and SV design files. Each subfolder represents a module (top-level, submodule, testbench, ...), and has one or more .vhdl or .sv files. With it, there must be a file named `filelist.txt`. That file must list each design file on a new line, and must end with a new line. Order of specification matters.
 
 The folder `sim` contains the scripts needed to compile and simulate the testbenches and their DUT modules. To create a new testbench to be able to compile designs, copy the `tb_template` directory and rename it to the new testbench (i.e. `cp tb_template tb_<MY_TESTBENCH>`). Before running, update the file `dependencies.txt`, which provides paths to the directories containing the relevant design files. These paths must be relative to the directory in `sim`. The order matters, much like with `filelist.txt`. The files `run.do` and `wave.do` are modifiable, and can be customized to suit the specific simulation and waveform needs.
+
+## Coding style
+
+### UVM reporting
+
+The testbench modules use UVM reporting for errors and information. This is through the macros below. Here, `tb_top` is the name of the module attached to the log, `sformatf` allows a printf-style output, and `UVM_NONE` is the severity level. The script `sim.sh` will detect instances of `uvm_error`, and will exit the script with an error code when it finds those messages. This is useful for final reporting.
+
+```
+`uvm_info("tb_top", $sformatf("oreg[20:3]: %d ; oreg: %d ; o_res: %d",oreg[20:3], oreg, o_res), UVM_NONE);
+`uvm_error("tb_top", $sformatf("Test failed for i: %d; j: %d; k: %d", i, j, k));
+```
 
 ## Required environment
 
@@ -58,7 +64,24 @@ To compile the design files pointed to in `dependencies.txt`, execute `./comp.sh
 
 To run a simulation of the single top-level module, execute `./sim.sh`. To customize the run sequence, update `run.do`.
 
-Running the simulation generates a waveform in `vsim.wlf`. To view that waveform, run `./view.sh`. To customize the pre-set view, update `wave.do`. You can also save the current waveform you are viewing in Modelsim by selecting `File > Save Format` or (`ctrl+S`).
+Running the simulation generates a waveform in `vsim.wlf`. To view that waveform, run `./view.sh`. To customize the pre-set view, update `wave.do`. Modelsim also allows saving the current waveform selecting `File > Save Format` or (`ctrl+S`).
+
+### Testcases
+
+The simulation script allows for running the testbench with multiple iterations.
+
+1) First, create the file `args.ini` in the specific testbench simulation directory.
+2) Each line corresponds to a different iteration of the simulation.
+  a) Start each line with the testcase name followed by a semicolon.
+  b) After the semicolon, specify the vsim arguments passed into each testcase. The format `-g<GENERIC_NAME>=<GENERIC_VALUE` sets a generic value, for example.
+
+Example `args.ini`:
+```
+tc_pipeline: -gPIPELINE=1 -gTC_NAME=tc_pipeline
+tc_non_pipeline: -gPIPELINE=0 -gTC_NAME=tc_non_pipeline
+```
+
+Running the script `./sim.sh` automatically iterates through the lines of this file, if it exists. Each testcase creates a different log file in the `logs` directory.
 
 ### CMC licenses
 
