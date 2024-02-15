@@ -15,11 +15,8 @@ package mat_conv_pkg is
   constant MC_CMD_CMD_KERN  : std_logic := '0';
   constant MC_CMD_CMD_SUBJ  : std_logic := '1';
   
-  -- packet indices
-  constant MC_CMD_ID_STATUS : std_logic_vector( 2 downto 0) := b"101";
-  constant MC_CMD_ID_CHKSUM : std_logic_vector( 2 downto 0) := b"111";
-
   -- error codes
+  constant MC_STAT_NBITS    : integer                       := 4;
   constant MC_STAT_OKAY     : std_logic_vector(31 downto 0) := x"00000000";
   constant MC_STAT_ERR_PROC : std_logic_vector(31 downto 0) := x"00000001";
   constant MC_STAT_ERR_KEY  : std_logic_vector(31 downto 0) := x"00000002";

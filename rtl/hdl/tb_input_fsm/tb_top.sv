@@ -20,24 +20,30 @@ logic rst_n = 1'b0;
 logic por_n = 1'b1;
 
 // input signals
-logic [63:0] wdata           = '0;
-logic [7:0]  waddr           = '0;
+logic [63:0] pktdata         = '0;
+logic [7:0]  pktaddr         = '0;
 logic        new_pkt         = '0;
 logic        write_blank_ack = '0;
-logic        read_status     = '0;
+logic [31:0] rdata           = '0;
+logic        rvalid          = '0;
+logic        state_reg_pls   = '0;
+logic        proc_error      = '0;
 logic        res_written     = '0;
 
 // output signals
 wire         write_blank_en;
 wire         drop_pkts;
-wire [31:0]  cmd_data;
-wire [2:0]   cmd_data_id;
-wire         cmd_data_valid;
+wire [2:0]   addr;
+wire         ren;
+wire         wen;
+wire [31:0]  wdata;
 wire         eor;
 wire         cmd_kern;
 wire         cmd_subj;
 wire         cmd_valid;
 wire         cmd_err;
+wire         payload_done;
+wire         o_rst_n;
 
 `define ASSERT_EQ(a, b, format="%08h") if (a != b) `uvm_error("tb_top", $sformatf(`"Unexpected data in ``a``. Expected format, got format`", b, a))
 
@@ -52,32 +58,34 @@ input_fsm #(
   .i_por_n(por_n),
 
   // signals to and from Input FIFO
-  .i_wdata(wdata),
-  .i_waddr(waddr),
   .i_new_pkt(new_pkt),
+  .i_wdata(pktdata),
+  .i_waddr(pktaddr),
 
   // signals to and from AXI Receiver
   .i_write_blank_ack(write_blank_ack),
   .o_write_blank_en(write_blank_en),
   .o_drop_pkts(drop_pkts),
 
-  // signals to and from APB Receiver
-  .i_read_status(read_status),
-
   // signals to and from Command Buffer
-  .o_cmd_data(cmd_data),
-  .o_cmd_data_id(cmd_data_id),
-  .o_cmd_data_valid(cmd_data_valid),
+  .i_rdata(rdata),
+  .i_rvalid(rvalid),
+  .i_state_reg_pls(state_reg_pls),
+  .o_addr(addr),
+  .o_ren(ren),
+  .o_wen(wen),
+  .o_wdata(wdata),
 
-  // signals to and from Clusters
-  .o_eor(eor),
-
-  // global output status signals
+  // global status signals
+  .i_proc_error(proc_error),
   .i_res_written(res_written),
   .o_cmd_kern(cmd_kern),
   .o_cmd_subj(cmd_subj),
   .o_cmd_valid(cmd_valid),
-  .o_cmd_err(cmd_err)
+  .o_cmd_err(cmd_err),
+  .o_eor(eor),
+  .o_payload_done(payload_done),
+  .o_rst_n(o_rst_n)
 );
 
 // Clock generation
@@ -97,18 +105,18 @@ initial begin
   // ===== VALID KERNEL COMMAND =====
   // ================================
   #(MACCLK_PER);
-  wdata <= 64'h00000000CAFECAFE; // S_KEY, CMD
-  waddr <= 8'h80;
+  pktdata <= 64'h00000000CAFECAFE; // S_KEY, CMD
+  pktaddr <= 8'h80;
   new_pkt <= '1;
   #(MACCLK_PER);
-  wdata <= 64'hABCD000000100055; // SIZE, TX_ADDR
-  waddr <= waddr + 8;
+  pktdata <= 64'hABCD000000100055; // SIZE, TX_ADDR
+  pktaddr <= pktaddr + 8;
   #(MACCLK_PER);
-  wdata <= 64'h0000000000000000; // Reserved, TRANS_ID
-  waddr <= waddr + 8;
+  pktdata <= 64'h0000000000000000; // Reserved, TRANS_ID
+  pktaddr <= pktaddr + 8;
   #(MACCLK_PER);
-  wdata <= 64'hBF8E7444DEADBEEF; // E_KEY, CHKSUM
-  waddr <= waddr + 8;
+  pktdata <= 64'hBF8E7444DEADBEEF; // E_KEY, CHKSUM
+  pktaddr <= pktaddr + 8;
   #(MACCLK_PER);
   new_pkt <= '0;
   #(MACCLK_PER);
@@ -116,7 +124,7 @@ initial begin
   `uvm_info("tb_top", "transmitted cmd", UVM_NONE);
   `ASSERT_EQ(write_blank_en, '0, %b);
   `ASSERT_EQ(drop_pkts, '0, %b);
-  `ASSERT_EQ(cmd_data_valid, '0, %b);
+  //`ASSERT_EQ(cmd_stat_valid, '0, %b);
   `ASSERT_EQ(eor, '0, %b);
   `ASSERT_EQ(cmd_kern, '1, %b);
   `ASSERT_EQ(cmd_subj, '0, %b);
@@ -127,13 +135,13 @@ initial begin
   // =======================
   // ===== KERNEL DATA =====
   // =======================
-  waddr <= 8'h00;
+  pktaddr <= 8'h00;
   for (int unsigned i = 0; i < 4; i++) begin
     `uvm_info("tb_top", $sformatf("Transmitting kernel packet %d", i), UVM_NONE);
     new_pkt <= '1;
-    wdata <= 64'h0101010101010101;
+    pktdata <= 64'h0101010101010101;
     #(MACCLK_PER);
-    waddr <= waddr + 8;
+    pktaddr <= pktaddr + 8;
   end
   new_pkt <= '0;
   #(MACCLK_PER);
@@ -148,18 +156,18 @@ initial begin
   // ===== VALID SUBJECT COMMAND =====
   // =================================
   #(MACCLK_PER);
-  wdata <= 64'h6AF38000CAFECAFE; // S_KEY, CMD
-  waddr <= 8'h80;
+  pktdata <= 64'h6AF38000CAFECAFE; // S_KEY, CMD
+  pktaddr <= 8'h80;
   new_pkt <= '1;
   #(MACCLK_PER);
-  wdata <= 64'hABCD00001FB343AF; // SIZE, TX_ADDR
-  waddr <= waddr + 8;
+  pktdata <= 64'hABCD00001FB343AF; // SIZE, TX_ADDR
+  pktaddr <= pktaddr + 8;
   #(MACCLK_PER);
-  wdata <= 64'h0000000100000000; // Reserved, TRANS_ID
-  waddr <= waddr + 8;
+  pktdata <= 64'h0000000100000000; // Reserved, TRANS_ID
+  pktaddr <= pktaddr + 8;
   #(MACCLK_PER);
-  wdata <= 64'hCADEB7BFDEADBEEF; // E_KEY, CHKSUM
-  waddr <= waddr + 8;
+  pktdata <= 64'hCADEB7BFDEADBEEF; // E_KEY, CHKSUM
+  pktaddr <= pktaddr + 8;
   #(MACCLK_PER);
   new_pkt <= '0;
   #(4*MACCLK_PER);
@@ -167,13 +175,13 @@ initial begin
   // ========================
   // ===== SUBJECT DATA =====
   // ========================
-  waddr <= 8'h00;
+  pktaddr <= 8'h00;
   for (int unsigned i = 0; i < 16; i++) begin
     `uvm_info("tb_top", $sformatf("Transmitting subject packet %d", i), UVM_NONE);
     new_pkt <= '1;
-    wdata <= 64'h0101010101010101;
+    pktdata <= 64'h0101010101010101;
     #(MACCLK_PER);
-    waddr <= waddr + 8;
+    pktaddr <= pktaddr + 8;
   end
   new_pkt <= '0;
   #(MACCLK_PER);
@@ -188,18 +196,18 @@ initial begin
   // ===== INVALID KERNEL COMMAND =====
   // ==================================
   #(MACCLK_PER);
-  wdata <= 64'h00000000BEEFCAFE; // S_KEY, CMD
-  waddr <= 8'h80;
+  pktdata <= 64'h00000000BEEFCAFE; // S_KEY, CMD
+  pktaddr <= 8'h80;
   new_pkt <= '1;
   #(MACCLK_PER);
-  wdata <= 64'hABCD0000002000A5; // SIZE, TX_ADDR
-  waddr <= waddr + 8;
+  pktdata <= 64'hABCD0000002000A5; // SIZE, TX_ADDR
+  pktaddr <= pktaddr + 8;
   #(MACCLK_PER);
-  wdata <= 64'h0000000000000000; // Reserved, TRANS_ID
-  waddr <= waddr + 8;
+  pktdata <= 64'h0000000000000000; // Reserved, TRANS_ID
+  pktaddr <= pktaddr + 8;
   #(MACCLK_PER);
-  wdata <= 64'h0123456789ABCDEF; // E_KEY, CHKSUM
-  waddr <= waddr + 8;
+  pktdata <= 64'h0123456789ABCDEF; // E_KEY, CHKSUM
+  pktaddr <= pktaddr + 8;
   #(MACCLK_PER);
   new_pkt <= '0;
   #(MACCLK_PER);
@@ -207,7 +215,7 @@ initial begin
   `uvm_info("tb_top", "transmitted cmd", UVM_NONE);
   `ASSERT_EQ(write_blank_en, '0, %b);
   `ASSERT_EQ(drop_pkts, '0, %b);
-  `ASSERT_EQ(cmd_data_valid, '0, %b);
+  //`ASSERT_EQ(cmd_stat_valid, '0, %b);
   `ASSERT_EQ(eor, '0, %b);
   `ASSERT_EQ(cmd_kern, '0, %b);
   `ASSERT_EQ(cmd_subj, '0, %b);
@@ -215,9 +223,10 @@ initial begin
   `ASSERT_EQ(cmd_err, '1, %b);
   #(MACCLK_PER);
   // check output
-  `ASSERT_EQ(cmd_data, 32'h0000000E, %08h);
-  `ASSERT_EQ(cmd_data_id, 8'h05, %02h);
-  `ASSERT_EQ(cmd_data_valid, '1, %b);
+  `ASSERT_EQ(wdata, 32'h0000000E, %08h);
+  `ASSERT_EQ(wen, '1, %b);
+  #(MACCLK_PER);
+  `ASSERT_EQ(wen, '0, %b);
   #(4*MACCLK_PER);
 
   #(MACCLK_PER);
