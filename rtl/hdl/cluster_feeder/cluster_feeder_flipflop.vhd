@@ -18,7 +18,7 @@ end cluster_feeder_flipflop;
 
 architecture Behavioral of cluster_feeder_flipflop is
 begin
-    process(clk)
+    process(clk,i_pixel)
     begin
         if(rising_edge(clk)) then
             o_pixel <= i_pixel;
