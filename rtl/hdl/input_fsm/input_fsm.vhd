@@ -77,8 +77,8 @@ architecture rtl of input_fsm is
 
   -- command signals
   signal cur_cmd_chksum  : std_logic_vector(31 downto 0);
-  signal cur_cmd_status  : std_logic_vector(31 downto 0);
-  signal new_cmd_status  : std_logic_vector(31 downto 0);
+  signal cur_cmd_status  : std_logic_vector(MC_STAT_NBITS-1 downto 0);
+  signal new_cmd_status  : std_logic_vector(MC_STAT_NBITS-1 downto 0);
   signal cur_cmd_err     : std_logic;
   signal cur_cmd_kern    : std_logic;
   signal cur_cmd_subj    : std_logic;
@@ -214,7 +214,11 @@ begin
               else -- i_wdata(32+30) = MC_CMD_CMD_SUBJ
                 cur_cmd_kern <= '0';
                 cur_cmd_subj <= '1';
+                o_wen        <= '1';
               end if;
+              -- write OUT_ADDR
+              o_wdata(31 downto 2) <= i_wdata(32+29 downto 32+0);
+              o_addr(2 downto 0)   <= MC_ADDR_OUT_ADDR;
 
               -- next state
               input_fsm_state <= WAIT_CMD_SIZE;
@@ -224,15 +228,15 @@ begin
               cur_cmd_subj   <= '0';
               new_cmd_status <= (others => '0');
               cur_cmd_err    <= '0';
+
+              -- default interface signal
+              o_wen          <= '0';
             end if;
 
             -- initial interface signals
             o_write_blank_en <= '0';
             o_drop_pkts      <= '0';
-            o_addr           <= (others => '0');
             o_ren            <= '0';
-            o_wen            <= '0';
-            o_wdata          <= (others => '0');
             o_cmd_valid      <= '0';
             o_cmd_err        <= '0';
             o_cmd_kern       <= '0';
@@ -259,6 +263,7 @@ begin
               exp_cols <= i_wdata(3 downto 0);
               -- left shift by 7 bits for subject then truncate 3 bits
               cur_cols <= unsigned(i_wdata(3 downto 0) & "0000");
+
               if (cur_cmd_kern = '1') then
                 -- size of kernel is given as a raw integer
                 -- take multiples of 8-bytes (truncate 3 LSbs)
@@ -269,17 +274,22 @@ begin
                   new_cmd_status <= MC_STAT_ERR_SIZE;
                   cur_cmd_err    <= '1';
                 end if;
-              elsif (cur_cmd_subj = '1') then
+              else -- cur_cmd_subj = '1'
                 -- size of subject is given as a multiple of 128
                 -- pad with seven zeros then truncate 3 LSbs
                 cur_pkts <= unsigned(i_wdata(29 downto 15) & "0000");
               end if;
 
               -- process TX_ADDR fields, i_wdata(63 downto 32)
+              o_wdata(31 downto 2) <= i_wdata(32+29 downto 32+0);
+              o_addr(2 downto 0)   <= MC_ADDR_TX_ADDR;
+              o_wen                <= '1';
 
               -- next state
               input_fsm_state <= WAIT_CMD_TID;
             else
+              -- default interface signals
+              o_wen <= '0';
             end if;
 
           -- waiting for the third 64b packet in the command
@@ -291,6 +301,9 @@ begin
               input_fsm_state <= WAIT_CMD_E_KEY;
             else
             end if;
+
+            -- clear signals from previous states
+            o_wen <= '0';
 
           -- waiting for the fourth 64b packet in the command
           when WAIT_CMD_E_KEY =>
@@ -324,7 +337,7 @@ begin
             else
               -- valid state
               input_fsm_state <= PAYLOAD_RX;
-              cur_cmd_cmplt    <= '1';
+              cur_cmd_cmplt   <= '1';
 
               -- broadcast command type
               o_cmd_kern  <= cur_cmd_kern;
@@ -334,21 +347,32 @@ begin
           -- receiving payload data
           when PAYLOAD_RX =>
             -- update counters
-            if (is_payload_pkt(i_new_pkt, i_waddr) = '1') then
-              -- increment counters
-              cur_pkts <= cur_pkts - 1;
-
+            if (i_rvalid = '1') then
+              -- copy loaded state to counter
+              cur_pkts       <= unsigned(i_rdata(31 downto 13));
+              cur_cols       <= unsigned(i_rdata(12 downto 5));
+              cur_cmd_status <= i_rdata( 4 downto 0);
+            elsif (is_payload_pkt(i_new_pkt, i_waddr) = '1') then
               -- end of row logic
               if (cur_cols = zero_cols) then
                 cur_cols <= unsigned(exp_cols & "0000");
+                cur_pkts <= cur_pkts;
                 o_eor    <= '1';
               else
                 cur_cols <= cur_cols - 1;
+                cur_pkts <= cur_pkts - 1;
                 o_eor    <= '0';
               end if;
             else
               -- default values
               o_eor <= '0';
+            end if;
+
+            -- write blank logic
+            if (cur_cols < burst_size) then
+              o_write_blank_en <= '1';
+            elsif (write_blank_ack = '1') then
+              o_write_blank_en <= '0';
             end if;
 
             -- next state logic
@@ -366,28 +390,32 @@ begin
               input_fsm_state <= PAYLOAD_RX;
             end if;
 
-            -- write blank logic
-            if (cur_cols < burst_size) then
-              o_write_blank_en <= '1';
-            elsif (write_blank_ack = '1') then
-              o_write_blank_en <= '0';
-            end if;
+            -- clear signals from previous states
+            o_ren             <= '0';
 
           -- wait for the result transmission
           when WAIT_RES_TX =>
-            o_write_blank_en <= '0';
             -- wait for output FSM signal
             if (i_res_written = '1') then
               input_fsm_state <= ACK_STAT_TX;
             end if;
 
+            -- clear signals from previous states
+            o_eor            <= '0';
+            o_write_blank_en <= '0';
+
           -- need to write status of the command
           when ACK_STAT_TX =>
+            -- save state
+            o_addr                <= MC_ADDR_STATE;
+            o_wdata(31 downto 13) <= std_logic_vector(cur_pkts);
+            o_wdata(12 downto  5) <= std_logic_vector(cur_cols);
+            o_wdata( 4 downto  0) <= cur_cmd_status or new_cmd_status;
+            o_wen                 <= '1';
+
             -- broadcast status
-            --o_cmd_stat       <= cur_cmd_status or new_cmd_status;
-            --o_cmd_stat_valid <= '1';
-            o_cmd_valid      <= not(cur_cmd_err);
-            o_cmd_err        <= cur_cmd_err;
+            o_cmd_valid           <= not(cur_cmd_err);
+            o_cmd_err             <= cur_cmd_err;
 
             -- transition to next state
             if (cur_cmd_err = '1') then
@@ -407,9 +435,9 @@ begin
             --o_cmd_stat_valid <= '0';
             if (i_state_reg_pls = '1') then
               if (cur_cmd_cmplt = '1') then
-                -- TODO load in saved state
-                --cur_cols <= XXX;
-                --cur_pkts <= XXX;
+                -- load in saved processing state
+                o_addr          <= MC_ADDR_STATE;
+                o_ren           <= '1';
                 input_fsm_state <= PAYLOAD_RX;
               else
                 -- restart command
@@ -418,6 +446,9 @@ begin
               end if;
               o_drop_pkts <= '0';
             end if;
+
+            -- clear signals from previous states
+            o_wen               <= '0';
 
           -- unknown state
           when others =>
