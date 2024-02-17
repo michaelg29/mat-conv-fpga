@@ -48,6 +48,7 @@ entity input_fsm is
     o_cmd_err         : out std_logic;
     o_cmd_kern        : out std_logic;
     o_cmd_subj        : out std_logic;
+    o_cmd_kern_signed : out std_logic;
     o_eor             : out std_logic;
     o_payload_done    : out std_logic;
     o_rst_n           : out std_logic
@@ -76,39 +77,40 @@ architecture rtl of input_fsm is
   signal input_fsm_state : INPUT_FSM_STATE_T;
 
   -- command signals
-  signal cur_cmd_chksum  : std_logic_vector(31 downto 0);
-  signal cur_cmd_status  : std_logic_vector(MC_STAT_NBITS-1 downto 0);
-  signal new_cmd_status  : std_logic_vector(MC_STAT_NBITS-1 downto 0);
-  signal cur_cmd_err     : std_logic;
-  signal cur_cmd_kern    : std_logic;
-  signal cur_cmd_subj    : std_logic;
-  signal cur_cmd_cmplt   : std_logic;
+  signal cur_cmd_chksum      : std_logic_vector(31 downto 0);
+  signal cur_cmd_status      : std_logic_vector(MC_STAT_NBITS-1 downto 0);
+  signal new_cmd_status      : std_logic_vector(MC_STAT_NBITS-1 downto 0);
+  signal cur_cmd_err         : std_logic;
+  signal cur_cmd_kern        : std_logic;
+  signal cur_cmd_subj        : std_logic;
+  signal cur_cmd_kern_signed : std_logic;
+  signal cur_cmd_cmplt       : std_logic;
 
   -- CDC signals
-  signal write_blank_ack : std_logic;
+  signal write_blank_ack     : std_logic;
 
   ----------------------
   -- PAYLOAD COUNTERS --
   ----------------------
-  signal exp_cols        : std_logic_vector(3 downto 0); -- 4 bits in the SIZE field of the command
-  signal cur_cols        : unsigned( 7 downto 0); -- maximum 11-bit count of columns => maximum 8-bit count of 8-Byte packets
-  signal cur_pkts        : unsigned(18 downto 0); -- maximum 22-bit count of elements => maximum 19-bit count of 8-Byte packets
+  signal exp_cols            : std_logic_vector(3 downto 0); -- 4 bits in the SIZE field of the command
+  signal cur_cols            : unsigned( 7 downto 0); -- maximum 11-bit count of columns => maximum 8-bit count of 8-Byte packets
+  signal cur_pkts            : unsigned(18 downto 0); -- maximum 22-bit count of elements => maximum 19-bit count of 8-Byte packets
 
   -- maximum burst size is 16 packets
-  constant burst_size    : unsigned( 7 downto 0) := to_unsigned(16, 8);
+  constant burst_size        : unsigned( 7 downto 0) := to_unsigned(16, 8);
   -- zero
-  constant zero_cols     : unsigned( 7 downto 0) := (others => '0');
-  constant zero_pkts     : unsigned(18 downto 0) := (others => '0');
+  constant zero_cols         : unsigned( 7 downto 0) := (others => '0');
+  constant zero_pkts         : unsigned(18 downto 0) := (others => '0');
 
   -----------------------
   -- GENERAL CONSTANTS --
   -----------------------
 
   -- addresses
-  constant MC_ADDR_STATE    : std_logic_vector( 2 downto 0)
+  constant MC_ADDR_STATE     : std_logic_vector( 2 downto 0)
   := "100";
-  constant MC_ADDR_OUT_ADDR : std_logic_vector( 2 downto 0) := "001";
-  constant MC_ADDR_TX_ADDR  : std_logic_vector( 2 downto 0) := "010";
+  constant MC_ADDR_OUT_ADDR  : std_logic_vector( 2 downto 0) := "001";
+  constant MC_ADDR_TX_ADDR   : std_logic_vector( 2 downto 0) := "010";
 
   -----------------------------------------------------------
   -- Return whether the module has received a command packet.
@@ -148,33 +150,34 @@ begin
     if (i_macclk'event and i_macclk = '1') then
       if (i_rst_n = '0' or i_por_n = '0') then
         -- active-low reset external signals
-        o_write_blank_en <= '0';
-        o_drop_pkts      <= '0';
-        o_addr           <= (others => '0');
-        o_ren            <= '0';
-        o_wen            <= '0';
-        o_wdata          <= (others => '0');
-        o_cmd_valid      <= '0';
-        o_cmd_err        <= '0';
-        o_cmd_kern       <= '0';
-        o_cmd_subj       <= '0';
-        o_eor            <= '0';
-        o_payload_done   <= '0';
-        o_rst_n          <= '1';
+        o_write_blank_en  <= '0';
+        o_drop_pkts       <= '0';
+        o_addr            <= (others => '0');
+        o_ren             <= '0';
+        o_wen             <= '0';
+        o_wdata           <= (others => '0');
+        o_cmd_valid       <= '0';
+        o_cmd_err         <= '0';
+        o_cmd_kern        <= '0';
+        o_cmd_subj        <= '0';
+        o_cmd_kern_signed <= '0';
+        o_eor             <= '0';
+        o_payload_done    <= '0';
+        o_rst_n           <= '1';
 
         -- active-low reset internal signals
-        input_fsm_state  <= WAIT_CMD_S_KEY;
-        cur_cmd_chksum   <= (others => '0');
-        cur_cmd_status   <= MC_STAT_OKAY;
-        new_cmd_status   <= MC_STAT_OKAY;
-        cur_cmd_kern     <= '0';
-        cur_cmd_subj     <= '0';
-        cur_cmd_err      <= '0';
-        cur_cmd_cmplt    <= '0';
-        exp_cols         <= (others => '0');
-        cur_cols         <= (others => '0');
-        cur_pkts         <= (others => '0');
-        write_blank_ack  <= '0';
+        input_fsm_state   <= WAIT_CMD_S_KEY;
+        cur_cmd_chksum    <= (others => '0');
+        cur_cmd_status    <= MC_STAT_OKAY;
+        new_cmd_status    <= MC_STAT_OKAY;
+        cur_cmd_kern      <= '0';
+        cur_cmd_subj      <= '0';
+        cur_cmd_err       <= '0';
+        cur_cmd_cmplt     <= '0';
+        exp_cols          <= (others => '0');
+        cur_cols          <= (others => '0');
+        cur_pkts          <= (others => '0');
+        write_blank_ack   <= '0';
       else
         -- CDC signals
         write_blank_ack  <= i_write_blank_ack;
@@ -205,9 +208,10 @@ begin
               end if;
 
               -- process CMD fields, i_wdata(63 downto 32)
-              --   [   31]: Reserved
+              --   [   31]: KERN_SIGNED
               --   [   30]: LOAD_TYPE
               --   [29: 0]: OUT_ADDR
+              cur_cmd_kern_signed <= i_wdata(32+31);
               if (i_wdata(32+30) = MC_CMD_CMD_KERN) then
                 cur_cmd_kern <= '1';
                 cur_cmd_subj <= '0';
@@ -234,21 +238,22 @@ begin
             end if;
 
             -- initial interface signals
-            o_write_blank_en <= '0';
-            o_drop_pkts      <= '0';
-            o_ren            <= '0';
-            o_cmd_valid      <= '0';
-            o_cmd_err        <= '0';
-            o_cmd_kern       <= '0';
-            o_cmd_subj       <= '0';
-            o_eor            <= '0';
-            o_payload_done   <= '0';
+            o_write_blank_en  <= '0';
+            o_drop_pkts       <= '0';
+            o_ren             <= '0';
+            o_cmd_valid       <= '0';
+            o_cmd_err         <= '0';
+            o_cmd_kern        <= '0';
+            o_cmd_kern_signed <= '0';
+            o_cmd_subj        <= '0';
+            o_eor             <= '0';
+            o_payload_done    <= '0';
 
             -- initial internal signals
-            cur_cmd_cmplt    <= '0';
-            exp_cols         <= (others => '0');
-            cur_cols         <= (others => '0');
-            cur_pkts         <= (others => '0');
+            cur_cmd_cmplt     <= '0';
+            exp_cols          <= (others => '0');
+            cur_cols          <= (others => '0');
+            cur_pkts          <= (others => '0');
 
           -- waiting for the second 64b packet in the command
           when WAIT_CMD_SIZE =>
@@ -340,8 +345,9 @@ begin
               cur_cmd_cmplt   <= '1';
 
               -- broadcast command type
-              o_cmd_kern  <= cur_cmd_kern;
-              o_cmd_subj  <= cur_cmd_subj;
+              o_cmd_kern        <= cur_cmd_kern;
+              o_cmd_subj        <= cur_cmd_subj;
+              o_cmd_kern_signed <= cur_cmd_kern_signed;
             end if;
 
           -- receiving payload data

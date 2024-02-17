@@ -40,6 +40,7 @@ wire [31:0]  wdata;
 wire         eor;
 wire         cmd_kern;
 wire         cmd_subj;
+wire         cmd_kern_signed;
 wire         cmd_valid;
 wire         cmd_err;
 wire         payload_done;
@@ -81,6 +82,7 @@ input_fsm #(
   .i_res_written(res_written),
   .o_cmd_kern(cmd_kern),
   .o_cmd_subj(cmd_subj),
+  .o_cmd_kern_signed(cmd_kern_signed),
   .o_cmd_valid(cmd_valid),
   .o_cmd_err(cmd_err),
   .o_eor(eor),
