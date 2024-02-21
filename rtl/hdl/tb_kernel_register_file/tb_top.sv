@@ -27,6 +27,7 @@ module tb_top
     logic [FIFO_WIDTH-1:0][7:0] i_kernels;
     logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] o_kernels; //[kernel row][kernel value in row][bit in kernel value]
 
+    const int NUM_STATES = (KERNEL_SIZE*KERNEL_SIZE - 1)/FIFO_WIDTH + 1; //round up trick
 
     //========================================
     // Clocks
@@ -67,7 +68,9 @@ module tb_top
     //NOTE: test number must match with test name index
     string TEST_CASES[] = {
         "tb_krf_io_no_pipeline",
-        "tb_krf_io_pipeline"
+        "tb_krf_io_pipeline",
+        "tb_krf_invalid_load",
+        "tb_krf_overload"
     };
 
     initial begin
@@ -78,15 +81,13 @@ module tb_top
             //If test case, run it
             if(!uvm_re_match(TC, TEST_CASES[i])) begin
 
-                $display("===> Running Test '%s' for %i iterations", TEST_CASES[i], NUM_REPS);
+                $display("===> Running Test '%s' for %d iterations", TEST_CASES[i], NUM_REPS);
                 
                 for (int j = 0 ; j < NUM_REPS ; j++) begin
 
                     `uvm_info("tb_top", $sformatf("Iteration %d", j), UVM_NONE);
 
-                    if(VERBOSE) begin
-                        $display("RESET DUT");
-                    end
+                    `uvm_info("tb_top", "Resetting DUT", UVM_NONE);
                     reset_dut(i_clk, i_rst, i_kernels);
 
                     case (i+1)
@@ -99,6 +100,20 @@ module tb_top
                             end
                         2 : begin
                             test2(.i_clk(i_clk),
+                                .i_valid(i_valid),
+                                .i_rst(i_rst),
+                                .i_kernels(i_kernels),
+                                .o_kernels(o_kernels));
+                            end
+                        3 : begin
+                            test3(.i_clk(i_clk),
+                                .i_valid(i_valid),
+                                .i_rst(i_rst),
+                                .i_kernels(i_kernels),
+                                .o_kernels(o_kernels));
+                            end
+                        4 : begin
+                            test4(.i_clk(i_clk),
                                 .i_valid(i_valid),
                                 .i_rst(i_rst),
                                 .i_kernels(i_kernels),
@@ -176,7 +191,7 @@ module tb_top
             i_rst = 1'b1;
             @(negedge i_clk);
 
-            for (int j = 0 ; j < 4 ; j++) begin
+            for (int j = 0 ; j < NUM_STATES ; j++) begin
                 @(negedge i_clk);
             end
             i_valid = 0'b0;
@@ -195,7 +210,9 @@ module tb_top
     //========================================
 
 
-    // tb_krf_io_no_pipeline :load kernel values from the FIFO with no pipelining (i_rst held, toggled i_valid)
+    /*
+     tb_krf_io_no_pipeline : load kernel values from the FIFO with no pipelining (i_rst held, toggled i_valid)
+     */
     task automatic test1;
         ref reg i_clk;
         ref reg i_valid;
@@ -218,7 +235,7 @@ module tb_top
 
             @(negedge i_clk);
 
-            for (int i = 0 ; i < 4 ; i++) begin
+            for (int i = 0 ; i < NUM_STATES ; i++) begin
 
                 // Load a row
                 //assert(std::randomize(i_kernels)); //NEED LICENSE
@@ -247,9 +264,9 @@ module tb_top
                 i_valid = 1'b0; // mark input as invalid to check output and make sure new row is loaded
                 @(negedge i_clk); // let data appear at output (1 clock cycle)
 
-                // check pixels
+                // check output
                 if(krf_total_cvrt != o_kernels) begin
-                    `uvm_error("tb_top", $sformatf("Test 1 failed at i = %d\no_kernels = 0x%X ; expected = 0x%X",i,o_kernels, krf_total_cvrt));
+                    `uvm_error("tb_top", $sformatf("Test failed at i = %d\no_kernels = 0x%X ; expected = 0x%X",i,o_kernels, krf_total_cvrt));
                     @(negedge i_clk); // let data appear at output
                     $finish(2);
                 end
@@ -261,7 +278,9 @@ module tb_top
     endtask : test1
 
 
-    // tb_krf_io_pipeline :load kernel values from the FIFO with pipelining (i_rst and i_valid held)
+    /* 
+        tb_krf_io_pipeline : load kernel values from the FIFO with pipelining (i_rst and i_valid held)
+    */
     task automatic test2;
         ref reg i_clk;
         ref reg i_valid;
@@ -284,19 +303,7 @@ module tb_top
             i_rst = 1'b1; //reset state machine -> ready to program
             i_valid = 1'b1; //input valid
 
-            for (int i = 0 ; i < 5 ; i++) begin
-
-                if(VERBOSE) begin
-                    $display("Current kernel vals: 0x%X", i_kernels);
-                    $display("All kernel vals: 0x%X", i_krf_total);
-                end
-
-                // check pixels
-                if(krf_total_cvrt != o_kernels) begin
-                    `uvm_error("tb_top", $sformatf("Test 1 failed at i = %d\no_kernels = 0x%X ; expected = 0x%X",i,o_kernels, krf_total_cvrt))
-                    @(negedge i_clk); // let data appear at output
-                    $finish(2);
-                end
+            for (int i = 0 ; i < NUM_STATES ; i++) begin
 
                 // Load a row
                 //assert(std::randomize(i_kernels)); //NEED LICENSE
@@ -309,12 +316,24 @@ module tb_top
                 end else begin
                     i_kernels = 64'h45BEEF9CFECAC0FF;
                 end
-        
+
+                @(negedge i_clk); //input new data / let data appear at output (1 clock cycle)
+
                 //Save new kernel values
                 i_krf_total[i] = i_kernels;
                 krf_total_cvrt = krf_convert(i_krf_total);
 
-                @(negedge i_clk); //input new data / let data appear at output (1 clock cycle)
+                if(VERBOSE) begin
+                    $display("Current kernel vals: 0x%X", i_kernels);
+                    $display("All kernel vals: 0x%X", i_krf_total);
+                end
+
+                // check output
+                if(krf_total_cvrt != o_kernels) begin
+                    `uvm_error("tb_top", $sformatf("Test failed at i = %d\no_kernels = 0x%X ; expected = 0x%X",i,o_kernels, krf_total_cvrt))
+                    @(negedge i_clk); // let data appear at output
+                    $finish(2);
+                end
 
             end
                 
@@ -323,4 +342,197 @@ module tb_top
 
     endtask : test2
 
+
+
+    /*
+     tb_krf_invalid_load : load kernel values under invalid conditions (i_rst=1 i_valid=0, i_rst=0 i_valid=1). 
+                           for all possible states. No pipelining.
+     */
+    task automatic test3;
+        ref reg i_clk;
+        ref reg i_valid;
+        ref reg i_rst;
+        ref logic [FIFO_WIDTH-1:0][7:0] i_kernels;
+        ref logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] o_kernels; //[kernel row][kernel value in row][bit in kernel value]
+
+        logic [3:0][FIFO_WIDTH-1:0][7:0] i_krf_total; //stacked inputs of KRF
+        logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] krf_total_cvrt; // Convert krf_total to easily map to output
+
+        begin
+
+            //for each state: do it
+
+            /*
+            Attempt loading kernel values when i_rst=0, i_valid=1
+            */
+            i_kernels = 64'h45BEEF9CFECAC0FF;
+            i_valid = 1'b1; 
+            @(negedge i_clk);
+
+            // check output
+            if(o_kernels != 64'h0) begin
+                `uvm_error("tb_top", $sformatf("Test failed when i_rst=0, i_valid=1\no_kernels = 0x%X ; expected = 0x%X",o_kernels, 64'h0));
+                @(negedge i_clk); // let data appear at output
+                $finish(2);
+            end
+
+            i_valid = 1'b0; 
+            @(negedge i_clk);
+
+
+            /*
+            Attempt loading kernel values at each state when i_valid=0, i_rst=1
+            */
+            @(negedge i_clk);
+            i_rst = 1'b1; //reset state machine -> ready to program
+            
+            //reset signals
+            i_kernels = '{0};
+            i_krf_total = '{0};
+            krf_total_cvrt = '{0};
+
+            @(negedge i_clk);
+
+            for (int i = 0 ; i < NUM_STATES ; i++) begin
+
+                /*
+                New state
+                */
+                //assert(std::randomize(i_kernels)); //NEED LICENSE
+                if(i==0) begin
+                    i_kernels = 64'h45BEEF9CFECAC0FF;
+                end else if (i==1) begin
+                    i_kernels = 64'h0123456789101112;
+                end else if (i==2) begin
+                    i_kernels = 64'hBEEF50B3CAFE6688;
+                end else begin
+                    i_kernels = 64'h45BEEF9CFECAC0FF;
+                end
+            
+                //Save new kernel values
+                i_krf_total[i] = i_kernels;
+                krf_total_cvrt = krf_convert(i_krf_total);
+
+                if(VERBOSE) begin
+                    $display("Current kernel vals: 0x%X", i_kernels);
+                    $display("All kernel vals: 0x%X", i_krf_total);
+                end
+
+
+                i_valid = 1'b1; //mark input as valid
+                @(negedge i_clk);
+
+                /*
+                Attempt to load new input (NOTE: this test is already done in the non-pipeline test cases)
+                */
+                i_valid = 1'b0; // mark input as invalid to check output and make sure new input is loaded
+                @(negedge i_clk); // let data appear at output (1 clock cycle)
+
+                // check output
+                if(krf_total_cvrt != o_kernels) begin
+                    `uvm_error("tb_top", $sformatf("Test failed at i = %d\no_kernels = 0x%X ; expected = 0x%X",i,o_kernels, krf_total_cvrt));
+                    @(negedge i_clk); // let data appear at output
+                    $finish(2);
+                end
+            end
+                
+            `uvm_info("tb_top", "Test tb_krf_invalid_load passed", UVM_NONE);
+        end
+
+    endtask : test3
+
+
+
+
+
+
+    /*
+     tb_krf_overload : try loading additional values once the KRF is full
+     */
+    task automatic test4;
+        ref reg i_clk;
+        ref reg i_valid;
+        ref reg i_rst;
+        ref logic [FIFO_WIDTH-1:0][7:0] i_kernels;
+        ref logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] o_kernels; //[kernel row][kernel value in row][bit in kernel value]
+
+        logic [3:0][FIFO_WIDTH-1:0][7:0] i_krf_total; //stacked inputs of KRF
+        logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] krf_total_cvrt; // Convert krf_total to easily map to output
+
+        begin
+
+            //for each state: do it
+
+            @(negedge i_clk);
+            i_rst = 1'b1; //reset state machine -> ready to program
+            
+            //reset signals
+            i_kernels = '{0};
+            i_krf_total = '{0};
+            krf_total_cvrt = '{0};
+
+            @(negedge i_clk);
+            /*
+              Fill KRF
+            */
+            for (int i = 0 ; i < NUM_STATES ; i++) begin
+
+                // Load a row
+                //assert(std::randomize(i_kernels)); //NEED LICENSE
+                if(i==0) begin
+                    i_kernels = 64'h45BEEF9CFECAC0FF;
+                end else if (i==1) begin
+                    i_kernels = 64'h0123456789101112;
+                end else if (i==2) begin
+                    i_kernels = 64'hBEEF50B3CAFE6688;
+                end else begin
+                    i_kernels = 64'h45BEEF9CFECAC0FF;
+                end
+            
+                //Save new kernel values
+                i_krf_total[i] = i_kernels;
+                krf_total_cvrt = krf_convert(i_krf_total);
+
+                if(VERBOSE) begin
+                    $display("Current kernel vals: 0x%X", i_kernels);
+                    $display("All kernel vals: 0x%X", i_krf_total);
+                end
+
+
+                i_valid = 1'b1; //mark input as valid
+                @(negedge i_clk);
+                i_valid = 1'b0; // mark input as invalid to check output and make sure new row is loaded
+                @(negedge i_clk); // let data appear at output (1 clock cycle)
+
+                // check output
+                if(krf_total_cvrt != o_kernels) begin
+                    `uvm_error("tb_top", $sformatf("Test failed at i = %d\no_kernels = 0x%X ; expected = 0x%X",i,o_kernels, krf_total_cvrt));
+                    @(negedge i_clk); // let data appear at output
+                    $finish(2);
+                end
+            end
+
+            /*
+              Try loading additional input
+            */
+            i_kernels = 64'hADD0ADD1ADD2ADD3;
+            i_valid = 1'b1; //mark input as valid
+            if(VERBOSE) begin
+                $display("Attempt loading additional input: 0x%X", i_kernels);
+            end
+            @(negedge i_clk);
+            i_valid = 1'b0; // mark input as invalid to check output and make sure new row is loaded
+            @(negedge i_clk); // let data appear at output (1 clock cycle)
+
+            // check output
+            if(krf_total_cvrt != o_kernels) begin
+                `uvm_error("tb_top", $sformatf("Test failed when loading additional input\no_kernels = 0x%X ; expected = 0x%X",o_kernels, krf_total_cvrt));
+                @(negedge i_clk); // let data appear at output
+                $finish(2);
+            end
+                
+            `uvm_info("tb_top", "Test tb_krf_overload passed", UVM_NONE);
+        end
+
+    endtask : test4
 endmodule
