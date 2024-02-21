@@ -9,7 +9,8 @@ module tb_top
         parameter int NUM_REPS = 3, //Number of times each test shall be reapeated with different values
         parameter int SEED = 0, //Seed for the random input generation
         parameter int VERBOSE = 0, //Enable verbosity for debug
-        parameter string TC= "tb_krf_io_no_pipeline" // Name of test case to run
+        parameter string TESTS_TO_RUN = "tb_krf_io_no_pipeline,tb_krf_io_pipeline", // Name of test cases to run
+        parameter string SEPARATOR = "," // Separator for the TESTS_TO_RUN string (must be a character)
     );
 
     import uvm_pkg::*;
@@ -72,11 +73,35 @@ module tb_top
 
     initial begin
 
+        //Variables
+        automatic string test_case = "";
+        automatic int curr_len = 0;
+
+        //Split test cases string into tokens
+        automatic string test_queue[];
+        strtok(TESTS_TO_RUN, SEPARATOR, test_queue);
+
+        if(VERBOSE) begin
+            $display("test_queue: %p", test_queue);
+        end
+
         //Loop through all possible test cases
         foreach (TEST_CASES[i]) begin
 
-            //If test case, run it
-            if(!uvm_re_match(TC, TEST_CASES[i])) begin
+            //Get current test case name
+            test_case = TEST_CASES[i];
+
+            //Check size of list of tests to run
+            curr_len = test_queue.size();
+
+            //If no more test to run: stop
+            if(curr_len == 0) break;
+
+            //Remove occurences of test_case in list of tests left to run
+            test_queue = test_queue.find(s) with (uvm_re_match(test_case, s) != 0);
+
+            //if list is smaller, test case was present so run
+            if(curr_len > test_queue.size()) begin
 
                 $display("===> Running Test: %s", TEST_CASES[i]);
                 
@@ -98,11 +123,11 @@ module tb_top
                     default : $display("WARNING: %d is not a valid task ID", i);
                 endcase
                 
-                //Exit loop
-                break;
             end
 
         end
+
+        `uvm_info("tb_top", "All tests passed", UVM_NONE);
         $finish(0);
         
     end
@@ -112,6 +137,50 @@ module tb_top
     //========================================
     // Functions
     //========================================
+
+    /*
+        String tokenizer
+    */
+    function automatic strtok(string s, string sep, ref string oarray[]);
+
+        automatic int start = 0;
+        automatic int stop = 0;
+        automatic int last_token = 1; //last token present flag
+
+        string array [];
+
+        //Tokenize using separator
+        foreach(s[i]) begin
+            
+            if(s[i]==sep) begin
+                //edge cases:
+                if(start == i) begin
+                    start = i+1;
+                    continue;
+                end else if (i==s.len()-1) begin
+                    last_token = 0;
+                end
+
+                //Push to token array
+                array = new [array.size() + 1] (array);
+                array[array.size() - 1] = s.substr(start, i-1);
+
+                //Update start
+                start = i+1;
+            end
+        end
+
+        if(last_token == 1) begin
+            //Push last token to array
+            array = new [array.size() + 1] (array);
+            array[array.size() - 1] = s.substr(start, s.len()-1);
+        end
+
+        //Assign dyamic array to ref
+        oarray = array;
+
+    endfunction
+
 
     /*
         Check the current KRF output to the input values
