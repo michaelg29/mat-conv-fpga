@@ -67,9 +67,9 @@ module tb_top
                 
                 for (int j = 0 ; j < NUM_REPS ; j++) begin
 
-                    if(VERBOSE) begin
-                        $display("RESET DUT");
-                    end
+                    `uvm_info("tb_top", $sformatf("Iteration %d", j), UVM_NONE);
+
+                    `uvm_info("tb_top", "Resetting DUT", UVM_NONE);
                     reset_dut(i_clk, TODO);
 
                     case (i+1)
@@ -122,7 +122,9 @@ module tb_top
     //========================================
 
 
-    // tb_testname :description
+    /*
+     tb_testname : description
+     */
     task automatic test1;
 
         begin
