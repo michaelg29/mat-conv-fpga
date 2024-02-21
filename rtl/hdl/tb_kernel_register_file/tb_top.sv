@@ -78,25 +78,36 @@ module tb_top
             //If test case, run it
             if(!uvm_re_match(TC, TEST_CASES[i])) begin
 
-                $display("===> Running Test: %s", TEST_CASES[i]);
+                $display("===> Running Test '%s' for %i iterations", TEST_CASES[i], NUM_REPS);
                 
-                case (i+1)
-                    1 : begin      
-                        test1(.i_clk(i_clk),
-                            .i_valid(i_valid),
-                            .i_rst(i_rst),
-                            .i_kernels(i_kernels),
-                            .o_kernels(o_kernels));
-                        end
-                    2 : begin
-                        test2(.i_clk(i_clk),
-                            .i_valid(i_valid),
-                            .i_rst(i_rst),
-                            .i_kernels(i_kernels),
-                            .o_kernels(o_kernels));
-                        end
-                    default : $display("WARNING: %d is not a valid task ID", i);
-                endcase
+                for (int j = 0 ; j < NUM_REPS ; j++) begin
+
+                    `uvm_info("tb_top", $sformatf("Iteration %d", j), UVM_NONE);
+
+                    if(VERBOSE) begin
+                        $display("RESET DUT");
+                    end
+                    reset_dut(i_clk, i_rst, i_kernels);
+
+                    case (i+1)
+                        1 : begin      
+                            test1(.i_clk(i_clk),
+                                .i_valid(i_valid),
+                                .i_rst(i_rst),
+                                .i_kernels(i_kernels),
+                                .o_kernels(o_kernels));
+                            end
+                        2 : begin
+                            test2(.i_clk(i_clk),
+                                .i_valid(i_valid),
+                                .i_rst(i_rst),
+                                .i_kernels(i_kernels),
+                                .o_kernels(o_kernels));
+                            end
+                        default : $display("WARNING: %d is not a valid task ID", i);
+                    endcase
+
+                end
                 
                 //Exit loop
                 break;
@@ -149,17 +160,33 @@ module tb_top
     // Tasks
     //========================================
 
-    task automatic reset;
-        ref reg clk;    
-        ref rst;
+    task automatic reset_dut;
+        ref reg i_clk;    
+        ref reg i_rst;
+        ref logic [FIFO_WIDTH-1:0][7:0] i_kernels;
         begin
-            @(negedge clk);
-            rst = 1'b1;
-            @(negedge clk);
-            rst = 1'b0;
-            @(negedge clk);
+
+            //Load 0s
+            i_kernels = '{0};
+            i_valid = 1'b1;
+
+            //Reset state machine
+            i_rst = 1'b0;
+            @(negedge i_clk);
+            i_rst = 1'b1;
+            @(negedge i_clk);
+
+            for (int j = 0 ; j < 4 ; j++) begin
+                @(negedge i_clk);
+            end
+            i_valid = 0'b0;
+            @(negedge i_clk);
+
+            //DUT is ready
+            i_rst = 1'b0;
+            @(negedge i_clk);
         end
-    endtask : reset
+    endtask : reset_dut
 
 
 
@@ -181,59 +208,51 @@ module tb_top
 
         begin
 
-            for (int j = 0 ; j < NUM_REPS ; j++) begin
+            @(negedge i_clk);
+            i_rst = 1'b1; //reset state machine -> ready to program
+            
+            //reset signals
+            i_kernels = '{0};
+            i_krf_total = '{0};
+            krf_total_cvrt = '{0};
 
-                @(negedge i_clk);
-                i_rst = 1'b1; //reset state machine -> ready to program
-                
-                //reset signals
-                i_kernels = '{0};
-                i_krf_total = '{0};
-                krf_total_cvrt = '{0};
+            @(negedge i_clk);
 
-                @(negedge i_clk);
+            for (int i = 0 ; i < 4 ; i++) begin
 
-                for (int i = 0 ; i < 4 ; i++) begin
-
-                    // Load a row
-                    //assert(std::randomize(i_kernels)); //NEED LICENSE
-                    if(i==0) begin
-                        i_kernels = 64'h45BEEF9CFECAC0FF;
-                    end else if (i==1) begin
-                        i_kernels = 64'h0123456789101112;
-                    end else if (i==2) begin
-                        i_kernels = 64'hBEEF50B3CAFE6688;
-                    end else begin
-                        i_kernels = 64'h45BEEF9CFECAC0FF;
-                    end
-                    //i_kernels = 64'hBEEF50B3CAFE66C2; //first BEEF is top-left two bytes, last B3 is third value of second row
-                    
-                    //Save new kernel values
-                    i_krf_total[i] = i_kernels;
-                    krf_total_cvrt = krf_convert(i_krf_total);
-
-                    if(VERBOSE) begin
-                        $display("Current kernel vals: 0x%X", i_kernels);
-                        $display("All kernel vals: 0x%X", i_krf_total);
-                    end
-
-
-                    i_valid = 1'b1;
-                    @(negedge i_clk);
-                    i_valid = 1'b0; // check output and make sure new row is loaded
-
-                    @(posedge i_clk); // 1 clock cycle to output the data
-                    @(negedge i_clk); // let data appear at output
-
-                    // check pixels
-                    // variable part select
-                    if(krf_total_cvrt != o_kernels) begin
-                        `uvm_error("tb_top", $sformatf("Test 1 failed at j = %d, i = %d\no_kernels = 0x%X ; expected = 0x%X",j,i,o_kernels, krf_total_cvrt))
-                        @(negedge i_clk); // let data appear at output
-                        $finish(2);
-                    end
+                // Load a row
+                //assert(std::randomize(i_kernels)); //NEED LICENSE
+                if(i==0) begin
+                    i_kernels = 64'h45BEEF9CFECAC0FF;
+                end else if (i==1) begin
+                    i_kernels = 64'h0123456789101112;
+                end else if (i==2) begin
+                    i_kernels = 64'hBEEF50B3CAFE6688;
+                end else begin
+                    i_kernels = 64'h45BEEF9CFECAC0FF;
                 end
-                
+            
+                //Save new kernel values
+                i_krf_total[i] = i_kernels;
+                krf_total_cvrt = krf_convert(i_krf_total);
+
+                if(VERBOSE) begin
+                    $display("Current kernel vals: 0x%X", i_kernels);
+                    $display("All kernel vals: 0x%X", i_krf_total);
+                end
+
+
+                i_valid = 1'b1; //mark input as valid
+                @(negedge i_clk);
+                i_valid = 1'b0; // mark input as invalid to check output and make sure new row is loaded
+                @(negedge i_clk); // let data appear at output (1 clock cycle)
+
+                // check pixels
+                if(krf_total_cvrt != o_kernels) begin
+                    `uvm_error("tb_top", $sformatf("Test 1 failed at i = %d\no_kernels = 0x%X ; expected = 0x%X",i,o_kernels, krf_total_cvrt));
+                    @(negedge i_clk); // let data appear at output
+                    $finish(2);
+                end
             end
 
             `uvm_info("tb_top", "Test tb_krf_io_no_pipeline passed", UVM_NONE);
@@ -255,52 +274,48 @@ module tb_top
 
         begin
 
-            for (int j = 0 ; j < NUM_REPS ; j++) begin
-                @(negedge i_clk);
-                i_rst = 1'b1; //reset state machine -> ready to program
-                @(negedge i_clk);
+            //reset signals
+            i_kernels = '{0};
+            i_krf_total = '{0};
+            krf_total_cvrt = '{0};
 
-                for (int i = 0 ; i < 4 ; i++) begin
+            @(negedge i_clk);
 
-                    // Load a row
-                    //assert(std::randomize(i_kernels)); //NEED LICENSE
-                    if(i==0) begin
-                        i_kernels = 64'h45BEEF9CFECAC0FF;
-                    end else if (i==1) begin
-                        i_kernels = 64'h0123456789101112;
-                    end else if (i==2) begin
-                        i_kernels = 64'hBEEF50B3CAFE6688;
-                    end else begin
-                        i_kernels = 64'h45BEEF9CFECAC0FF;
-                    end
-                    //i_kernels = 64'hBEEF50B3CAFE66C2; //first BEEF is top-left two bytes, last B3 is third value of second row
-                    
-                    //Save new kernel values
-                    i_krf_total[i] = i_kernels;
-                    krf_total_cvrt = krf_convert(i_krf_total);
+            i_rst = 1'b1; //reset state machine -> ready to program
+            i_valid = 1'b1; //input valid
 
-                    if(VERBOSE) begin
-                        $display("Current kernel vals: 0x%X", i_kernels);
-                        $display("All kernel vals: 0x%X", i_krf_total);
-                    end
+            for (int i = 0 ; i < 5 ; i++) begin
 
-
-                    i_valid = 1'b1;
-                    @(negedge i_clk);
-                    i_valid = 1'b0; // check output and make sure new row is loaded
-
-                    @(posedge i_clk); // 1 clock cycle to output the data
-                    @(negedge i_clk); // let data appear at output
-
-                    // check pixels
-                    // variable part select
-                    if(krf_total_cvrt != o_kernels) begin
-                        `uvm_error("tb_top", $sformatf("Test 1 failed at i = %d\r\o_kernels = 0x%X ; expected = 0x%X",i,o_kernels, krf_total_cvrt))
-                        @(negedge i_clk); // let data appear at output
-                        $finish(2);
-                    end
+                if(VERBOSE) begin
+                    $display("Current kernel vals: 0x%X", i_kernels);
+                    $display("All kernel vals: 0x%X", i_krf_total);
                 end
-                
+
+                // check pixels
+                if(krf_total_cvrt != o_kernels) begin
+                    `uvm_error("tb_top", $sformatf("Test 1 failed at i = %d\no_kernels = 0x%X ; expected = 0x%X",i,o_kernels, krf_total_cvrt))
+                    @(negedge i_clk); // let data appear at output
+                    $finish(2);
+                end
+
+                // Load a row
+                //assert(std::randomize(i_kernels)); //NEED LICENSE
+                if(i==0) begin
+                    i_kernels = 64'h45BEEF9CFECAC0FF;
+                end else if (i==1) begin
+                    i_kernels = 64'h0123456789101112;
+                end else if (i==2) begin
+                    i_kernels = 64'hBEEF50B3CAFE6688;
+                end else begin
+                    i_kernels = 64'h45BEEF9CFECAC0FF;
+                end
+        
+                //Save new kernel values
+                i_krf_total[i] = i_kernels;
+                krf_total_cvrt = krf_convert(i_krf_total);
+
+                @(negedge i_clk); //input new data / let data appear at output (1 clock cycle)
+
             end
                 
             `uvm_info("tb_top", "Test tb_krf_io_pipeline passed", UVM_NONE);
