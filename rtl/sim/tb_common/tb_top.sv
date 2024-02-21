@@ -63,17 +63,26 @@ module tb_top
             //If test case, run it
             if(!uvm_re_match(TC, TEST_CASES[i])) begin
 
-                $display("===> Running Test: %s", TEST_CASES[i]);
+                $display("===> Running Test '%s' for %i iterations", TEST_CASES[i], NUM_REPS);
                 
-                case (i+1)
-                    1 : begin      
-                        test1();
-                        end
-                    2 : begin
-                        test2();
-                        end
-                    default : $display("WARNING: %d is not a valid task ID", i);
-                endcase
+                for (int j = 0 ; j < NUM_REPS ; j++) begin
+
+                    if(VERBOSE) begin
+                        $display("RESET DUT");
+                    end
+                    reset_dut(i_clk, TODO);
+
+                    case (i+1)
+                        1 : begin      
+                            test1();
+                            end
+                        2 : begin
+                            test2();
+                            end
+                        default : $display("WARNING: %d is not a valid task ID", i);
+                    endcase
+
+                end
                 
                 //Exit loop
                 break;
@@ -99,7 +108,7 @@ module tb_top
     /*
         Reset DUT
     */
-    task automatic reset;
+    task automatic reset_dut;
         ref reg clk;    
         begin
             //TODO
