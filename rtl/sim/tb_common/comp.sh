@@ -59,7 +59,7 @@ function do_compile {
     path=$1
     ([ -z "$path" ] || [ -z "${path%%#*}" ]) && return
     echo -e "\n\n=====\nCOMPILING ${path##*/}\n=====\n\n"
-    
+
     name="${path##*/}_library"
     echo "Compiling ${name} located at ${path}"
 

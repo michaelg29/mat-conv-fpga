@@ -203,7 +203,7 @@ begin
               axi_awlen             <= x"4"; -- 5 QWords for header only
               request_header        <= '1';
               request_header_p      <= '1';
-            elsif (i_payload_fifo_count >= payload_count + 1) then
+            elsif (i_payload_fifo_cnt >= payload_count + 1) then
               axi_master_fsm_state   <= SEND_PAYLOAD;
               request_payload        <= '1';
               request_payload_p      <= '1';

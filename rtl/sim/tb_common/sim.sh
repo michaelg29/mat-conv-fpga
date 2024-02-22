@@ -66,6 +66,7 @@ function do_sim {
             echo $line >> ${logname}
         done
     }
+    exit_code=$?
 
     # analyze log
     n_uvm_error=`grep -rn "UVM_ERROR" ${logname} | wc -l`
@@ -76,8 +77,7 @@ function do_sim {
     echo -e "\n\n"
 
     [ $n_uvm_error -gt 0 ] && return 1;
-
-    return 0;
+    return $exit_code
 }
 
 # run all testcases

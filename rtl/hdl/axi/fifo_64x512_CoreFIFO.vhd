@@ -1,15 +1,11 @@
 
- 
 library ieee;
 use ieee.std_logic_1164.all;
 
---library rtg4;
---use rtg4.all;
---library COREFIFO_LIB;
---use COREFIFO_LIB.all;
-
-library fifo_library;
-use fifo_library.all;
+library rtg4;
+use rtg4.all;
+library COREFIFO_LIB;
+use COREFIFO_LIB.all;
 
 entity fifo_64x512 is
     generic (
