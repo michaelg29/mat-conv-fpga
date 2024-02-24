@@ -1,2 +1,3 @@
 global_mem.vhd
 acknowledge_buffer.vhd
+register_file.vhd

@@ -291,12 +291,12 @@ begin
       B_DOUT        => open,
       B_DOUT_EN     => '0',
       B_DOUT_SRST_N => i_rst_n,
-      B_CLK         => '1', -- clockgate to reduce power
+      B_CLK         => '0', -- clockgate to reduce power
       B_ADDR_EN     => '0',
       B_SB_CORRECT  => open,
       B_DB_DETECT   => open,
 
-      -- port C (writer)
+      -- port C (writer) - Input FSM/AXI Rx
       C_ADDR        => C_ADDR,
       C_CLK         => i_macclk,
       C_DIN         => C_DIN(17 downto 0),
@@ -348,12 +348,12 @@ begin
       B_DOUT        => open,
       B_DOUT_EN     => '0',
       B_DOUT_SRST_N => i_rst_n,
-      B_CLK         => '1', -- clockgate to reduce power
+      B_CLK         => '0', -- clockgate to reduce power
       B_ADDR_EN     => '0',
       B_SB_CORRECT  => open,
       B_DB_DETECT   => open,
 
-      -- port C (writer)
+      -- port C (writer) - Input FSM/AXI Rx
       C_ADDR        => C_ADDR,
       C_CLK         => i_macclk,
       C_DIN         => C_DIN(35 downto 18),
