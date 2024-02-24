@@ -40,7 +40,7 @@ entity global_mem is
     i_reg_cw0_wen    : in  std_logic;
     i_reg_cw0_wdata  : in  std_logic_vector(31 downto 0);
     i_reg_ar0_ren    : in  std_logic;
-    o_reg_ar0_rdata  : out std_logic_vector(31 downto 0);
+    o_reg_ar_rdata   : out std_logic_vector(31 downto 0);
     o_reg_ar0_rvalid : out std_logic;
 
     -- Output FSM
@@ -51,7 +51,6 @@ entity global_mem is
     i_reg_ar1_addr   : in  std_logic;
     o_ack_ar_rdata   : out std_logic_vector(31 downto 0);
     o_ack_ar_rvalid  : out std_logic;
-    o_reg_ar1_rdata  : out std_logic_vector(31 downto 0);
     o_reg_ar1_rvalid : out std_logic
   );
 end global_mem;
@@ -104,13 +103,12 @@ architecture rtl of global_mem is
 
       -- port A reader 0 - Input FSM
       i_ar0_ren    : in  std_logic;
-      o_ar0_rdata  : out std_logic_vector(31 downto 0);
+      o_ar_rdata   : out std_logic_vector(31 downto 0);
       o_ar0_rvalid : out std_logic;
 
       -- port A reader 1 - Output FSM
       i_ar1_ren    : in  std_logic;
       i_ar1_addr   : in  std_logic;
-      o_ar1_rdata  : out std_logic_vector(31 downto 0);
       o_ar1_rvalid : out std_logic;
 
       -- port B reader - APB Rx
@@ -176,13 +174,12 @@ begin
 
       -- port A reader 0 - Input FSM
       i_ar0_ren    => i_reg_ar0_ren,
-      o_ar0_rdata  => o_reg_ar0_rdata,
+      o_ar_rdata   => o_reg_ar_rdata,
       o_ar0_rvalid => o_reg_ar0_rvalid,
 
       -- port A reader 1 - Output FSM
       i_ar1_addr   => i_reg_ar1_addr,
       i_ar1_ren    => i_reg_ar1_ren,
-      o_ar1_rdata  => o_reg_ar1_rdata,
       o_ar1_rvalid => o_reg_ar1_rvalid,
 
       -- port B reader - APB Rx

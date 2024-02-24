@@ -23,13 +23,12 @@ entity register_file is
 
     -- port A reader 0 - Input FSM
     i_ar0_ren    : in  std_logic;
-    o_ar0_rdata  : out std_logic_vector(31 downto 0);
+    o_ar_rdata   : out std_logic_vector(31 downto 0);
     o_ar0_rvalid : out std_logic;
 
     -- port A reader 1 - Output FSM
     i_ar1_ren    : in  std_logic;
     i_ar1_addr   : in  std_logic;
-    o_ar1_rdata  : out std_logic_vector(31 downto 0);
     o_ar1_rvalid : out std_logic;
 
     -- port B reader - APB Rx
@@ -109,14 +108,29 @@ architecture rtl of register_file is
   end component;
 
   -- signals to/from memory block
-  constant B_ADDR : std_logic_vector( 6 downto 0) := "0000000";
-  signal B_BLK    : std_logic_vector( 1 downto 0);
-  signal B_DOUT   : std_logic_vector(35 downto 0);
+  signal A_REN         : std_logic;
+  signal A_ADDR        : std_logic_vector( 6 downto 0);
+  signal A_BLK         : std_logic_vector( 1 downto 0);
+  signal A_DOUT        : std_logic_vector(35 downto 0);
+  constant B_ADDR      : std_logic_vector( 6 downto 0) := "0000000";
+  signal B_BLK         : std_logic_vector( 1 downto 0);
+  signal B_DOUT        : std_logic_vector(35 downto 0);
+  signal C_ADDR        : std_logic_vector( 6 downto 0);
+  signal C_DIN_US      : unsigned(31 downto 0);
+  signal C_DIN         : std_logic_vector(35 downto 0);
+  signal C_WEN         : std_logic;
+  signal C_BLK         : std_logic_vector( 1 downto 0);
 
   -- state signals for requests
-  signal A0_RSTR : std_logic_vector(READ_LATENCY downto 0);
-  signal A1_RSTR : std_logic_vector(READ_LATENCY downto 0);
-  signal B_RSTR  : std_logic_vector(READ_LATENCY downto 0);
+  signal A0_RSTR       : std_logic_vector(READ_LATENCY+1 downto 0);
+  signal A1_RSTR       : std_logic_vector(READ_LATENCY+1 downto 0);
+  signal B_RSTR        : std_logic_vector(READ_LATENCY downto 0);
+
+  -- CDC signals for AXI Tx
+  signal cw1_wen_cdc   : std_logic;
+  signal cw1_wdata_cdc : std_logic_vector(31 downto 0);
+
+  constant cw1_wdata_incr : unsigned(31 downto 0) := to_unsigned(8, 32);
 
 begin
 
@@ -129,9 +143,34 @@ begin
   begin
     if (i_macclk'event and i_macclk = '1') then
       if (i_rst_n = '0') then
-
+        A0_RSTR      <= (others => '0');
+        A1_RSTR      <= (others => '0');
+        A_REN        <= '0';
+        A_ADDR       <= (others => '0');
+        o_ar0_rvalid <= '0';
+        o_ar1_rvalid <= '0';
+        o_ar_rdata   <= (others => '0');
       else
+        -- shift read string to represent one cycle passing in a read
+        A0_RSTR(READ_LATENCY downto 0) <= A0_RSTR(READ_LATENCY+1 downto 1);
+        A1_RSTR(READ_LATENCY downto 0) <= A1_RSTR(READ_LATENCY+1 downto 1);
 
+        -- start counter for new read
+        A0_RSTR(READ_LATENCY+1) <= i_ar0_ren;
+        A1_RSTR(READ_LATENCY+1) <= i_ar1_ren and not(i_ar0_ren);
+        A_REN                   <= i_ar0_ren or i_ar1_ren;
+        if (i_ar0_ren = '1') then
+          -- Input FSM reads state register
+          A_ADDR(1 downto 0) <= "00";
+        else
+          -- Output FSM reads from two possible registers
+          A_ADDR(1 downto 0) <= '1' & i_ar1_addr;
+        end if;
+
+        -- process completed read
+        o_ar0_rvalid <= A0_RSTR(0);
+        o_ar1_rvalid <= A1_RSTR(0);
+        o_ar_rdata   <= A_DOUT(33 downto 18) & A_DOUT(15 downto 0);
       end if;
     end if;
   end process;
@@ -163,9 +202,29 @@ begin
   begin
     if (i_macclk'event and i_macclk = '1') then
       if (i_rst_n = '0') then
+        -- reset CDC signals
+        cw1_wen_cdc        <= '0';
+        cw1_wdata_cdc      <= (others => '0');
 
+        -- reset memory port signals
+        C_WEN              <= '0';
+        C_ADDR(1 downto 0) <= (others => '0');
+        C_DIN_US           <= (others => '0');
       else
+        -- CDC
+        cw1_wen_cdc   <= i_cw1_wen;
+        cw1_wdata_cdc <= i_cw1_wdata;
 
+        -- process Input FSM write
+        C_WEN <= i_cw0_wen or cw1_wen_cdc;
+        if (i_cw0_wen = '1') then
+          C_ADDR(1 downto 0) <= i_cw0_addr;
+          C_DIN_US           <= unsigned(i_cw0_wdata);
+        -- process AXI Tx write to the cur_base_addr register
+        elsif (cw1_wen_cdc = '1') then
+          C_ADDR(1 downto 0) <= "10";
+          C_DIN_US <= unsigned(i_cw1_wdata) + cw1_wdata_incr;
+        end if;
       end if;
     end if;
   end process;
@@ -175,7 +234,15 @@ begin
   ----------------------------
 
   -- signal concatenations
-
+  A_ADDR(6 downto 2)  <= (others => '0');
+  A_BLK               <= A_REN & A_REN;
+  B_BLK               <= i_br_ren & i_br_ren;
+  C_ADDR(6 downto 2)  <= (others => '0');
+  C_DIN(35 downto 34) <= (others => '0');
+  C_DIN(33 downto 18) <= std_logic_vector(C_DIN_US(31 downto 16));
+  C_DIN(17 downto 16) <= (others => '0');
+  C_DIN(15 downto  0) <= std_logic_vector(C_DIN_US(15 downto 0));
+  C_BLK               <= C_WEN & C_WEN;
 
   -- bits [15:0]
   REG_FILE_0 : RTG4uSRAM_0
@@ -201,13 +268,13 @@ begin
     )
     port map (
       -- port A (reader) - Input FSM/Output FSM
-      A_ADDR        => (others => '0'),
-      A_BLK         => (others => '0'),
-      A_DOUT        => open,
-      A_DOUT_EN     => '0',
-      A_DOUT_SRST_N => '0',
-      A_CLK         => '0',
-      A_ADDR_EN     => '0',
+      A_ADDR        => A_ADDR,
+      A_BLK         => A_BLK,
+      A_DOUT        => A_DOUT(17 downto 0),
+      A_DOUT_EN     => '1',
+      A_DOUT_SRST_N => i_rst_n,
+      A_CLK         => i_macclk,
+      A_ADDR_EN     => '1',
       A_SB_CORRECT  => open,
       A_DB_DETECT   => open,
 
@@ -215,19 +282,19 @@ begin
       B_ADDR        => B_ADDR,
       B_BLK         => B_BLK,
       B_DOUT        => B_DOUT(17 downto 0),
-      B_DOUT_EN     => '0',
-      B_DOUT_SRST_N => '0',
-      B_CLK         => i_aclk,
-      B_ADDR_EN     => '0',
+      B_DOUT_EN     => '1',
+      B_DOUT_SRST_N => i_rst_n,
+      B_CLK         => i_pclk,
+      B_ADDR_EN     => '1',
       B_SB_CORRECT  => open,
       B_DB_DETECT   => open,
 
       -- port C (writer) - Input FSM/AXI Tx
-      C_ADDR        => (others => '0'),
-      C_CLK         => '0',
-      C_DIN         => (others => '0'),
-      C_WEN         => '0',
-      C_BLK         => (others => '0'),
+      C_ADDR        => C_ADDR,
+      C_CLK         => i_macclk,
+      C_DIN         => C_DIN(17 downto 0),
+      C_WEN         => C_WEN,
+      C_BLK         => C_BLK,
 
       -- common signals
       ARST_N        => i_rst_n,
@@ -258,13 +325,13 @@ begin
     )
     port map (
       -- port A (reader) - Input FSM/Output FSM
-      A_ADDR        => (others => '0'),
-      A_BLK         => (others => '0'),
-      A_DOUT        => open,
-      A_DOUT_EN     => '0',
-      A_DOUT_SRST_N => '0',
-      A_CLK         => '0',
-      A_ADDR_EN     => '0',
+      A_ADDR        => A_ADDR,
+      A_BLK         => A_BLK,
+      A_DOUT        => A_DOUT(35 downto 18),
+      A_DOUT_EN     => '1',
+      A_DOUT_SRST_N => i_rst_n,
+      A_CLK         => i_macclk,
+      A_ADDR_EN     => '1',
       A_SB_CORRECT  => open,
       A_DB_DETECT   => open,
 
@@ -272,19 +339,19 @@ begin
       B_ADDR        => B_ADDR,
       B_BLK         => B_BLK,
       B_DOUT        => B_DOUT(35 downto 18),
-      B_DOUT_EN     => '0',
-      B_DOUT_SRST_N => '0',
-      B_CLK         => i_aclk,
-      B_ADDR_EN     => '0',
+      B_DOUT_EN     => '1',
+      B_DOUT_SRST_N => i_rst_n,
+      B_CLK         => i_pclk,
+      B_ADDR_EN     => '1',
       B_SB_CORRECT  => open,
       B_DB_DETECT   => open,
 
       -- port C (writer) - Input FSM/AXI Tx
-      C_ADDR        => (others => '0'),
-      C_CLK         => '0',
-      C_DIN         => (others => '0'),
-      C_WEN         => '0',
-      C_BLK         => (others => '0'),
+      C_ADDR        => C_ADDR,
+      C_CLK         => i_macclk,
+      C_DIN         => C_DIN(35 downto 18),
+      C_WEN         => C_WEN,
+      C_BLK         => C_BLK,
 
       -- common signals
       ARST_N        => i_rst_n,

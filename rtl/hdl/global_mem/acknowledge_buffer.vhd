@@ -243,12 +243,13 @@ begin
   ----------------------------
 
   -- signal concatenations
-  A_ADDR <= "0000" & i_ar_addr;
-  A_BLK  <= i_ar_ren & i_ar_ren;
+  A_ADDR              <= "0000" & i_ar_addr;
+  A_BLK               <= i_ar_ren & i_ar_ren;
 
   C_ADDR              <= "0000" & std_logic_vector(C_ADDR_US);
   C_DIN(35 downto 34) <= (others => '0');
   C_DIN(17 downto 16) <= (others => '0');
+  C_BLK               <= C_WEN & C_WEN;
 
   -- bits [15:0]
   ACK_BUF_0 : RTG4uSRAM_0
