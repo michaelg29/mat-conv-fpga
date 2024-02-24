@@ -18,6 +18,7 @@ entity register_file is
     -- clock and reset
     i_aclk       : in  std_logic;
     i_macclk     : in  std_logic;
+    i_pclk       : in  std_logic;
     i_rst_n      : in  std_logic;
 
     -- port A reader 0 - Input FSM
@@ -107,7 +108,15 @@ architecture rtl of register_file is
     );
   end component;
 
-  
+  -- signals to/from memory block
+  constant B_ADDR : std_logic_vector( 6 downto 0) := "0000000";
+  signal B_BLK    : std_logic_vector( 1 downto 0);
+  signal B_DOUT   : std_logic_vector(35 downto 0);
+
+  -- state signals for requests
+  signal A0_RSTR : std_logic_vector(READ_LATENCY downto 0);
+  signal A1_RSTR : std_logic_vector(READ_LATENCY downto 0);
+  signal B_RSTR  : std_logic_vector(READ_LATENCY downto 0);
 
 begin
 
@@ -116,15 +125,49 @@ begin
   -------------------------
 
   -- arbitrate reads from the Input FSM and Output FSM
-  p_port_a_read : process(i_macclk, i_rst_n)
+  p_port_a_read : process(i_macclk)
   begin
-  
+    if (i_macclk'event and i_macclk = '1') then
+      if (i_rst_n = '0') then
+
+      else
+
+      end if;
+    end if;
   end process;
-  
-  -- arbitrate writes from the Input FSM and AXI Tx
-  p_port_c_write : process(i_macclk, i_rst_n)
+
+  -- process reads from the APB Rx
+  p_port_b_read : process(i_pclk)
   begin
-  
+    if (i_pclk'event and i_pclk = '1') then
+      if (i_rst_n = '0') then
+        B_RSTR      <= (others => '0');
+        o_br_rvalid <= '0';
+        o_br_rdata  <= (others => '0');
+      else
+        -- shift read string to represent one cycle passing in a read
+        B_RSTR(READ_LATENCY-1 downto 0) <= B_RSTR(READ_LATENCY downto 1);
+
+        -- start counter for new read
+        B_RSTR(READ_LATENCY) <= i_br_ren;
+
+        -- process completed read
+        o_br_rvalid <= B_RSTR(0);
+        o_br_rdata  <= B_DOUT(33 downto 18) & B_DOUT(15 downto 0);
+      end if;
+    end if;
+  end process;
+
+  -- arbitrate writes from the Input FSM and AXI Tx
+  p_port_c_write : process(i_macclk)
+  begin
+    if (i_macclk'event and i_macclk = '1') then
+      if (i_rst_n = '0') then
+
+      else
+
+      end if;
+    end if;
   end process;
 
   ----------------------------
@@ -132,6 +175,7 @@ begin
   ----------------------------
 
   -- signal concatenations
+
 
   -- bits [15:0]
   REG_FILE_0 : RTG4uSRAM_0
@@ -168,12 +212,12 @@ begin
       A_DB_DETECT   => open,
 
       -- port B (reader) - APB Rx
-      B_ADDR        => (others => '0'),
-      B_BLK         => (others => '0'),
-      B_DOUT        => open,
+      B_ADDR        => B_ADDR,
+      B_BLK         => B_BLK,
+      B_DOUT        => B_DOUT(17 downto 0),
       B_DOUT_EN     => '0',
       B_DOUT_SRST_N => '0',
-      B_CLK         => '0',
+      B_CLK         => i_aclk,
       B_ADDR_EN     => '0',
       B_SB_CORRECT  => open,
       B_DB_DETECT   => open,
@@ -225,12 +269,12 @@ begin
       A_DB_DETECT   => open,
 
       -- port B (reader) - APB Rx
-      B_ADDR        => (others => '0'),
-      B_BLK         => (others => '0'),
-      B_DOUT        => open,
+      B_ADDR        => B_ADDR,
+      B_BLK         => B_BLK,
+      B_DOUT        => B_DOUT(35 downto 18),
       B_DOUT_EN     => '0',
       B_DOUT_SRST_N => '0',
-      B_CLK         => '0',
+      B_CLK         => i_aclk,
       B_ADDR_EN     => '0',
       B_SB_CORRECT  => open,
       B_DB_DETECT   => open,

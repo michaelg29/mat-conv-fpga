@@ -18,6 +18,7 @@ entity global_mem is
     -- clock and reset
     i_aclk           : in  std_logic;
     i_macclk         : in  std_logic;
+    i_pclk           : in  std_logic;
     i_rst_n          : in  std_logic;
 
     -- APB Rx
@@ -97,8 +98,8 @@ architecture rtl of global_mem is
     );
     port (
       -- clock and reset
-      i_aclk       : in  std_logic;
       i_macclk     : in  std_logic;
+      i_pclk       : in  std_logic;
       i_rst_n      : in  std_logic;
 
       -- port A reader 0 - Input FSM
@@ -169,8 +170,8 @@ begin
     )
     port map (
       -- clock and reset
-      i_aclk       => i_aclk,
       i_macclk     => i_macclk,
+      i_pclk       => i_pclk,
       i_rst_n      => i_rst_n,
 
       -- port A reader 0 - Input FSM

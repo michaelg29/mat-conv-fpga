@@ -101,6 +101,7 @@ architecture rtl of acknowledge_buffer is
   -- signals to/from memory block
   signal A_ADDR    : std_logic_vector( 6 downto 0);
   signal A_BLK     : std_logic_vector( 1 downto 0);
+  signal A_DOUT    : std_logic_vector(35 downto 0);
   signal C_ADDR_US : unsigned(2 downto 0);
   signal C_ADDR    : std_logic_vector( 6 downto 0);
   signal C_DIN     : std_logic_vector(35 downto 0);
@@ -112,7 +113,6 @@ architecture rtl of acknowledge_buffer is
   signal A_CK_RSTR : unsigned(READ_LATENCY downto 0); -- track a checksum read request
 
   -- checksum signals from acknowledge buffer
-  signal A_DOUT    : std_logic_vector(35 downto 0);
   signal A_RDATA   : std_logic_vector(31 downto 0);
   signal A_R_CKSUM : std_logic_vector(31 downto 0);
 
@@ -130,111 +130,110 @@ begin
 
   -- process reads from the Output FSM
   A_RDATA <= A_DOUT(33 downto 18) & A_DOUT(15 downto 0);
-  p_port_a_read : process(i_macclk, i_rst_n)
+  p_port_a_read : process(i_macclk)
   begin
-    if (i_rst_n = '0') then
-      -- reset internal signals
-      A_RSTR    <= (others => '0');
-      A_CK_RSTR <= (others => '0');
-      A_R_CKSUM <= (others => '0');
+    if (i_macclk'event and i_macclk = '1') then
+      if (i_rst_n = '0') then
+        -- reset internal signals
+        A_RSTR    <= (others => '0');
+        A_CK_RSTR <= (others => '0');
+        A_R_CKSUM <= (others => '0');
 
-      -- reset output signals
-      o_ar_rdata  <= (others => '0');
-      o_ar_rvalid <= '0';
-    elsif (i_macclk'event and i_macclk = '1') then
-      -- shift read string to represent one cycle passing in a read
-      A_RSTR(READ_LATENCY-1 downto 0)    <= A_RSTR(READ_LATENCY downto 1);
-      A_CK_RSTR(READ_LATENCY-1 downto 0) <= A_CK_RSTR(READ_LATENCY downto 1);
+        -- reset output signals
+        o_ar_rdata  <= (others => '0');
+        o_ar_rvalid <= '0';
+      else
+        -- shift read string to represent one cycle passing in a read
+        A_RSTR(READ_LATENCY-1 downto 0)    <= A_RSTR(READ_LATENCY downto 1);
+        A_CK_RSTR(READ_LATENCY-1 downto 0) <= A_CK_RSTR(READ_LATENCY downto 1);
 
-      -- process new read
-      if (i_ar_ren = '1') then
         -- start counter for read
-        A_RSTR(READ_LATENCY) <= '1';
-
-        -- start counter for checksum read
-        if (i_ar_addr = "111") then
+        A_RSTR(READ_LATENCY) <= i_ar_ren;
+        if (i_ar_ren = '1' and i_ar_addr = "111") then
+          -- start counter for checksum read
           A_CK_RSTR(READ_LATENCY) <= '1';
         else
+          -- no new read
           A_CK_RSTR(READ_LATENCY) <= '0';
         end if;
-      else
-        -- no new read
-        A_RSTR(READ_LATENCY)    <= '0';
-        A_CK_RSTR(READ_LATENCY) <= '0';
-      end if;
 
-      -- process completed read
-      o_ar_rvalid <= A_RSTR(0);
-      if (A_RSTR(0) = '1') then
-        if (A_CK_RSTR(0) = '1') then
-          -- output checksum
-          o_ar_rdata <= A_R_CKSUM;
+        -- process completed read
+        o_ar_rvalid <= A_RSTR(0);
+        if (A_RSTR(0) = '1') then
+          if (A_CK_RSTR(0) = '1') then
+            -- output checksum
+            o_ar_rdata <= A_R_CKSUM;
 
-          -- clear checksum
-          A_R_CKSUM <= (others => '0');
+            -- clear checksum
+            A_R_CKSUM <= (others => '0');
+          else
+            -- output read data from memory
+            o_ar_rdata <= A_RDATA;
+
+            -- update checksum
+            A_R_CKSUM <= A_R_CKSUM xor A_RDATA;
+          end if;
         else
-          -- output read data from memory
-          o_ar_rdata <= A_RDATA;
-
-          -- update checksum
-          A_R_CKSUM <= A_R_CKSUM xor A_RDATA;
+          A_R_CKSUM <= A_R_CKSUM;
         end if;
       end if;
     end if;
   end process;
 
   -- arbitrate writes from AXI Rx and Input FSM
-  p_axi_rx_write : process(i_aclk, i_macclk, i_rst_n)
+  p_axi_rx_write : process(i_macclk)
   begin
-    if (i_rst_n = '0') then
-      -- reset CDC signals
-      cw0_addr_cdc    <= (others => '0');
-      cw0_wen_cdc     <= '0';
-      cw0_wdata_cdc   <= (others => '0');
-      cw0_wdata_hi_en <= '0';
+    if (i_macclk'event and i_macclk = '1') then
+      if (i_rst_n = '0') then
+        -- reset CDC signals
+        cw0_addr_cdc    <= (others => '0');
+        cw0_wen_cdc     <= '0';
+        cw0_wdata_cdc   <= (others => '0');
+        cw0_wdata_hi_en <= '0';
 
-      -- reset memory port signals
-      C_DIN           <= (others => '0');
-      C_WEN           <= '0';
-      C_ADDR_US       <= (others => '0');
-    elsif (i_macclk'event and i_macclk = '1') then
-      -- CDC
-      cw0_addr_cdc  <= i_cw0_addr;
-      cw0_wen_cdc   <= i_cw0_wen;
-      cw0_wdata_cdc <= i_cw0_wdata;
-
-      -- process AXI Rx write to the command space
-      if (cw0_wen_cdc = '1' and cw0_addr_cdc(3) = '1') then
-        -- shift register CDC data
-        if (cw0_wdata_hi_en = '0') then
-          -- least significant bits
-          C_DIN(15 downto  0) <= cw0_wdata_cdc(15 downto 0);
-          C_DIN(33 downto 18) <= cw0_wdata_cdc(31 downto 16);
-          C_WEN               <= '1';
-          C_ADDR_US           <= unsigned(cw0_addr_cdc(2 downto 0));
-          cw0_wdata_hi_en     <= '1';
-        else
-          -- most significant bits
-          C_DIN(15 downto  0) <= cw0_wdata_cdc(47 downto 32);
-          C_DIN(33 downto 18) <= cw0_wdata_cdc(63 downto 48);
-          C_WEN               <= '1';
-          C_ADDR_US           <= C_ADDR_US + 1; -- write to second 32-bit word
-          C_ADDR(2 downto 0)  <= cw0_addr_cdc(2 downto 0);
-          cw0_wdata_hi_en     <= '0';
-        end if;
-      -- process Input FSM write to state register (copy to STATUS_reg)
-      elsif (i_cw1_wen = '1' and i_cw1_addr = "00") then
-        -- copy 5 bits of write data
-        C_DIN( 4 downto  0) <= i_cw1_wdata;
-        C_DIN(15 downto  5) <= (others => '0');
-        C_DIN(33 downto 18) <= (others => '0');
-
-        -- static address for Input FSM
-        C_ADDR_US           <= to_unsigned(5, 3); -- STATUS_reg is the fifth word
-        C_WEN               <= '1';
-      -- no write
+        -- reset memory port signals
+        C_DIN           <= (others => '0');
+        C_WEN           <= '0';
+        C_ADDR_US       <= (others => '0');
       else
-        C_WEN <= '0';
+        -- CDC
+        cw0_addr_cdc  <= i_cw0_addr;
+        cw0_wen_cdc   <= i_cw0_wen;
+        cw0_wdata_cdc <= i_cw0_wdata;
+
+        -- process AXI Rx write to the command space
+        if (cw0_wen_cdc = '1' and cw0_addr_cdc(3) = '1') then
+          -- shift register CDC data
+          if (cw0_wdata_hi_en = '0') then
+            -- least significant bits
+            C_DIN(15 downto  0) <= cw0_wdata_cdc(15 downto 0);
+            C_DIN(33 downto 18) <= cw0_wdata_cdc(31 downto 16);
+            C_WEN               <= '1';
+            C_ADDR_US           <= unsigned(cw0_addr_cdc(2 downto 0));
+            cw0_wdata_hi_en     <= '1';
+          else
+            -- most significant bits
+            C_DIN(15 downto  0) <= cw0_wdata_cdc(47 downto 32);
+            C_DIN(33 downto 18) <= cw0_wdata_cdc(63 downto 48);
+            C_WEN               <= '1';
+            C_ADDR_US           <= C_ADDR_US + 1; -- write to second 32-bit word
+            C_ADDR(2 downto 0)  <= cw0_addr_cdc(2 downto 0);
+            cw0_wdata_hi_en     <= '0';
+          end if;
+        -- process Input FSM write to state register (copy to STATUS_reg)
+        elsif (i_cw1_wen = '1' and i_cw1_addr = "00") then
+          -- copy 5 bits of write data
+          C_DIN( 4 downto  0) <= i_cw1_wdata;
+          C_DIN(15 downto  5) <= (others => '0');
+          C_DIN(33 downto 18) <= (others => '0');
+
+          -- static address for Input FSM
+          C_ADDR_US           <= to_unsigned(5, 3); -- STATUS_reg is the fifth word
+          C_WEN               <= '1';
+        -- no write
+        else
+          C_WEN <= '0';
+        end if;
       end if;
     end if;
   end process;
