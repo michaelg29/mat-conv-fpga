@@ -64,6 +64,7 @@ function do_compile {
     echo "Compiling ${name} located at ${path}"
 
     if [ -f ${path}/filelist.txt ]; then
+        rm -rf libs/${name}
         vlib libs/${name}
         cat ${path}/filelist.txt |
         while read file; do

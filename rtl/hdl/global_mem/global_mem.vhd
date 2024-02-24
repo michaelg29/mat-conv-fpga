@@ -35,7 +35,6 @@ entity global_mem is
     i_reg_cw1_wdata  : in  std_logic_vector(31 downto 0);
 
     -- Input FSM
-    i_ack_cw1_wen    : in  std_logic;
     i_reg_cw0_addr   : in  std_logic_vector( 1 downto 0);
     i_reg_cw0_wen    : in  std_logic;
     i_reg_cw0_wdata  : in  std_logic_vector(31 downto 0);
@@ -82,6 +81,7 @@ architecture rtl of global_mem is
 
       -- port C writer 1 - Input FSM
       i_cw1_wen    : in  std_logic;
+      i_cw1_addr   : in  std_logic_vector( 1 downto 0);
       i_cw1_wdata  : in  std_logic_vector( 4 downto 0)
     );
   end component;
@@ -114,9 +114,10 @@ begin
       i_cw0_wen    => i_ack_cw0_wen,
       i_cw0_wdata  => i_ack_cw0_wdata,
 
-      -- port C writer 1 - Input FSM
-      i_cw1_wen    => i_ack_cw1_wen,
-      i_cw1_wdata  => i_ack_cw0_wdata(4 downto 0)
+      -- port C writer 1 - Input FSM (copy signals from writes to register file)
+      i_cw1_wen    => i_reg_cw0_wen,
+      i_cw1_addr   => i_reg_cw0_addr,
+      i_cw1_wdata  => i_reg_cw0_wdata(4 downto 0)
     );
 
 end rtl;

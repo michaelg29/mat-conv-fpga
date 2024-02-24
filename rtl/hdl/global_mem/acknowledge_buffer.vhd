@@ -25,14 +25,15 @@ entity acknowledge_buffer is
     i_ar_ren     : in  std_logic;
     o_ar_rdata   : out std_logic_vector(31 downto 0);
     o_ar_rvalid  : out std_logic;
-    
+
     -- port C writer 0 - AXI Rx
     i_cw0_addr   : in  std_logic_vector( 3 downto 0);
     i_cw0_wen    : in  std_logic;
     i_cw0_wdata  : in  std_logic_vector(63 downto 0);
-    
+
     -- port C writer 1 - Input FSM
     i_cw1_wen    : in  std_logic;
+    i_cw1_addr   : in  std_logic_vector( 1 downto 0);
     i_cw1_wdata  : in  std_logic_vector( 4 downto 0)
   );
 end acknowledge_buffer;
@@ -100,6 +101,7 @@ architecture rtl of acknowledge_buffer is
   -- signals to/from memory block
   signal A_ADDR    : std_logic_vector( 6 downto 0);
   signal A_BLK     : std_logic_vector( 1 downto 0);
+  signal C_ADDR_US : unsigned(2 downto 0);
   signal C_ADDR    : std_logic_vector( 6 downto 0);
   signal C_DIN     : std_logic_vector(35 downto 0);
   signal C_WEN     : std_logic;
@@ -114,6 +116,12 @@ architecture rtl of acknowledge_buffer is
   signal A_RDATA   : std_logic_vector(31 downto 0);
   signal A_R_CKSUM : std_logic_vector(31 downto 0);
 
+  -- CDC signals for AXI Rx
+  signal cw0_addr_cdc    : std_logic_vector( 3 downto 0);
+  signal cw0_wen_cdc     : std_logic;
+  signal cw0_wdata_cdc   : std_logic_vector(63 downto 0);
+  signal cw0_wdata_hi_en : std_logic; -- write the high 32-bit word
+
 begin
 
   -------------------------
@@ -122,7 +130,7 @@ begin
 
   -- process reads from the Output FSM
   A_RDATA <= A_DOUT(33 downto 18) & A_DOUT(15 downto 0);
-  p_output_fsm_read : process(i_macclk, i_rst_n)
+  p_port_a_read : process(i_macclk, i_rst_n)
   begin
     if (i_rst_n = '0') then
       -- reset internal signals
@@ -174,13 +182,74 @@ begin
       end if;
     end if;
   end process;
-  
+
+  -- arbitrate writes from AXI Rx and Input FSM
+  p_axi_rx_write : process(i_aclk, i_macclk, i_rst_n)
+  begin
+    if (i_rst_n = '0') then
+      -- reset CDC signals
+      cw0_addr_cdc    <= (others => '0');
+      cw0_wen_cdc     <= '0';
+      cw0_wdata_cdc   <= (others => '0');
+      cw0_wdata_hi_en <= '0';
+
+      -- reset memory port signals
+      C_DIN           <= (others => '0');
+      C_WEN           <= '0';
+      C_ADDR_US       <= (others => '0');
+    elsif (i_macclk'event and i_macclk = '1') then
+      -- CDC
+      cw0_addr_cdc  <= i_cw0_addr;
+      cw0_wen_cdc   <= i_cw0_wen;
+      cw0_wdata_cdc <= i_cw0_wdata;
+
+      -- process AXI Rx write to the command space
+      if (cw0_wen_cdc = '1' and cw0_addr_cdc(3) = '1') then
+        -- shift register CDC data
+        if (cw0_wdata_hi_en = '0') then
+          -- least significant bits
+          C_DIN(15 downto  0) <= cw0_wdata_cdc(15 downto 0);
+          C_DIN(33 downto 18) <= cw0_wdata_cdc(31 downto 16);
+          C_WEN               <= '1';
+          C_ADDR_US           <= unsigned(cw0_addr_cdc(2 downto 0));
+          cw0_wdata_hi_en     <= '1';
+        else
+          -- most significant bits
+          C_DIN(15 downto  0) <= cw0_wdata_cdc(47 downto 32);
+          C_DIN(33 downto 18) <= cw0_wdata_cdc(63 downto 48);
+          C_WEN               <= '1';
+          C_ADDR_US           <= C_ADDR_US + 1; -- write to second 32-bit word
+          C_ADDR(2 downto 0)  <= cw0_addr_cdc(2 downto 0);
+          cw0_wdata_hi_en     <= '0';
+        end if;
+      -- process Input FSM write to state register (copy to STATUS_reg)
+      elsif (i_cw1_wen = '1' and i_cw1_addr = "00") then
+        -- copy 5 bits of write data
+        C_DIN( 4 downto  0) <= i_cw1_wdata;
+        C_DIN(15 downto  5) <= (others => '0');
+        C_DIN(33 downto 18) <= (others => '0');
+
+        -- static address for Input FSM
+        C_ADDR_US           <= to_unsigned(5, 3); -- STATUS_reg is the fifth word
+        C_WEN               <= '1';
+      -- no write
+      else
+        C_WEN <= '0';
+      end if;
+    end if;
+  end process;
+
   ----------------------------
   -- Internal memory blocks --
   ----------------------------
 
+  -- signal concatenations
   A_ADDR <= "0000" & i_ar_addr;
   A_BLK  <= i_ar_ren & i_ar_ren;
+
+  C_ADDR              <= "0000" & std_logic_vector(C_ADDR_US);
+  C_DIN(35 downto 34) <= (others => '0');
+  C_DIN(17 downto 16) <= (others => '0');
 
   -- bits [15:0]
   ACK_BUF_0 : RTG4uSRAM_0
@@ -238,7 +307,7 @@ begin
       ARST_N        => i_rst_n,
       BUSY          => open
     );
-    
+
   -- bits [31:16]
   ACK_BUF_1 : RTG4uSRAM_0
     generic map (
