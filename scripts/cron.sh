@@ -39,7 +39,7 @@ for tb in "${MAT_CONV_TBS[@]}"; do
   else 
     echo "Compilation failed, exited with code $?"
   fi
-  #./sim.sh > ./../../../reports/sim_report_${tb}_`date +%a-%b-%d_%H-%M-%S`.log
+  ./sim.sh > ./../../../reports/sim_report_${tb}_`date +%a-%b-%d_%H-%M-%S`.log
   if [ $? -eq 0 ]; then
     echo "Simulation passed!"
   else 

@@ -76,11 +76,11 @@ module tb_top
     */
     initial begin
 
-        $display("Core Testbench Starts");
+        `uvm_info("tb_top", "Core Testbench Starts", UVM_NONE);
         if(PIPELINE == 1) begin
-            $display("Pipelined testbench");
+            `uvm_info("tb_top", "Pipelined testbench", UVM_NONE);
         end else begin
-            $display("Non-pipelined testbench");
+            `uvm_info("tb_top", "Non-pipelined testbench", UVM_NONE);
         end
 
         // Reset all signals to 0
@@ -140,8 +140,8 @@ module tb_top
                             // Compare output to valid result
                             if(oreg[20:3] != o_res) begin
                                 @(negedge i_clk);
-                                $display("Test failed for i: %d ; j: %d ; k: %d",i,j,k);
-                                $display("oreg[20:3]: %d ; oreg: %d ; o_res: %d",oreg[20:3], oreg, o_res);
+                                `uvm_error("tb_top", $sformatf("Test failed for i: %d; j: %d; k: %d", i, j, k));
+                                `uvm_error("tb_top", $sformatf("oreg[20:3]: %d ; oreg: %d ; o_res: %d",oreg[20:3], oreg, o_res));
                                 $finish(2);
                             end
                         end
@@ -192,8 +192,8 @@ module tb_top
                         // Compare output to valid result
                         if(oreg[20:3] != o_res) begin
                             @(negedge i_clk);
-                            $display("Test failed for i: %d ; j: %d ; k: %d",i,j,k);
-                            $display("oreg[20:3]: %d ; oreg: %d ; o_res: %d",oreg[20:3], oreg, o_res);
+                            `uvm_error("tb_top", $sformatf("Test failed for i: %d; j: %d; k: %d", i, j, k));
+                            `uvm_error("tb_top", $sformatf("oreg[20:3]: %d ; oreg: %d ; o_res: %d",oreg[20:3], oreg, o_res));
                             $finish(2);
                         end
 
@@ -204,7 +204,7 @@ module tb_top
 
         end
 
-        $display("Test passed");
+        `uvm_info("tb_top", "Test passed", UVM_NONE);
         $finish(0);
     end
 

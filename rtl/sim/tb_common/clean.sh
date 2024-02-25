@@ -15,3 +15,7 @@ while read dir; do
         rm -r libs/${dir}
     fi
 done
+
+rm -rf ./logs
+rm -f *.vstf
+rm -f *.wlf
