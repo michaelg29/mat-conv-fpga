@@ -5,10 +5,7 @@
 module tb_top
     #(
         parameter KERNEL_SIZE = 5,
-        parameter FIFO_WIDTH = 8,
         parameter int NUM_REPS = 2, //Number of times each test shall be reapeated with different values
-        parameter int SEED = 0, //Seed for the random input generation
-        parameter int VERBOSE = 0, //Enable verbosity for debug
         parameter string TC= "tb_core_io_pipeline", // Name of test case to run
 
         parameter MIN_PIXEL_VAL = 40'h160,
@@ -21,9 +18,6 @@ module tb_top
     );
 
     import uvm_pkg::*;
-
-    //Set seed for randomization
-    bit [31:0] dummy = $urandom(SEED);
 
     //========================================
     // Signals
