@@ -19,7 +19,7 @@ architecture saturator_arch of saturator is
     begin
       if(rising_edge(i_clk)) then 
         if i_sign = '0' then --clamp unsigned. Value cant be negative, only have to check the upper bound
-          if (i_val(17 downto 12) or "000000") = "000000" then
+          if i_val(17 downto 12) = "000000" then
             o_res <= i_val(11 downto 4);
           else 
             o_res <= "11111111";
@@ -35,7 +35,7 @@ architecture saturator_arch of saturator is
             end if;
 
           else --positive number, clamp to 127
-            if (i_val(16 downto 11) or "000000") = "000000" then
+            if i_val(16 downto 11) = "000000" then
               o_res <= i_val(11 downto 4);
             else 
               o_res <= "01111111";
