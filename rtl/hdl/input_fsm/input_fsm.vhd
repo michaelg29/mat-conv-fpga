@@ -50,8 +50,7 @@ entity input_fsm is
     o_cmd_subj        : out std_logic;
     o_cmd_kern_signed : out std_logic;
     o_eor             : out std_logic;
-    o_payload_done    : out std_logic;
-    o_rst_n           : out std_logic
+    o_payload_done    : out std_logic
   );
 end input_fsm;
 
@@ -64,6 +63,7 @@ architecture rtl of input_fsm is
   -- STATE DEFINITION --
   ----------------------
   type INPUT_FSM_STATE_T is (
+    FSM_RESTART,
     WAIT_CMD_S_KEY,
     WAIT_CMD_SIZE,
     WAIT_CMD_TID,
@@ -163,7 +163,6 @@ begin
         o_cmd_kern_signed <= '0';
         o_eor             <= '0';
         o_payload_done    <= '0';
-        o_rst_n           <= '1';
 
         -- active-low reset internal signals
         input_fsm_state   <= WAIT_CMD_S_KEY;
@@ -183,16 +182,47 @@ begin
         write_blank_ack  <= i_write_blank_ack;
 
         -- apply checksum and status changes
-        cur_cmd_status   <= cur_cmd_status or new_cmd_status;
-        if (is_command_pkt(i_new_pkt, i_waddr) = '1') then
-          cur_cmd_chksum <= cur_cmd_chksum xor
-          i_wdata(31 downto 0) xor i_wdata(63 downto 32);
+        if (input_fsm_state = FSM_RESTART) then
+          cur_cmd_status   <= (others => '0');
+          cur_cmd_chksum   <= (others => '0');
         else
-          cur_cmd_chksum <= cur_cmd_chksum;
+          cur_cmd_status   <= cur_cmd_status or new_cmd_status;
+          if (is_command_pkt(i_new_pkt, i_waddr) = '1') then
+            cur_cmd_chksum <= cur_cmd_chksum xor
+            i_wdata(31 downto 0) xor i_wdata(63 downto 32);
+          else
+            cur_cmd_chksum <= cur_cmd_chksum;
+          end if;
         end if;
 
         -- calculate new state
         case (input_fsm_state) is
+
+          when FSM_RESTART =>
+            -- reset internal signals
+            cur_cmd_kern      <= '0';
+            cur_cmd_subj      <= '0';
+            new_cmd_status    <= (others => '0');
+            cur_cmd_err       <= '0';
+            cur_cmd_cmplt     <= '0';
+            exp_cols          <= (others => '0');
+            cur_cols          <= (others => '0');
+            cur_pkts          <= (others => '0');
+
+            -- default interface signal
+            o_wen             <= '0';
+            o_write_blank_en  <= '0';
+            o_drop_pkts       <= '0';
+            o_ren             <= '0';
+            o_cmd_valid       <= '0';
+            o_cmd_err         <= '0';
+            o_cmd_kern        <= '0';
+            o_cmd_kern_signed <= '0';
+            o_cmd_subj        <= '0';
+            o_eor             <= '0';
+            o_payload_done    <= '0';
+
+            input_fsm_state <= WAIT_CMD_S_KEY;
 
           -- waiting for the first 64b packet in the command
           when WAIT_CMD_S_KEY =>
@@ -227,33 +257,7 @@ begin
               -- next state
               input_fsm_state <= WAIT_CMD_SIZE;
             else
-              -- reset internal signals
-              cur_cmd_kern   <= '0';
-              cur_cmd_subj   <= '0';
-              new_cmd_status <= (others => '0');
-              cur_cmd_err    <= '0';
-
-              -- default interface signal
-              o_wen          <= '0';
             end if;
-
-            -- initial interface signals
-            o_write_blank_en  <= '0';
-            o_drop_pkts       <= '0';
-            o_ren             <= '0';
-            o_cmd_valid       <= '0';
-            o_cmd_err         <= '0';
-            o_cmd_kern        <= '0';
-            o_cmd_kern_signed <= '0';
-            o_cmd_subj        <= '0';
-            o_eor             <= '0';
-            o_payload_done    <= '0';
-
-            -- initial internal signals
-            cur_cmd_cmplt     <= '0';
-            exp_cols          <= (others => '0');
-            cur_cols          <= (others => '0');
-            cur_pkts          <= (others => '0');
 
           -- waiting for the second 64b packet in the command
           when WAIT_CMD_SIZE =>
@@ -432,8 +436,7 @@ begin
               o_drop_pkts     <= '1';
             else
               -- transmitted final status, ready for new command
-              o_rst_n         <= '0';
-              input_fsm_state <= WAIT_CMD_S_KEY;
+              input_fsm_state <= FSM_RESTART;
             end if;
 
           -- waiting for error acknowledgement
@@ -447,8 +450,7 @@ begin
                 input_fsm_state <= PAYLOAD_RX;
               else
                 -- restart command
-                o_rst_n         <= '0';
-                input_fsm_state <= WAIT_CMD_S_KEY;
+                input_fsm_state <= FSM_RESTART;
               end if;
               o_drop_pkts <= '0';
             end if;
