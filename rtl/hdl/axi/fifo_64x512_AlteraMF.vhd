@@ -109,6 +109,7 @@ signal DB_DETECT_net_1  : std_logic;
 signal Q_net_1          : std_logic_vector(63 downto 0);
 signal RDCNT_net_1      : std_logic_vector(9 downto 0);
 signal WRCNT_net_1      : std_logic_vector(9 downto 0);
+signal ACLR             : std_logic;
 ----------------------------------------------------------------------
 -- TiedOff Signals
 ----------------------------------------------------------------------
@@ -146,13 +147,15 @@ begin
   RDCNT_net_1       <= RDCNT_net_0;
   RDCNT(9 downto 0) <= RDCNT_net_1;
 
+  ACLR              <= not(RESET_N);
+
 ----------------------------------------------------------------------
 -- Almost empty and almost full process
 ----------------------------------------------------------------------
   p_aempty : process(RCLK, RESET_N)
   begin
     if (RESET_N = '0') then
-      AEMPTY_net_0 <= '0'; 
+      AEMPTY_net_0 <= '0';
     elsif (RCLK'event and RCLK = '1') then
       if (to_integer(unsigned(RDCNT_net_0)) <= AEVAL) then
         AEMPTY_net_0 <= '1';
@@ -161,11 +164,11 @@ begin
       end if;
     end if;
   end process p_aempty;
-  
+
   p_afull : process(WCLK, RESET_N)
   begin
     if (RESET_N = '0') then
-      AFULL_net_0 <= '0'; 
+      AFULL_net_0 <= '0';
     elsif (WCLK'event and WCLK = '1') then
       if (to_integer(unsigned(WRCNT_net_0)) >= AFVAL) then
         AFULL_net_0 <= '1';
@@ -187,14 +190,14 @@ dcfifo64x512_0 : dcfifo
     lpm_showahead           => ( "OFF" ),
     lpm_hint                => ( "USE_EAB=ON" ),
     lpm_type                => ( "DCFIFO" ),
-    overflow_checking       => ( "ON" ),
-    underflow_checking      => ( "ON" ),
+    overflow_checking       => ( "OFF" ),
+    underflow_checking      => ( "OFF" ),
     enable_ecc              => ( "OFF" ),
     delay_rdusedw           => ( 1 ),
     delay_wrusedw           => ( 1 ),
     add_usedw_msb_bit       => ( "OFF" ),
-    rdsync_delaypipe        => ( 3 ),
-    wrsync_delaypipe        => ( 3 ),
+    rdsync_delaypipe        => ( 0 ),
+    wrsync_delaypipe        => ( 0 ),
     use_eab                 => ( "ON" ),
     write_aclr_synch        => ( "OFF" ),
     read_aclr_synch         => ( "OFF" ),
@@ -209,7 +212,7 @@ dcfifo64x512_0 : dcfifo
     data         => DATA,
     wrreq        => WE,
     rdreq        => RE,
-    aclr         => RESET_N,
+    aclr         => ACLR,
     q            => Q_net_0,
     wrfull       => WRFULL_net_0,
     rdfull       => open,

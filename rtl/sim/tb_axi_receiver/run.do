@@ -2,6 +2,7 @@ restart
 log /tb_top/*
 log /tb_top/DUT/*
 log /tb_top/DUT/dcfifo64x512_0/*
+log /tb_top/DUT/dcfifo64x512_0/DCFIFO_MW/*
 
 set StdArithNoWarnings 1
 set NumericStdNoWarnings 1

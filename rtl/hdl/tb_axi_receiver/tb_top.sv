@@ -1,5 +1,6 @@
 `timescale 1 ps/ 1 ps
 `define ACLK_PER_PS 15625 // 64MHz
+`define MACCLK_PER_PS 7812.5 // 128MHz
 
 `include "uvm_macros.svh"
 
@@ -9,7 +10,9 @@ import uvm_pkg::*;
 
 // clock and reset
 localparam time ACLK_PER = `ACLK_PER_PS * 1ps;
+localparam time MACCLK_PER = `MACCLK_PER_PS * 1ps;
 logic aclk_dut = 1'b1;
+logic macclk_dut = 1'b1;
 logic arst_n     = 1'b0;
 
 // write address channel
@@ -25,7 +28,7 @@ logic        awvalid;
 wire         awready;
 
 // write data channel
-logic [63:0] wdata;
+logic [63:0] wdata = '0;
 logic [ 7:0] wstrb;
 logic        wlast;
 logic        wvalid;
@@ -130,7 +133,7 @@ fifo_64x512 #(
   .AFVAL(510)
 ) DUT (
   .CLK(aclk_dut),
-  .RCLK(aclk_dut),
+  .RCLK(macclk_dut),
   .WCLK(aclk_dut),
   .DATA(wdata),
   .RE(ren),
@@ -153,32 +156,47 @@ fifo_64x512 #(
 always #(ACLK_PER / 2) begin
 	aclk_dut <= ~aclk_dut;
 end
+always #(MACCLK_PER / 2) begin
+	macclk_dut <= ~macclk_dut;
+end
 
 initial begin
 
-  #(1ps);
-
-	// code that executes only once
+  // code that executes only once
 	$display("Running testbench");
 	// insert code here --> begin
   #(ACLK_PER);
   arst_n <= 1'b1;
+  #(ACLK_PER);
   $display("Done with startup");
+  #(3*ACLK_PER);
 
   wdata <= 64'hCAFEBEEF;
   wen <= 1'b1;
 
-  #(ACLK_PER);
+  #(2*ACLK_PER);
 
   wen <= 1'b0;
 
   #(10*ACLK_PER);
 
+  @(posedge macclk_dut);
+
   ren <= 1'b1;
 
-  #(ACLK_PER);
+  #(MACCLK_PER);
 
   ren <= 1'b0;
+
+  #(MACCLK_PER);
+
+  ren <= 1'b1;
+
+  #(MACCLK_PER);
+
+  ren <= 1'b0;
+
+  #(MACCLK_PER);
 
   #(10*ACLK_PER);
 
