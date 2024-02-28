@@ -12,7 +12,9 @@ module tb_top
         parameter string TC= "tb_cmc_mem_rw_no_pipeline", // Name of test case to run
 
         parameter MIN_ADDR = 11'h0,
-        parameter MAX_ADDR = 11'h7FF
+        parameter MAX_ADDR = 11'h7FF,
+        parameter WRITE_DELAY = 4, //delay between valid address and valid input data
+        parameter READ_DELAY = 2, //delay between valid address and valid output data
     );
 
     import uvm_pkg::*;
@@ -106,7 +108,13 @@ module tb_top
                             );
                             end
                         2 : begin
-                            test2();
+                            test2(
+                                .i_clk(i_clk),
+                                .i_addr(i_addr),
+                                .i_core(i_core),
+                                .o_core(o_core),
+                                .o_pixel(o_pixel)
+                            );
                             end
                         default : $display("WARNING: %d is not a valid task ID", i);
                     endcase
@@ -164,7 +172,6 @@ module tb_top
         var longint addr;
         var int port;
         var int i_val;
-
         logic [KERNEL_SIZE:0][17:0] o_expected;
 
         begin
@@ -193,10 +200,9 @@ module tb_top
                     i_val = 1'b1;
                     @(negedge i_clk);
                     i_val = 1'b0;
-                    @(negedge i_clk);
-                    @(negedge i_clk);
-                    @(negedge i_clk);
-                    @(negedge i_clk);
+
+                    //Wait for write data
+                    for(int i=0; i<WRITE_DELAY; i++) @(negedge i_clk);
 
                     if(port == (KERNEL_SIZE-1)) begin //if last port
                         //Perform read (no delay, data is bypassed)
@@ -205,14 +211,15 @@ module tb_top
                         i_val = 1'b1;
                         @(negedge i_clk);
                         i_val = 1'b0;
-                        @(negedge i_clk);
-                        @(negedge i_clk);
+
+                        //Wait for read data
+                        for(int i=0; i<READ_DELAY; i++) @(negedge i_clk);
                     end
 
 
                     //Check result
                     if(o_expected != {o_core,o_pixel}) begin
-                        `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X ; port = %d ; k = %d\noutput = 0x%X ; expected = 0x%X",addr,port,{o_core,o_pixel},o_expected));
+                        `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X ; port = %d\noutput = 0x%X ; expected = 0x%X",addr,port,{o_core,o_pixel},o_expected));
                         @(negedge i_clk);
                         $finish(2);
                     end
@@ -236,8 +243,76 @@ module tb_top
         ref logic [KERNEL_SIZE-1:0][17:0] o_core;
         ref logic [17:0] o_pixel;
 
+        var longint addr;
+        var int port;
+        var int randval;
+        logic [MAX_ADDR-MIN_ADDR:0][KERNEL_SIZE:0][17:0] o_expected; 
+
         begin
-            //TODO
+
+            // Reset all signals to 0
+            i_addr = 0;
+            i_core = 0;
+            i_val = 1'b0;
+            @(negedge i_clk);
+
+            //Next inputs are valid
+            i_val = 1'b1;
+
+            // Loop through all addresses to write (need +WRITE_DELAY due to timing delays)
+            for(addr = MIN_ADDR ; addr <= MAX_ADDR+WRITE_DELAY ; addr++) begin
+
+                //Generate random input
+                randval = addr+port;
+                i_val = {18{1'b0},(KERNEL_SIZE-1){randval[17:0]}}; //first output port is always 0
+                //assert(std::randomize(i_val)); //NEED LICENSE
+
+                //Save output for latest comparison
+                o_expected[addr]= i_val;
+
+                //Give addr
+                i_addr = addr;
+                if(MAX_ADDR-addr < WRITE_DELAY) begin
+                    //Done with all addresses, still need to give inputs
+                    i_val = 1'b0;
+                end
+
+                //Give input
+                if(addr-MIN_ADDR >= WRITE_DELAY) begin //input is only valid after WRITE_DELAY clock cycles, need to wait
+                    i_core = o_expected[addr-WRITE_DELAY];
+                end
+                @(negedge i_clk);
+
+            end
+
+
+            //Next outputs are valid
+            i_val = 1'b1;
+
+            // Loop through all addresses to read
+            for(addr = MIN_ADDR ; addr <= MAX_ADDR+READ_DELAY ; addr++) begin
+
+                //Give addr
+                if(MAX_ADDR-addr < READ_DELAY) begin
+                    //Done with all addresses, still wait for next outputs
+                    i_val = 1'b0;
+                end
+
+                //Get output
+                @(negedge i_clk);
+                if(addr-MIN_ADDR >= READ_DELAY) begin //output is only valid after READ_DELAY clock cycles, need to wait
+
+                    //Check result
+                    if(o_expected[addr] != {o_core,o_pixel}) begin
+                        `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X\noutput = 0x%X ; expected = 0x%X",addr,{o_core,o_pixel},o_expected[addr]));
+                        @(negedge i_clk);
+                        $finish(2);
+                    end
+
+                end
+
+            end
+
         end
 
     endtask : test2
