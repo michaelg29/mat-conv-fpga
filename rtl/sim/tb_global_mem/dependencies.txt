@@ -1,0 +1,2 @@
+../../hdl/mem_wrapper
+../../hdl/tb_global_mem
