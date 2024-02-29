@@ -30,8 +30,8 @@ function do_run {
     args=$1
 }
 
-# function to compile library at path
-function do_compile {
+# function to run testcase
+function do_sim {
     name=$1
     args=$2
     logname="./logs/${name}.log"
@@ -65,10 +65,10 @@ if [ -f args.ini ]; then
     while read line; do
         name="${line%%:*}"
         args="${line##*:}"
-        do_compile "${name}" "${args}"
+        ! ([ -z "$line" ] || [ -z "${line%%#*}" ]) && do_sim "${name}" "${args}"
     done
 else
-    do_compile "tc" ""
+    do_sim "tc" ""
     [ $? -gt 0 ] && echo "Exiting with error" && exit 1
 fi
 
