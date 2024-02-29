@@ -6,7 +6,7 @@ static task automatic run_task(
   ref logic        A_CLK,
   ref logic [10:0] A_ADDR,
   ref logic [17:0] A_DIN,
-  ref logic [ 1:0] A_WEN,
+  ref logic        A_WEN,
   ref logic        A_REN,
 
   // port A output wires
@@ -17,18 +17,20 @@ static task automatic run_task(
   ref logic        B_CLK,
   ref logic [10:0] B_ADDR,
   ref logic [17:0] B_DIN,
-  ref logic [ 1:0] B_WEN,
+  ref logic        B_WEN,
   ref logic        B_REN,
 
   // port B output wires
   ref logic  [17:0] B_DOUT
   );
 
+  `uvm_info("tb_global_mem_lsram_wrapper", "Running testcase lsram_wrapper", UVM_NONE);
+
   A_ADDR = '0;
   A_DIN  = 18'h0BEEF;
-  A_WEN  = 2'b11;
+  A_WEN  = 1'b1;
   #(ACLK_PER);
-  A_WEN  = 2'b00;
+  A_WEN  = 1'b0;
 
   #(5*ACLK_PER);
   A_REN  = 1'b1;
