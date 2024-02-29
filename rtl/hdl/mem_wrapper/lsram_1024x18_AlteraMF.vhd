@@ -3,8 +3,8 @@ library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 
-LIBRARY altera_mf;
-USE altera_mf.altera_mf_components.all;
+LIBRARY altera_lnsim;
+USE altera_lnsim.altera_lnsim_components.all;
 
 --------------------------------------------------------------
 -- Wrapper for dual-port bi-directional 1k*18 lsram_1024x18 --
@@ -62,13 +62,15 @@ end lsram_1024x18;
 
 architecture rtl of lsram_1024x18 is
 
-  -- Defined in altera_mf_components.vhd
-  component altsyncram
+  -- from altera_lnsim_components.vhd
+  component altera_syncram
     generic (
       operation_mode                 : string := "BIDIR_DUAL_PORT";
+      optimization_option            : string := "AUTO";
       -- port a parameters
       width_a                        : integer := 1;
       widthad_a                      : integer := 1;
+      widthad2_a                     : integer := 1;
       numwords_a                     : integer := 0;
       -- registering parameters
       -- port a read parameters
@@ -78,15 +80,12 @@ architecture rtl of lsram_1024x18 is
       outdata_aclr_a                 : string := "NONE";
       -- clearing parameters
       -- port a write parameters
-      indata_aclr_a                  : string := "NONE";
-      wrcontrol_aclr_a               : string := "NONE";
-      -- clear for the byte enable port reigsters which are clocked by clk0
-      byteena_aclr_a                 : string := "NONE";
       -- width of the byte enable ports. if it is used, must be WIDTH_WRITE_A/8 or /9
       width_byteena_a                : integer := 1;
       -- port b parameters
-      width_b                        : integer := 18;
+      width_b                        : integer := 1;
       widthad_b                      : integer := 1;
+      widthad2_b                     : integer := 1;
       numwords_b                     : integer := 0;
       -- registering parameters
       -- port b read parameters
@@ -95,19 +94,13 @@ architecture rtl of lsram_1024x18 is
       outdata_reg_b                  : string := "UNREGISTERED";
       -- clearing parameters
       outdata_aclr_b                 : string := "NONE";
-      rdcontrol_aclr_b               : string := "NONE";
       -- registering parameters
       -- port b write parameters
       indata_reg_b                   : string := "CLOCK1";
-      wrcontrol_wraddress_reg_b      : string := "CLOCK1";
       -- registering parameter for the byte enable reister for port b
       byteena_reg_b                  : string := "CLOCK1";
       -- clearing parameters
-      indata_aclr_b                  : string := "NONE";
-      wrcontrol_aclr_b               : string := "NONE";
       address_aclr_b                 : string := "NONE";
-      -- clear parameter for byte enable port register
-      byteena_aclr_b                 : string := "NONE";
       -- StratixII only : to bypass clock enable or using clock enable
       clock_enable_input_a           : string := "NORMAL";
       clock_enable_output_a          : string := "NORMAL";
@@ -125,12 +118,12 @@ architecture rtl of lsram_1024x18 is
       enable_ecc                     : string := "FALSE";
       ecc_pipeline_stage_enabled	   : string := "FALSE";
 
-      width_eccstatus                : integer := 3;
+      width_eccstatus                : integer := 2;
       -- global parameters
       -- width of a byte for byte enables
       byte_size                      : integer := 0;
       read_during_write_mode_mixed_ports: string := "DONT_CARE";
-      -- ram block type choices are "AUTO", "M512", "M4K" and "MEGARAM"
+      -- ram block type choices are "AUTO", "M20K", "M10K" and "MLAB"
       ram_block_type                 : string := "AUTO";
       -- determine whether LE support is turned on or off for altsyncram
       implement_in_les               : string := "OFF";
@@ -139,11 +132,19 @@ architecture rtl of lsram_1024x18 is
 
       sim_show_memory_data_in_port_b_layout :  string  := "OFF";
 
+      -- Nadder New Features
+      outdata_sclr_a                 : string := "NONE";
+      outdata_sclr_b                 : string := "NONE";
+      enable_ecc_encoder_bypass      : string := "FALSE";
+      enable_coherent_read           : string := "FALSE";
+      enable_force_to_zero           : string := "FALSE";
+      width_eccencparity             : integer := 8;
+
       -- general operation parameters
       init_file                      : string := "UNUSED";
       init_file_layout               : string := "UNUSED";
       maximum_depth                  : integer := 0;
-      intended_device_family         : string := "Cyclone";
+      intended_device_family         : string := "Arria 10";
       lpm_hint                       : string := "UNUSED";
       lpm_type                       : string := "altsyncram"
     );
@@ -167,6 +168,13 @@ architecture rtl of lsram_1024x18 is
       aclr1     : in std_logic := '0';
       byteena_a : in std_logic_vector( (width_byteena_a - 1) downto 0) := (others => '1');
       byteena_b : in std_logic_vector( (width_byteena_b - 1) downto 0) := (others => 'Z');
+
+      -- Nadder New Features
+      eccencbypass    : in std_logic := '0';
+      eccencparity    : in std_logic_vector( (width_eccencparity - 1) downto 0) := (others => '1');
+      sclr            : in std_logic := '0';
+      address2_a 	    : in std_logic_vector(widthad2_a - 1 downto 0) := (others => '1');
+      address2_b 	    : in std_logic_vector(widthad2_b - 1 downto 0) := (others => '1');
 
       addressstall_a : in std_logic := '0';
       addressstall_b : in std_logic := '0';
@@ -192,12 +200,15 @@ begin
   A_DB_DETECT  <= eccstatus(1);
   B_DB_DETECT  <= eccstatus(1);
 
-  lsram_0: altsyncram
+  lsram_0: altera_syncram
     generic map (
       operation_mode                 => ( "BIDIR_DUAL_PORT" ),
+      optimization_option            => ( "AUTO" ),
+
       -- port a parameters
       width_a                        => ( 18 ),
       widthad_a                      => ( 11 ),
+      widthad2_a                     => ( 1 ),
       numwords_a                     => ( 1024 ),
       -- registering parameters
       -- port a read parameters
@@ -205,55 +216,44 @@ begin
       -- clearing parameters
       address_aclr_a                 => ( "NONE" ),
       outdata_aclr_a                 => ( "NONE" ),
-      -- clearing parameters
-      -- port a write parameters
-      indata_aclr_a                  => ( "NONE" ),
-      wrcontrol_aclr_a               => ( "NONE" ),
-      -- clear for the byte enable port reigsters which are clocked by clk0
-      byteena_aclr_a                 => ( "NONE" ),
       -- width of the byte enable ports. if it is used, must be WIDTH_WRITE_A/8 or /9
       width_byteena_a                => ( 2 ),
       -- port b parameters
       width_b                        => ( 18 ),
       widthad_b                      => ( 11 ),
+      widthad2_b                     => ( 1 ),
       numwords_b                     => ( 1024 ),
       -- registering parameters
       -- port b read parameters
       rdcontrol_reg_b                => ( "CLOCK1" ),
       address_reg_b                  => ( "CLOCK1" ),
-      outdata_reg_b                  => ( "UNREGISTERED" ),
+      outdata_reg_b                  => ( "CLOCK1" ),
       -- clearing parameters
       outdata_aclr_b                 => ( "NONE" ),
-      rdcontrol_aclr_b               => ( "NONE" ),
       -- registering parameters
       -- port b write parameters
       indata_reg_b                   => ( "CLOCK1" ),
-      wrcontrol_wraddress_reg_b      => ( "CLOCK1" ),
       -- registering parameter for the byte enable reister for port b
       byteena_reg_b                  => ( "CLOCK1" ),
       -- clearing parameters
-      indata_aclr_b                  => ( "NONE" ),
-      wrcontrol_aclr_b               => ( "NONE" ),
       address_aclr_b                 => ( "NONE" ),
-      -- clear parameter for byte enable port register
-      byteena_aclr_b                 => ( "NONE" ),
       -- width of the byte enable ports. if it is used, must be WIDTH_WRITE_A/8 or /9
       width_byteena_b                => ( 2 ),
       -- clock enable setting for the core
       clock_enable_core_a            => ( "USE_INPUT_CLKEN" ),
       clock_enable_core_b            => ( "USE_INPUT_CLKEN" ),
       -- read-during-write-same-port setting
-      read_during_write_mode_port_a  => ( "NEW_DATA_NO_NBE_READ" ),
-      read_during_write_mode_port_b  => ( "NEW_DATA_NO_NBE_READ" ),
+      read_during_write_mode_port_a  => ( "NEW_DATA_WITH_NBE_READ" ),
+      read_during_write_mode_port_b  => ( "NEW_DATA_WITH_NBE_READ" ),
       -- ECC status ports setting
-      enable_ecc                     => ( "TRUE" ),
-      ecc_pipeline_stage_enabled	   => ( "TRUE" ),
+      enable_ecc                     => ( "FALSE" ),
+      ecc_pipeline_stage_enabled	   => ( "FALSE" ),
 
       width_eccstatus                => ( 2 ),
       -- global parameters
       -- width of a byte for byte enables
       byte_size                      => ( 0 ),
-      read_during_write_mode_mixed_ports => ( "DONT_CARE" ),
+      read_during_write_mode_mixed_ports => ( "OLD_DATA" ),
       -- ram block type choices are "AUTO", "M512", "M4K" and "MEGARAM"
       ram_block_type                 => ( "AUTO" ),
       -- determine whether LE support is turned on or off for altsyncram
@@ -267,7 +267,7 @@ begin
       init_file                      => ( "UNUSED" ),
       init_file_layout               => ( "UNUSED" ),
       maximum_depth                  => ( 0 ),
-      intended_device_family         => ( "Cyclone" ),
+      intended_device_family         => ( "Arria V" ),
       lpm_hint                       => ( "UNUSED" ),
       lpm_type                       => ( "altsyncram" )
     )
@@ -291,6 +291,12 @@ begin
       aclr1     => clr,
       byteena_a => A_WEN,
       byteena_b => B_WEN,
+
+      eccencbypass   => '0',
+      eccencparity   => (others => '0'),
+      sclr           => clr,
+      address2_a     => (others => '0'),
+      address2_b     => (others => '0'),
 
       addressstall_a => '0',
       addressstall_b => '0',

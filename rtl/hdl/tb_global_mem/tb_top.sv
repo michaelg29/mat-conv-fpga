@@ -52,26 +52,26 @@ lsram_1024x18 #(
 ) DUT (
   // port A
   .A_ADDR          (A_ADDR),
-  .A_BLK           (2'b11),
+  .A_BLK           (3'b111),
   .A_CLK           (w_aclk_dut),
   .A_DIN           (A_DIN),
   .A_DOUT          (A_DOUT),
   .A_WEN           (A_WEN),
   .A_REN           (A_REN),
-  .A_DOUT_EN       (2'b11),
+  .A_DOUT_EN       (1'b1),
   .A_DOUT_SRST_N   (rst_n),
   .A_SB_CORRECT    (A_SB_CORRECT),
   .A_DB_DETECT     (A_DB_DETECT),
 
   // port B
   .B_ADDR          (B_ADDR),
-  .B_BLK           (2'b11),
+  .B_BLK           (3'b111),
   .B_CLK           (w_macclk_dut),
   .B_DIN           (B_DIN),
   .B_DOUT          (B_DOUT),
   .B_WEN           (B_WEN),
   .B_REN           (B_REN),
-  .B_DOUT_EN       (2'b11),
+  .B_DOUT_EN       (1'b1),
   .B_DOUT_SRST_N   (rst_n),
   .B_SB_CORRECT    (B_SB_CORRECT),
   .B_DB_DETECT     (B_DB_DETECT),
@@ -100,7 +100,7 @@ initial begin
     
   $display("Resetting");
   rst_n <= 1'b0;
-  #(10*MACCLK_PER);
+  //#(10*MACCLK_PER);
   
   $display("Exiting");
   $stop();
