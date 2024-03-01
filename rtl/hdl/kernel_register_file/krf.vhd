@@ -43,6 +43,12 @@ architecture rtl of krf is
         begin
             if rising_edge(i_rst) then
                 krf_fsm_state <= RESET;
+                reg_0 <= (others => '0');
+                reg_1 <= (others => '0');
+                reg_2 <= (others => '0');
+                reg_3 <= (others => '0');
+                reg_4 <= (others => '0');
+
             elsif rising_edge(fsm_clk) then
                 case (krf_fsm_state) is
 
