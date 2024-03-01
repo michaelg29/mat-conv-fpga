@@ -6,7 +6,9 @@ use IEEE.numeric_std.all;
 
 
 
-entity core is port ( i_clk, i_en : in std_logic;
+entity core is 
+  generic (i_round : signed(43 downto 0) := (2 => '1', others => '0'));
+  port ( i_clk, i_en : in std_logic;
                       i_k0, i_k1, i_k2, i_k3, i_k4, i_s0, i_s1, i_s2, i_s3, i_s4 : in std_logic_vector(7 downto 0); 
                       i_sub: in std_logic_vector(17 downto 0);
                       o_res: out std_logic_vector(17 downto 0)); 
@@ -43,7 +45,7 @@ signal MAC2_P : signed(43 downto 0);
   --To round the ouput, we add 1 right after the LSB kept and truncate. We round off 3 bits (2 downto 0), and hence we add 0b100 to the result before truncating. 
   -- this value is hardcoded into input C of mathblock 1, and the truncation is done at the output of mathblock 2.
   MAC1 : math_block port map ( i_a1 => MAC1_A1, i_b1 => MAC1_B1, i_a2 => MAC1_A2, i_b2 => MAC1_B2, 
-                               i_c => (2 => '1', others => '0'), i_d => (others => '0'), i_clk => i_clk, o_p => MAC1_P);
+                               i_c => i_round, i_d => (others => '0'), i_clk => i_clk, o_p => MAC1_P);
 
   MAC2 : math_block port map ( i_a1 => (others => '0'), i_b1=> (others => '0'), i_a2 => MAC2_A2, i_b2 => MAC2_B2, 
                                i_c => MAC0_P, i_d => MAC1_P, i_clk => i_clk, o_p => MAC2_P);

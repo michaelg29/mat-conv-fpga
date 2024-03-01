@@ -13,11 +13,11 @@ end testbench_core;
 architecture tb of testbench_core is
 
 --Device Under Test component
-component core is port ( i_clk, i_en: in std_logic;
-                      i_k0, i_k1, i_k2, i_k3, i_k4, i_s0, i_s1, i_s2, i_s3, i_s4 : in std_logic_vector(7 downto 0); 
-                      i_sub: in std_logic_vector(17 downto 0);
-                      o_res: out std_logic_vector(17 downto 0)); 
-end component; 
+--component core is port ( i_clk, i_en: in std_logic;
+--                      i_k0, i_k1, i_k2, i_k3, i_k4, i_s0, i_s1, i_s2, i_s3, i_s4 : in std_logic_vector(7 downto 0); 
+--                      i_sub: in std_logic_vector(17 downto 0);
+--                      o_res: out std_logic_vector(17 downto 0)); 
+--end component; 
 
 signal i_clk, i_en : std_logic;
 signal i_k0, i_k1, i_k2, i_k3, i_k4, i_s0, i_s1, i_s2, i_s3, i_s4 : std_logic_vector(7 downto 0); 
@@ -27,7 +27,9 @@ signal o_res : std_logic_vector(17 downto 0);
 begin
 
 	--Connect DUT
-    DUT: core port map (i_clk => i_clk, i_en => i_en,
+    DUT: entity work.core 
+    generic map (i_round => (7 => '1', others => '0'))
+    port map (i_clk => i_clk, i_en => i_en,
                         i_k0 => i_k0, i_k1 => i_k1, i_k2 => i_k2, i_k3 => i_k3, i_k4 => i_k4, 
                         i_s0 => i_s0, i_s1 => i_s1, i_s2 => i_s2, i_s3 => i_s3, i_s4 => i_s4, 
                         i_sub => i_sub, o_res => o_res);
