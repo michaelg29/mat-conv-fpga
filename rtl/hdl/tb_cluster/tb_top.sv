@@ -9,7 +9,8 @@ module tb_top
         parameter int NUM_REPS = 3, //Number of times each test shall be reapeated with different values
         parameter int SEED = 0, //Seed for the random input generation
         parameter int VERBOSE = 0, //Enable verbosity for debug
-        parameter string TC= "tb_testcase name" // Name of test case to run
+        parameter string TC= "tb_testcase name", // Name of test case to run
+        parameter ROUNDING=3'b100
     );
 
     import uvm_pkg::*;
@@ -131,7 +132,31 @@ module tb_top
     // Functions
     //========================================
 
-    //TODO: add helper functions if necessary
+
+    /*
+        Calculate a matrix convolution for a subject the size of the kernel
+        using the operations in the cluster (rounding)
+        @param[in] kern: kernel 2D array
+        @param[in] subj: subject 2D array
+    */
+    function logic [17:0] local_convolution;
+
+        input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kernel;
+
+        logic [17:0]result = ROUNDING;
+
+        for(int i = 0 ; i < KERNEL_SIZE ; i++) begin
+            for(int j = 0 ; j < KERNEL_SIZE ; j++) begin
+                result = ROUNDING
+
+            end
+            //Perform rounding for row dot product
+        end
+
+        //Perform clamping
+
+        return result;
+    endfunction
 
     //========================================
     // Tasks
