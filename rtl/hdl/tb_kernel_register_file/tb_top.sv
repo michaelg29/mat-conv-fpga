@@ -185,20 +185,12 @@ module tb_top
             i_kernels = '{0};
             i_valid = 1'b1;
 
-            //Reset state machine
-            i_rst = 1'b0;
-            @(negedge i_clk);
+            //Reset state machine and outputs
             i_rst = 1'b1;
             @(negedge i_clk);
 
-            for (int j = 0 ; j < NUM_STATES ; j++) begin
-                @(negedge i_clk);
-            end
-            i_valid = 0'b0;
-            @(negedge i_clk);
-
-            //DUT is ready
             i_rst = 1'b0;
+            i_valid = 0'b0;
             @(negedge i_clk);
         end
     endtask : reset_dut
