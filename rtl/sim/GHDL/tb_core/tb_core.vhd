@@ -36,9 +36,9 @@ begin
 
     clk_process: process
 		begin
-        i_clk <= '1';
+        i_clk <= '0';
     	wait for 2 ns;
-    	i_clk <= '0';
+    	i_clk <= '1';
     	wait for 2 ns;
 	end process;
 
@@ -58,26 +58,27 @@ begin
         i_sub <= (others => '0');
         wait for 16 ns;
 
-        i_en <= '1';
+        
         i_k0 <= std_logic_vector(to_signed(127, 8));-- 0.9921875 in signed Q0.7
         i_s0 <= std_logic_vector(to_signed(10, 8));
-        wait for 8 ns;
+        wait for 4 ns;
 
+        i_en <= '1';
         i_k1 <= std_logic_vector(to_signed(127, 8));-- 0.9921875 in signed Q0.7
         i_s1 <= std_logic_vector(to_signed(10, 8));
-        wait for 8 ns;
+        wait for 4 ns;
 
         i_k2 <= std_logic_vector(to_signed(127, 8));-- 0.9921875 in signed Q0.7
         i_s2 <= std_logic_vector(to_signed(10, 8));
-        wait for 8 ns;
+        wait for 4 ns;
 
         i_k3 <= std_logic_vector(to_signed(127, 8));-- 0.9921875 in signed Q0.7
         i_s3 <= std_logic_vector(to_signed(10, 8));
-        wait for 8 ns;
+        wait for 4 ns;
 
         i_k4 <= std_logic_vector(to_signed(127, 8));-- 0.9921875 in signed Q0.7
         i_s4 <= std_logic_vector(to_signed(10, 8));
-        wait for 8 ns;
+        wait for 4 ns;
 
         
         i_sub <= std_logic_vector(to_signed(127, 18));
