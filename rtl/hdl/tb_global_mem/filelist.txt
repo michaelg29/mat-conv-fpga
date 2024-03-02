@@ -1,0 +1,2 @@
+tb_global_mem_pkg.sv
+tb_top.sv

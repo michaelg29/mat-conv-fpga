@@ -1,0 +1,2 @@
+lsram_1024x18_AlteraMF.vhd
+usram_64x18_AlteraMF.vhd
