@@ -1,0 +1,2 @@
+../../hdl/kernel_register_file
+../../hdl/tb_kernel_register_file
