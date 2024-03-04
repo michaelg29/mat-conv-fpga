@@ -1,0 +1,6 @@
+../../hdl/core
+../../hdl/math_block
+../../hdl/shifter
+../../hdl/cluster_feeder
+../../hdl/kernel_register_file
+../../hdl/tb_cluster_mac
