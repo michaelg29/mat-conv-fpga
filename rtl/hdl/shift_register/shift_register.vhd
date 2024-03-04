@@ -10,8 +10,8 @@ entity shift_register is
     );
   port ( 
     i_clk : in std_logic;
-    i_val: in std_logic_vector(WIDTH downto 0); 
-    o_val: out std_logic_vector(WIDTH downto 0)); 
+    i_val: in std_logic_vector(WIDTH-1 downto 0); 
+    o_val: out std_logic_vector(WIDTH-1 downto 0)); 
 end shift_register; 
 
 architecture arch of shift_register is 

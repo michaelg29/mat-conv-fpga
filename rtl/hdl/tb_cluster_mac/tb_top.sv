@@ -6,10 +6,10 @@ module tb_top
     #(
         parameter KERNEL_SIZE = 5,
         parameter FIFO_WIDTH = 8,
-        parameter int NUM_REPS = 3, //Number of times each test shall be reapeated with different values
+        parameter int NUM_REPS = 2, //Number of times each test shall be reapeated with different values
         parameter int SEED = 0, //Seed for the random input generation
         parameter int VERBOSE = 0, //Enable verbosity for debug
-        parameter string TC= "tb_testcase name", // Name of test case to run
+        parameter string TC= "tb_cluster_mac_io_pipeline", // Name of test case to run
 
         parameter ROUNDING = 3'b100,
         parameter READ_DELAY = 2 //delay between valid address and valid output data
@@ -68,7 +68,7 @@ module tb_top
     /*
     Delays
     */
-    logic [READ_DELAY-1:0][FIFO_WIDTH-1:0][7:0] pixels_delay; //delays from cluster feeder to cores
+    logic [READ_DELAY-1:0][KERNEL_SIZE-1:0][7:0] pixels_delay; //delays from cluster feeder to cores
 
 
 
@@ -152,7 +152,7 @@ module tb_top
             .i_k2       (o_kernels[g][2]),
             .i_k3       (o_kernels[g][3]),
             .i_k4       (o_kernels[g][4]),
-            .i_sub      ('{0}), //constant 0
+            .i_sub      (18'h0), //constant 0
             .o_res      (o_res[g])
         );
     end
@@ -185,7 +185,7 @@ module tb_top
     //Array of test cases names
     //NOTE: test number must match with test name index
     string TEST_CASES[] = {
-        "tb_testcase name"
+        "tb_cluster_mac_io_pipeline"
         //TODO
     };
 
@@ -204,15 +204,29 @@ module tb_top
                     `uvm_info("tb_top", $sformatf("Iteration %d", j), UVM_NONE);
 
                     `uvm_info("tb_top", "Resetting DUT", UVM_NONE);
-                    //reset_dut(i_clk, TODO);
+                    reset_dut(
+                        .i_clk(i_clk), 
+                        .i_rst(i_rst), 
+                        .i_kernels(i_kernels)
+                        );
 
                     case (i+1)
                         1 : begin      
-                            test1();
+                            test1(
+                                .i_clk(i_clk),
+
+                                //KRF signals
+                                .i_valid(i_valid),
+                                .i_rst(i_rst),
+                                .i_kernels(i_kernels),
+                                .o_kernels(o_kernels)
+
+                                //Cluster feeder signals
+                            );
                             end
-                        2 : begin
-                            test2();
-                            end
+                        //2 : begin
+                        //    test2();
+                        //    end
                         default : $display("WARNING: %d is not a valid task ID", i);
                     endcase
 
@@ -294,6 +308,74 @@ module tb_top
     endtask : reset_dut
 
 
+    /*
+        Load kernel values into KRF
+    */
+    task automatic load_kernel_values;
+
+        //KRF inputs/outputs
+        ref reg i_clk;       
+        ref reg i_valid;
+        ref reg i_rst;
+        ref logic [FIFO_WIDTH-1:0][7:0] i_kernels;
+        ref logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] o_kernels; //[kernel row][kernel value in row][bit in kernel value]
+
+        logic [3:0][FIFO_WIDTH-1:0][7:0] i_krf_total; //stacked inputs of KRF
+        logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] krf_total_cvrt; // Convert krf_total to easily map to output
+
+
+        begin
+            `uvm_info("tb_top", "Loading Kernel values into KRF", UVM_NONE);
+            
+            //reset signals
+            i_kernels = '{0};
+            i_krf_total = '{0};
+            krf_total_cvrt = '{0};
+
+            @(negedge i_clk);
+
+            i_rst = 1'b1; //reset state machine -> ready to program
+            i_valid = 1'b1; //input valid
+
+            for (int i = 0 ; i < NUM_STATES ; i++) begin
+
+                // Load a row
+                //assert(std::randomize(i_kernels)); //NEED LICENSE
+                if(i==0) begin
+                    i_kernels = 64'h45BEEF9CFECAC0FF;
+                end else if (i==1) begin
+                    i_kernels = 64'h0123456789101112;
+                end else if (i==2) begin
+                    i_kernels = 64'hBEEF50B3CAFE6688;
+                end else begin
+                    i_kernels = 64'h45BEEF9CFECAC0FF;
+                end
+
+                @(negedge i_clk); //input new data / let data appear at output (1 clock cycle)
+
+                //Save new kernel values
+                i_krf_total[i] = i_kernels;
+                krf_total_cvrt = krf_convert(i_krf_total);
+
+                if(VERBOSE) begin
+                    $display("Current kernel vals: 0x%X", i_kernels);
+                    $display("All kernel vals: 0x%X", i_krf_total);
+                end
+
+                // check output
+                if(krf_total_cvrt != o_kernels) begin
+                    `uvm_error("tb_top", $sformatf("Test failed at i = %d\no_kernels = 0x%X ; expected = 0x%X",i,o_kernels, krf_total_cvrt))
+                    @(negedge i_clk); // let data appear at output
+                    $finish(2);
+                end
+            end
+            `uvm_info("tb_top", "Kernel values successfully loaded", UVM_NONE);
+
+        end
+
+
+    endtask : load_kernel_values
+
 
 
     //========================================
@@ -302,12 +384,43 @@ module tb_top
 
 
     /*
-     tb_testname : description
+     tb_cluster_mac_io_pipeline : load kernel in KRF, then load pixel values in cluster feeder and checks cores output
      */
     task automatic test1;
 
+        //Shared inputs
+        ref reg i_clk;
+
+        //KRF inputs/outputs       
+        ref reg i_valid;
+        ref reg i_rst;
+        ref logic [FIFO_WIDTH-1:0][7:0] i_kernels;
+        ref logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] o_kernels; //[kernel row][kernel value in row][bit in kernel value]
+
+        logic [3:0][FIFO_WIDTH-1:0][7:0] i_krf_total; //stacked inputs of KRF
+        logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] krf_total_cvrt; // Convert krf_total to easily map to output
+
+
+        //Cluster feeder 
+
+
+        //Cores output
+
+
         begin
-            //TODO
+
+            //Load kernel values
+            load_kernel_values(
+                .i_clk(i_clk),
+                .i_valid(i_valid),
+                .i_rst(i_rst),
+                .i_kernels(i_kernels),
+                .o_kernels(o_kernels)
+                );
+
+                
+            `uvm_info("tb_top", "Test tb_cluster_mac_io_pipeline passed", UVM_NONE);
+
         end
 
     endtask : test1
