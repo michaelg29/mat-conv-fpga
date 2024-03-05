@@ -12,7 +12,8 @@ module tb_top
         parameter string TC= "tb_cluster_mac_io_pipeline", // Name of test case to run
 
         parameter ROUNDING = 3'b100,
-        parameter READ_DELAY = 2 //delay between valid address and valid output data
+        parameter READ_DELAY = 2, //delay between valid address and valid output data
+        parameter NUM_PIXEL_REPS = 2
     );
 
     import uvm_pkg::*;
@@ -161,20 +162,11 @@ module tb_top
 
     //Delay from cluster feeder output to cores
     assign pixels_delay[0] = o_pixels; //feed into pixels delay pipeline 
-    genvar d;
-    generate
-    for(d=0 ; d<READ_DELAY-1 ; d++) begin
-        //Explicit shift registers for delays
-        shift_register#(
-            .WIDTH(KERNEL_SIZE*8)
-        )
-        sr(
-            .i_clk(i_clk),
-            .i_val(pixels_delay[d]),
-            .o_val(pixels_delay[d+1])
-        );
+    always @(posedge i_clk) begin
+        if(READ_DELAY > 1) begin
+            pixels_delay[READ_DELAY-1:1] = pixels_delay[READ_DELAY-2:0];
+        end 
     end
-    endgenerate
     assign i_pixels_cores = pixels_delay[READ_DELAY-1]; //feed output of pixels delay pipeline into cores
 
 
@@ -364,11 +356,16 @@ module tb_top
 
                 // check output
                 if(krf_total_cvrt != o_kernels) begin
-                    `uvm_error("tb_top", $sformatf("Test failed at i = %d\no_kernels = 0x%X ; expected = 0x%X",i,o_kernels, krf_total_cvrt))
+                    `uvm_error("tb_top", $sformatf("Test failed        \item Iterate over pixel values
+        \begin{enumerate} at i = %d\no_kernels = 0x%X ; expected = 0x%X",i,o_kernels, krf_total_cvrt))
                     @(negedge i_clk); // let data appear at output
                     $finish(2);
                 end
             end
+
+            i_rst = 1'b0; //done programming
+            i_valid = 1'b0; //input invalid
+
             `uvm_info("tb_top", "Kernel values successfully loaded", UVM_NONE);
 
         end
@@ -397,10 +394,6 @@ module tb_top
         ref logic [FIFO_WIDTH-1:0][7:0] i_kernels;
         ref logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] o_kernels; //[kernel row][kernel value in row][bit in kernel value]
 
-        logic [3:0][FIFO_WIDTH-1:0][7:0] i_krf_total; //stacked inputs of KRF
-        logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] krf_total_cvrt; // Convert krf_total to easily map to output
-
-
         //Cluster feeder 
 
 
@@ -408,6 +401,10 @@ module tb_top
 
 
         begin
+
+
+            //Iterate over random kernel values
+            //TODO
 
             //Load kernel values
             load_kernel_values(
@@ -418,6 +415,52 @@ module tb_top
                 .o_kernels(o_kernels)
                 );
 
+
+            @(negedge i_clk);
+
+            //Load pixel values
+            for(int i = 0 ; i < NUM_PIXEL_REPS; i++) begin
+
+
+                //Random pixel values
+                i_pixels = 64'hBEEF50B3CAFE6688;
+                //assert(std::randomize(i_pixels)); //NEED LICENSE
+
+                i_sel = 1'b1; // parallel load
+                i_new = 1'b1; // pipeline shall load
+                @(posedge i_clk);
+                @(negedge i_clk);
+                i_sel = 1'b0; // switch to serial load
+                i_new = 1'b0; // pipeline shall shift
+
+                for (int i = 0 ; i < (FIFO_WIDTH-KERNEL_SIZE+1) ; i++) begin
+
+                    if(i != 0) begin //pixels already shifted for first iteration
+                        //Shift pixels
+                        @(posedge i_clk); // 1 clock cycle to output the data
+                        @(negedge i_clk); // let data appear at output
+                    end
+
+                    if(VERBOSE) begin
+                        $display("o_pixels = 0x%X ; expected = 0x%X for i: %i", o_pixels, i_pixels[i+:5], i);
+                    end
+
+                    // check pixels
+                    // variable part select
+                    if(i_pixels[i+:5] != o_pixels) begin
+                        `uvm_error("tb_top", $sformatf("Test 1 failed at i = %d\r\no_pixels = 0x%X ; expected = 0x%X",i,o_pixels, i_pixels[i+:5]))
+                        @(negedge i_clk); // let data appear at output
+                        $finish(2);
+                    end
+                end
+                
+
+
+                //Load pixel values
+
+
+                //Verify kernel outputs
+            end
                 
             `uvm_info("tb_top", "Test tb_cluster_mac_io_pipeline passed", UVM_NONE);
 

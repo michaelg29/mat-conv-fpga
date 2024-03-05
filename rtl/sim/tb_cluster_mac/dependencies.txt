@@ -1,6 +1,5 @@
 ../../hdl/core
 ../../hdl/math_block
-../../hdl/shift_register
 ../../hdl/cluster_feeder
 ../../hdl/kernel_register_file
 ../../hdl/tb_cluster_mac
