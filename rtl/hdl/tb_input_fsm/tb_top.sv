@@ -43,8 +43,8 @@ wire         cmd_subj;
 wire         cmd_kern_signed;
 wire         cmd_valid;
 wire         cmd_err;
+wire         prepad_done;
 wire         payload_done;
-wire         o_rst_n;
 
 `define ASSERT_EQ(a, b, format="%08h") if (a != b) `uvm_error("tb_top", $sformatf(`"Unexpected data in ``a``. Expected format, got format`", b, a))
 
@@ -86,8 +86,8 @@ input_fsm #(
   .o_cmd_valid(cmd_valid),
   .o_cmd_err(cmd_err),
   .o_eor(eor),
-  .o_payload_done(payload_done),
-  .o_rst_n(o_rst_n)
+  .o_prepad_done(prepad_done),
+  .o_payload_done(payload_done)
 );
 
 // Clock generation

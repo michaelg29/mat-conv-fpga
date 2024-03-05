@@ -50,6 +50,7 @@ entity input_fsm is
     o_cmd_subj        : out std_logic;
     o_cmd_kern_signed : out std_logic;
     o_eor             : out std_logic;
+    o_prepad_done     : out std_logic;
     o_payload_done    : out std_logic
   );
 end input_fsm;
@@ -95,6 +96,7 @@ architecture rtl of input_fsm is
   signal exp_cols            : std_logic_vector(3 downto 0); -- 4 bits in the SIZE field of the command
   signal cur_cols            : unsigned( 7 downto 0); -- maximum 11-bit count of columns => maximum 8-bit count of 8-Byte packets
   signal cur_pkts            : unsigned(18 downto 0); -- maximum 22-bit count of elements => maximum 19-bit count of 8-Byte packets
+  signal prepad_cnt          : unsigned( 1 downto 0); -- count number of prepad rows
 
   -- maximum burst size is 16 packets
   constant burst_size        : unsigned( 7 downto 0) := to_unsigned(16, 8);
@@ -176,6 +178,7 @@ begin
         exp_cols          <= (others => '0');
         cur_cols          <= (others => '0');
         cur_pkts          <= (others => '0');
+        prepad_cnt        <= (others => '0');
         write_blank_ack   <= '0';
       else
         -- CDC signals
@@ -208,6 +211,7 @@ begin
             exp_cols          <= (others => '0');
             cur_cols          <= (others => '0');
             cur_pkts          <= (others => '0');
+            prepad_cnt        <= (others => '0');
 
             -- default interface signal
             o_wen             <= '0';
@@ -220,6 +224,7 @@ begin
             o_cmd_kern_signed <= '0';
             o_cmd_subj        <= '0';
             o_eor             <= '0';
+            o_prepad_done     <= '0';
             o_payload_done    <= '0';
 
             input_fsm_state <= WAIT_CMD_S_KEY;
@@ -368,6 +373,15 @@ begin
                 cur_cols <= unsigned(exp_cols & "0000");
                 cur_pkts <= cur_pkts;
                 o_eor    <= '1';
+
+                -- count number of pre-subject padding rows
+                if (prepad_cnt = "00") then
+                  prepad_cnt <= "01";
+                elsif (prepad_cnt = "01") then
+                  prepad_cnt <= "10";
+                else
+                  prepad_cnt <= prepad_cnt;
+                end if;
               else
                 cur_cols <= cur_cols - 1;
                 cur_pkts <= cur_pkts - 1;
@@ -399,6 +413,9 @@ begin
               -- continue receiving packets
               input_fsm_state <= PAYLOAD_RX;
             end if;
+
+            -- propagate pre-subject padding logic
+            o_prepad_done     <= prepad_cnt(1);
 
             -- clear signals from previous states
             o_ren             <= '0';
