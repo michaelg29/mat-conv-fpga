@@ -1,8 +1,6 @@
 onerror {resume}
 quietly WaveActivateNextPane {} 0
 add wave -noupdate /tb_top/i_clk
-add wave -noupdate /tb_top/core_dut0/*
-add wave -noupdate /tb_top/core_dut0/MAC2/*
 add wave -noupdate /tb_top/i_pixels
 add wave -noupdate /tb_top/pixels_delay
 add wave -noupdate /tb_top/i_pixel_cores

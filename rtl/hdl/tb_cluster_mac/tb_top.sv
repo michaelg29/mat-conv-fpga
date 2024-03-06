@@ -519,15 +519,15 @@ module tb_top
 
 
         //Load pixel values and check cores output (combined loop)
-        int num_feeder_iter = FIFO_WIDTH-KERNEL_SIZE+1; //number iterations to load pixels into cluster feeder
-        int num_cores_iter = READ_DELAY+CORE_DELAY; //Need iterations from previous pixel load and current ones
-        int num_iter = 0;
+        const int NUM_CLUSTER_FEEDER_ITER = FIFO_WIDTH-KERNEL_SIZE+1; //number iterations to load pixels into cluster feeder
+        const int NUM_CORE_ITER = READ_DELAY+CORE_DELAY; //Need iterations from previous pixel load and current ones
+        int NUM_ITER = 0;
 
         //Number of cycles determined by longest delay
-        if(num_cores_iter > num_feeder_iter) begin
-            num_iter = num_cores_iter;
+        if(NUM_CORE_ITER > NUM_CLUSTER_FEEDER_ITER) begin
+            NUM_ITER = NUM_CORE_ITER;
         end else begin
-            num_iter = num_feeder_iter;
+            NUM_ITER = NUM_CLUSTER_FEEDER_ITER;
         end
 
         begin
@@ -555,8 +555,8 @@ module tb_top
                 i_pixels = 64'hBEEF50B3CAFE6688;
                 //assert(std::randomize(i_pixels)); //NEED LICENSE
 
-                `uvm_info("tb_top", "Loading pixels into cluster feeder", UVM_NONE);
-                for (int j = 0 ; j < num_iter ; j++) begin
+                `uvm_info("tb_top", $sformatf("(%dth) Loading pixels into cluster feeder", i), UVM_NONE);
+                for (int j = 0 ; j < NUM_ITER ; j++) begin
 
                     /*
                         Cluster feeder Logic
@@ -601,9 +601,9 @@ module tb_top
                             mac += signed'(o_kernels[core][s]) * signed'(i_pixels[s+j]);
                         end
                         oreg[0][core] = mac;
-                        
 
-                        if(i+j >= num_cores_iter) begin //need to wait for first core output
+
+                        if(i+j >= NUM_CORE_ITER) begin //need to wait for first core output
                             // Compare output to valid result
                             if(oreg[READ_DELAY+CORE_DELAY-1][core][20:3] != o_res[core]) begin
                                 `uvm_error("tb_top", $sformatf("Test failed at i = %d ; j = %d ; core = %d\no_res = %d ; expected = %d",i,j,core,signed'(o_res[core]),signed'(oreg[READ_DELAY-1][core][20:3])));
@@ -621,10 +621,12 @@ module tb_top
             end
 
 
-            `uvm_info("tb_top", $sformatf("Extra %d clock cycles to check final outputs of cores", num_cores_iter), UVM_NONE);
+            `uvm_info("tb_top", $sformatf("Extra %d clock cycles to check final outputs of cores", NUM_CORE_ITER), UVM_NONE);
 
             //Last iterations to verify the final outputs of cores
-            for(int i = 0 ; i < num_cores_iter ; i++) begin
+            //The -1 in the loop limit is due to the fact that one clock cycle was used
+            //to input the pixels, which is accounted for in the NUM_CORE_ITER
+            for(int i = 0 ; i < NUM_CORE_ITER-1 ; i++) begin
 
                 //delay
                 @(negedge i_clk); // let data appear at output
@@ -639,21 +641,23 @@ module tb_top
 
                 for (int core = 0 ; core < KERNEL_SIZE-1 ; core++) begin
 
-                    // Calculate value that should be obtained from current input pixels
-                    oreg[0][core] = 0; //sub is 0
-                    oreg[0][core] += ROUNDING;
-                    for (int s = 0 ; s < KERNEL_SIZE ; s++) begin
-                        oreg += signed'(o_kernels[core][s]) * signed'(i_pixels[s+j]);
+                    if(NUM_ITER+i < FIFO_WIDTH-KERNEL_SIZE+1) begin //stop calculating oreg once all inputs have been iterated over
+                        // Calculate value that should be obtained from current input pixels
+                        mac = 0; //sub is 0
+                        mac += ROUNDING;
+                        for (int s = 0 ; s < KERNEL_SIZE ; s++) begin
+                            mac += signed'(o_kernels[core][s]) * signed'(i_pixels[NUM_ITER+i+s]);
+                        end
+                        oreg[0][core] = mac;
                     end
 
-                    if(i+j >= num_cores_iter) begin //need to wait for first core output
-                        // Compare output to valid result
-                        if(oreg[READ_DELAY+CORE_DELAY-1][core][20:3] != o_res[core]) begin
-                            `uvm_error("tb_top", $sformatf("Test failed at i = %d ; j = %d ; core = %d\no_res = 0x%X ; expected = 0x%X",i,j,core,o_res[core],oreg[READ_DELAY-1][core][20:3]));
-                            @(negedge i_clk);
-                            $finish(2);
-                        end
+                    // Compare output to valid result
+                    if(oreg[READ_DELAY+CORE_DELAY-1][core][20:3] != o_res[core]) begin
+                        `uvm_error("tb_top", $sformatf("Test failed at i = %d ; core = %d\no_res = 0x%X ; expected = 0x%X",i,core,signed'(o_res[core]),signed'(oreg[READ_DELAY-1][core][20:3])));
+                        @(negedge i_clk);
+                        $finish(2);
                     end
+                    
                 end
             end
                 
