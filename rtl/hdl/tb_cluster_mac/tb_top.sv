@@ -132,7 +132,6 @@ module tb_top
 
 
     //Cores
-    /*
     genvar g;
     generate;
     for(g=0 ; g<KERNEL_SIZE ; g++) begin
@@ -160,117 +159,6 @@ module tb_top
         );
     end
     endgenerate
-    */
-
-    core #(
-        .i_round({41'b0,ROUNDING})
-    )
-    core_dut0(
-        .i_clk      (i_clk),
-        .i_en       (i_en),
-        .i_s0       (i_pixels_cores[0]),
-        .i_s1       (i_pixels_cores[1]),
-        .i_s2       (i_pixels_cores[2]),
-        .i_s3       (i_pixels_cores[3]),
-        .i_s4       (i_pixels_cores[4]),
-
-        .i_k0       (o_kernels[0][0]),
-        .i_k1       (o_kernels[0][1]),
-        .i_k2       (o_kernels[0][2]),
-        .i_k3       (o_kernels[0][3]),
-        .i_k4       (o_kernels[0][4]),
-        .i_sub      (18'h0), //constant 0
-        .o_res      (o_res[0])
-    );
-
-    core #(
-        .i_round({41'b0,ROUNDING})
-    )
-    core_dut1(
-        .i_clk      (i_clk),
-        .i_en       (i_en),
-        .i_s0       (i_pixels_cores[0]),
-        .i_s1       (i_pixels_cores[1]),
-        .i_s2       (i_pixels_cores[2]),
-        .i_s3       (i_pixels_cores[3]),
-        .i_s4       (i_pixels_cores[4]),
-
-        .i_k0       (o_kernels[1][0]),
-        .i_k1       (o_kernels[1][1]),
-        .i_k2       (o_kernels[1][2]),
-        .i_k3       (o_kernels[1][3]),
-        .i_k4       (o_kernels[1][4]),
-        .i_sub      (18'h0), //constant 0
-        .o_res      (o_res[1])
-    );
-
-    core #(
-        .i_round({41'b0,ROUNDING})
-    )
-    core_dut2(
-        .i_clk      (i_clk),
-        .i_en       (i_en),
-        .i_s0       (i_pixels_cores[0]),
-        .i_s1       (i_pixels_cores[1]),
-        .i_s2       (i_pixels_cores[2]),
-        .i_s3       (i_pixels_cores[3]),
-        .i_s4       (i_pixels_cores[4]),
-
-        .i_k0       (o_kernels[2][0]),
-        .i_k1       (o_kernels[2][1]),
-        .i_k2       (o_kernels[2][2]),
-        .i_k3       (o_kernels[2][3]),
-        .i_k4       (o_kernels[2][4]),
-        .i_sub      (18'h0), //constant 0
-        .o_res      (o_res[2])
-    );
-
-    core #(
-        .i_round({41'b0,ROUNDING})
-    )
-    core_dut3(
-        .i_clk      (i_clk),
-        .i_en       (i_en),
-        .i_s0       (i_pixels_cores[0]),
-        .i_s1       (i_pixels_cores[1]),
-        .i_s2       (i_pixels_cores[2]),
-        .i_s3       (i_pixels_cores[3]),
-        .i_s4       (i_pixels_cores[4]),
-
-        .i_k0       (o_kernels[3][0]),
-        .i_k1       (o_kernels[3][1]),
-        .i_k2       (o_kernels[3][2]),
-        .i_k3       (o_kernels[3][3]),
-        .i_k4       (o_kernels[3][4]),
-        .i_sub      (18'h0), //constant 0
-        .o_res      (o_res[3])
-    );
-
-    core #(
-        .i_round({41'b0,ROUNDING})
-    )
-    core_dut4(
-        .i_clk      (i_clk),
-        .i_en       (i_en),
-        .i_s0       (i_pixels_cores[0]),
-        .i_s1       (i_pixels_cores[1]),
-        .i_s2       (i_pixels_cores[2]),
-        .i_s3       (i_pixels_cores[3]),
-        .i_s4       (i_pixels_cores[4]),
-
-        .i_k0       (o_kernels[4][0]),
-        .i_k1       (o_kernels[4][1]),
-        .i_k2       (o_kernels[4][2]),
-        .i_k3       (o_kernels[4][3]),
-        .i_k4       (o_kernels[4][4]),
-        .i_sub      (18'h0), //constant 0
-        .o_res      (o_res[4])
-    );
-
-
-
-
-
 
 
     //Delay from cluster feeder output to cores
