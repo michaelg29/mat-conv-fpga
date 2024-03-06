@@ -12,7 +12,8 @@ module tb_top
         parameter string TC= "tb_cluster_mac_io_pipeline", // Name of test case to run
 
         parameter ROUNDING = 3'b100,
-        parameter READ_DELAY = 2, //delay between valid address and valid output data
+        parameter READ_DELAY = 2, //delay between valid address and valid output data of CMC
+        parameter CORE_DELAY = 2, //delay from input to output of core
         parameter NUM_PIXEL_REPS = 2
     );
 
@@ -58,7 +59,7 @@ module tb_top
     var longint i1 = 0; // 5 pixels
     var longint j1 = 0; // 5 kernel values
     var longint k1 = 0; // sub
-    var [KERNEL_SIZE-1:0][43:0] oreg = 0;
+    var [READ_DELAY-1:0][KERNEL_SIZE-1:0][43:0] oreg = 0;
 
     // use time to get 64-bit signed int (only need 40-bits for i and j)
     var longint i;
@@ -320,11 +321,16 @@ module tb_top
             `uvm_info("tb_top", "Loading Kernel values into KRF", UVM_NONE);
             
             //reset signals
+            i_pixels = '{0};
             i_kernels = '{0};
             i_krf_total = '{0};
             krf_total_cvrt = '{0};
+            i_en = 0;
 
             @(negedge i_clk);
+
+            // Enable the core
+            i_en = 1;
 
             i_rst = 1'b1; //reset state machine -> ready to program
             i_valid = 1'b1; //input valid
@@ -342,7 +348,7 @@ module tb_top
                 end else begin
                     i_kernels = 64'h45BEEF9CFECAC0FF;
                 end
-
+                
                 @(negedge i_clk); //input new data / let data appear at output (1 clock cycle)
 
                 //Save new kernel values
@@ -418,48 +424,125 @@ module tb_top
 
             @(negedge i_clk);
 
-            //Load pixel values
+            //For all combinations of pixels
             for(int i = 0 ; i < NUM_PIXEL_REPS; i++) begin
-
+                
+                //Load pixel values and check cores output (combined loop)
+                int num_feeder_iter = FIFO_WIDTH-KERNEL_SIZE+1; //number iterations to load pixels into cluster feeder
+                int num_cores_iter = READ_DELAY+CORE_DELAY; //Need iterations from previous pixel load and current ones
+                int num_iter = 0;
 
                 //Random pixel values
                 i_pixels = 64'hBEEF50B3CAFE6688;
                 //assert(std::randomize(i_pixels)); //NEED LICENSE
 
-                i_sel = 1'b1; // parallel load
-                i_new = 1'b1; // pipeline shall load
-                @(posedge i_clk);
-                @(negedge i_clk);
-                i_sel = 1'b0; // switch to serial load
-                i_new = 1'b0; // pipeline shall shift
 
-                for (int i = 0 ; i < (FIFO_WIDTH-KERNEL_SIZE+1) ; i++) begin
+                //Number of cycles determined by longest delay
+                if(num_cores_iter > num_feeder_iter) begin
+                    num_iter = num_cores_iter;
+                end else begin
+                    num_iter = num_feeder_iter;
+                end
 
-                    if(i != 0) begin //pixels already shifted for first iteration
+                `uvm_info("tb_top", "Loading pixels into cluster feeder", UVM_NONE);
+                for (int j = 0 ; j < num_iter ; j++) begin
+
+                    /*
+                        Cluster feeder Logic
+                    */
+                    if(j==0) begin
+                        i_sel = 1'b1; // parallel load
+                        i_new = 1'b1; // pipeline shall load
+                    end else begin
                         //Shift pixels
-                        @(posedge i_clk); // 1 clock cycle to output the data
-                        @(negedge i_clk); // let data appear at output
+                        i_sel = 1'b0; // switch to serial load
+                        i_new = 1'b0; // pipeline shall shift
                     end
 
-                    if(VERBOSE) begin
-                        $display("o_pixels = 0x%X ; expected = 0x%X for i: %i", o_pixels, i_pixels[i+:5], i);
-                    end
+                    //delay
+                    @(negedge i_clk); // let data appear at output
 
-                    // check pixels
+
+                    // check cluster feeder output pixels
                     // variable part select
-                    if(i_pixels[i+:5] != o_pixels) begin
-                        `uvm_error("tb_top", $sformatf("Test 1 failed at i = %d\r\no_pixels = 0x%X ; expected = 0x%X",i,o_pixels, i_pixels[i+:5]))
+                    if(i_pixels[j+:5] != o_pixels) begin
+                        `uvm_error("tb_top", $sformatf("Test 1 failed at i = %d, j = %d\no_pixels = 0x%X ; expected = 0x%X",i,j,o_pixels, i_pixels[j+:5]))
                         @(negedge i_clk); // let data appear at output
                         $finish(2);
                     end
+
+
+                    /*
+                        Cores logic
+                    */
+                    for (int core = 0 ; core < KERNEL_SIZE-1 ; core++) begin
+
+                        // Calculate value that should be obtained from current input pixels
+                        oreg[0][core] = 0; //sub is 0
+                        oreg[0][core] += ROUNDING;
+                        for (int s = 0 ; s < KERNEL_SIZE ; s++) begin
+                            oreg += signed'(o_kernels[core][s]) * signed'(i_pixels[s+j]);
+                        end
+
+
+                        if(i+j >= num_cores_iter) begin //need to wait for first core output
+                            // Compare output to valid result
+                            if(oreg[READ_DELAY-1][core][20:3] != o_res[core]) begin
+                                `uvm_error("tb_top", $sformatf("Test failed at i = %d ; j = %d ; core = %d\no_res = 0x%X ; expected = 0x%X",i,j,core,o_res[core],oreg[READ_DELAY-1][core][20:3]));
+                                @(negedge i_clk);
+                                $finish(2);
+                            end
+                        end
+
+                    end
+
+                    //Shift oreg
+                    for (int k = 0; k < READ_DELAY-1 ; k++) begin
+                        oreg[k+1] = oreg[k];
+                    end
+
                 end
-                
+
+                `uvm_info("tb_top", "Pixel values successfully loaded to cluster feeder", UVM_NONE);
 
 
-                //Load pixel values
+                `uvm_info("tb_top", $sformatf("Extra %d clock cycles to check final outputs of cores", num_cores_iter), UVM_NONE);
+
+                //Last iterations to verify the final outputs of cores
+                for(int i = 0 ; i < num_cores_iter ; i++) begin
+
+                    //delay
+                    @(negedge i_clk); // let data appear at output
+
+                    /*
+                        Cores logic
+                    */
+                    for (int core = 0 ; core < KERNEL_SIZE-1 ; core++) begin
+
+                        // Calculate value that should be obtained from current input pixels
+                        oreg[0][core] = 0; //sub is 0
+                        oreg[0][core] += ROUNDING;
+                        for (int s = 0 ; s < KERNEL_SIZE ; s++) begin
+                            oreg += signed'(o_kernels[core][s]) * signed'(i_pixels[s+i]);
+                        end
 
 
-                //Verify kernel outputs
+                        if(i+j >= num_cores_iter) begin //need to wait for first core output
+                            // Compare output to valid result
+                            if(oreg[READ_DELAY-1][core][20:3] != o_res) begin
+                                `uvm_error("tb_top", $sformatf("Test failed at i = %d ; j = %d ; k = %d\no_res = 0x%X ; expected = 0x%X",i,j,k,o_res,oreg[20:3]));
+                                @(negedge i_clk);
+                                $finish(2);
+                            end
+                        end
+
+                        //Shift oreg
+                        for (int i = 0; i < READ_DELAY-1 ; i++) begin
+                            oreg[i+1] = oreg[i];
+                        end
+                    end
+                end
+
             end
                 
             `uvm_info("tb_top", "Test tb_cluster_mac_io_pipeline passed", UVM_NONE);

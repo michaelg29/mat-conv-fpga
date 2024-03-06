@@ -1,6 +1,12 @@
 onerror {resume}
 quietly WaveActivateNextPane {} 0
-add wave -noupdate /tb_top/w_clk_dut
+add wave -noupdate /tb_top/i_clk
+add wave -noupdate /tb_top/i_pixels
+add wave -noupdate /tb_top/o_pixels
+add wave -noupdate /tb_top/i_pixel_cores
+add wave -noupdate /tb_top/o_kernels
+add wave -noupdate /tb_top/o_res
+add wave -noupdate /tb_top/oreg
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {52468 ps} 0}
 quietly wave cursor active 1
