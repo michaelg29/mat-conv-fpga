@@ -64,7 +64,7 @@ architecture rtl of cmc is
           BUSY            : out std_logic
         );
       end component;
-
+      
       -- BLK signal
       signal blk_const: std_logic_vector (2 downto 0) := (others => '1');
       -- SB_CORRECT and DB_DETECT signal
@@ -73,7 +73,17 @@ architecture rtl of cmc is
       signal lsram0_read, lsram1_read, lsram2_read, lsram3_read: std_logic;
       signal lsram0_write, lsram1_write, lsram2_write, lsram3_write: std_logic_vector (1 downto 0);
 
-      begin 
+      -- Address process states
+      signal i_addr_signal : std_logic_vector(10 downto 0);
+      type addr_state is (initial, new_addr, latch_addr);
+      signal address_state: addr_state;
+
+      begin
+
+        -- i_core_0 and o_core 4 assignment
+        o_core0 <= (others => '0');
+        o_core4 <= i_core4;
+
         lsram_0: lsram_1024x18
         generic map(
             A_WIDTH => "01",
@@ -86,7 +96,7 @@ architecture rtl of cmc is
             SECURITY => '0'
         )
         port map(
-            A_ADDR => i_addr,
+            A_ADDR => i_addr_signal,
             A_BLK => blk_const,
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
@@ -97,7 +107,7 @@ architecture rtl of cmc is
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
-            B_ADDR => i_addr,
+            B_ADDR => i_addr_signal,
             B_BLK => blk_const,
             B_CLK => i_clk,
             B_DIN => i_core0,
@@ -123,7 +133,7 @@ architecture rtl of cmc is
             SECURITY => '0'
         )
         port map(
-            A_ADDR => i_addr,
+            A_ADDR => i_addr_signal,
             A_BLK => blk_const,
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
@@ -134,7 +144,7 @@ architecture rtl of cmc is
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
-            B_ADDR => i_addr,
+            B_ADDR => i_addr_signal,
             B_BLK => blk_const,
             B_CLK => i_clk,
             B_DIN => i_core1,
@@ -160,7 +170,7 @@ architecture rtl of cmc is
             SECURITY => '0'
             )
         port map(
-            A_ADDR => i_addr,
+            A_ADDR => i_addr_signal,
             A_BLK => blk_const,
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
@@ -171,7 +181,7 @@ architecture rtl of cmc is
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
-            B_ADDR => i_addr,
+            B_ADDR => i_addr_signal,
             B_BLK => blk_const,
             B_CLK => i_clk,
             B_DIN => i_core2,
@@ -197,7 +207,7 @@ architecture rtl of cmc is
             SECURITY => '0'
         )
         port map(
-            A_ADDR => i_addr,
+            A_ADDR => i_addr_signal,
             A_BLK => blk_const,
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
@@ -208,7 +218,7 @@ architecture rtl of cmc is
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
-            B_ADDR => i_addr,
+            B_ADDR => i_addr_signal,
             B_BLK => blk_const,
             B_CLK => i_clk,
             B_DIN => i_core3,
@@ -222,6 +232,33 @@ architecture rtl of cmc is
             ARST_N => '1',
             BUSY => open);
         
-            
+        -- LSRAM address FSM to latch address for one extra clock cycle
+        lsram_address_state   : process(i_clk, i_val, i_en)
+        begin
+            if rising_edge(i_clk) and i_en = '1' then
+            case address_state is
+                when initial =>
+                    if i_val = '1' then address_state <= new_addr; end if;
+                when new_addr =>
+                    address_state <= latch_addr; 
+                when latch_addr =>
+                    address_state <= initial;
+                end case;
+            end if;
+        end process;
+
+        lsram_address_value : process(address_state)
+        begin
+            if rising_edge(i_clk) and i_en = '1' then
+                case address_state is
+                    when initial => i_addr_signal <= (others => 'X');
+                    when new_addr => i_addr_signal <= i_addr;
+                    when latch_addr => i_addr_signal <= i_addr;
+                end case;
+            end if;
+        end process;
+
+
+        -- LSRAM read and write FSM 
 
 end rtl;
