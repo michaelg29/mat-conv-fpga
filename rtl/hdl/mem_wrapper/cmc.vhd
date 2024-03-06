@@ -67,7 +67,8 @@ architecture rtl of cmc is
       
       -- BLK signal
       signal blk_const: std_logic_vector (2 downto 0) := (others => '1');
-      -- SB_CORRECT and DB_DETECT signal
+      
+      -- SB_CORRECT and DB_DETECT signal for ECC
       signal a0_sb, b0_sb,a1_sb, b1_sb, a2_sb, b2_sb, a3_sb, b3_sb: std_logic;
       signal a0_db, b0_db,a1_db, b1_db, a2_db, b2_db, a3_db, b3_db: std_logic;
       signal lsram0_read, lsram1_read, lsram2_read, lsram3_read: std_logic;
