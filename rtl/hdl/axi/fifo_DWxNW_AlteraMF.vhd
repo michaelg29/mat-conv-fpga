@@ -3,20 +3,23 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-LIBRARY altera_mf;
-USE altera_mf.altera_mf_components.all;
+library altera_mf;
+use altera_mf.altera_mf_components.all;
 
-entity fifo_64x512 is
+entity fifo_DWxNW is
   generic (
-    AEVAL        : integer range 3 to 510 := 4;
-    AFVAL        : integer range 3 to 510 := 500
+    DWIDTH     : integer range 64 to  72 := 64;
+    NWORDS     : integer range 16 to 512 := 512;
+    AWIDTH     : integer range  4 to  10 := 10; 
+    AEVAL      : integer range  3 to 510 := 4;
+    AFVAL      : integer range  3 to 510 := 500
   );
   port(
     -- Inputs
     CLK        : in  std_logic;
     RCLK       : in  std_logic;
     WCLK       : in  std_logic;
-    DATA       : in  std_logic_vector(63 downto 0);
+    DATA       : in  std_logic_vector(DWIDTH-1 downto 0);
     RE         : in  std_logic;
     RESET_N    : in  std_logic;
     WE         : in  std_logic;
@@ -27,16 +30,17 @@ entity fifo_64x512 is
     EMPTY      : out std_logic;
     FULL       : out std_logic;
     OVERFLOW   : out std_logic;
-    Q          : out std_logic_vector(63 downto 0);
-    RDCNT      : out std_logic_vector(9 downto 0);
+    Q          : out std_logic_vector(DWIDTH-2 downto 0);
+    RDCNT      : out std_logic_vector(AWIDTH-1 downto 0);
     SB_CORRECT : out std_logic;
     UNDERFLOW  : out std_logic
   );
-end fifo_64x512;
+end fifo_DWxNW;
+
 ----------------------------------------------------------------------
--- fifo_64x512 architecture body
+-- fifo_DWxNW architecture body
 ----------------------------------------------------------------------
-architecture RTL of fifo_64x512 is
+architecture RTL of fifo_DWxNW is
 ----------------------------------------------------------------------
 -- Component declarations
 ----------------------------------------------------------------------
@@ -64,7 +68,7 @@ component dcfifo
     write_aclr_synch        : string := "OFF";
     lpm_type                : string := "dcfifo";
     enable_ecc              : string := "false";
-    intended_device_family  : string := "CYCLONE"
+    intended_device_family  : string := "Arria V"
   );
   port (
     data    : in std_logic_vector(lpm_width-1 downto 0);
@@ -93,7 +97,7 @@ signal DB_DETECT_net_0  : std_logic;
 signal RDEMPTY_net_0    : std_logic;
 signal WRFULL_net_0     : std_logic;
 signal OVERFLOW_net_0   : std_logic;
-signal Q_net_0          : std_logic_vector(63 downto 0);
+signal Q_net_0          : std_logic_vector(DWIDTH-1 downto 0);
 signal RDCNT_net_0      : std_logic_vector(9 downto 0);
 signal WRCNT_net_0      : std_logic_vector(9 downto 0);
 signal SB_CORRECT_net_0 : std_logic;
@@ -106,7 +110,7 @@ signal OVERFLOW_net_1   : std_logic;
 signal UNDERFLOW_net_1  : std_logic;
 signal SB_CORRECT_net_1 : std_logic;
 signal DB_DETECT_net_1  : std_logic;
-signal Q_net_1          : std_logic_vector(63 downto 0);
+signal Q_net_1          : std_logic_vector(DWIDTH-1 downto 0);
 signal RDCNT_net_1      : std_logic_vector(9 downto 0);
 signal WRCNT_net_1      : std_logic_vector(9 downto 0);
 signal ACLR             : std_logic;
@@ -114,7 +118,7 @@ signal ACLR             : std_logic;
 -- TiedOff Signals
 ----------------------------------------------------------------------
 signal GND_net          : std_logic;
-signal MEMRD_const_net_0: std_logic_vector(63 downto 0);
+signal MEMRD_const_net_0: std_logic_vector(DWIDTH-1 downto 0);
 
 begin
 ----------------------------------------------------------------------
@@ -143,9 +147,9 @@ begin
   DB_DETECT_net_1   <= DB_DETECT_net_0;
   DB_DETECT         <= DB_DETECT_net_1;
   Q_net_1           <= Q_net_0;
-  Q(63 downto 0)    <= Q_net_1;
+  Q                 <= Q_net_1;
   RDCNT_net_1       <= RDCNT_net_0;
-  RDCNT(9 downto 0) <= RDCNT_net_1;
+  RDCNT             <= RDCNT_net_1;
 
   ACLR              <= not(RESET_N);
 
@@ -182,11 +186,11 @@ begin
 -- Component instances
 ----------------------------------------------------------------------
 
-dcfifo64x512_0 : dcfifo
+dcfifo_0 : dcfifo
   generic map (
-    lpm_width               => ( 64 ),
-    lpm_widthu              => ( 10 ),
-    lpm_numwords            => ( 512 ),
+    lpm_width               => ( DWIDTH ),
+    lpm_widthu              => ( AWIDTH ),
+    lpm_numwords            => ( NWORDS ),
     lpm_showahead           => ( "OFF" ),
     lpm_hint                => ( "USE_EAB=ON" ),
     lpm_type                => ( "DCFIFO" ),

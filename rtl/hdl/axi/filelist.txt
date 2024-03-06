@@ -1,4 +1,5 @@
 mat_conv_axi_pkg.vhd
-fifo_64x512_AlteraMF.vhd
+fifo_DWxNW_AlteraMF.vhd
 axi_transmitter.vhd
 axi_receiver.vhd
+rx_buffer.vhd

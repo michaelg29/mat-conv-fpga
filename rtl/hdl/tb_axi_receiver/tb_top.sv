@@ -128,14 +128,17 @@ wire [9:0] rdcnt;
 wire sb_correct;
 wire underflow;
 
-fifo_64x512 #(
+fifo_DWxNW #(
+  .DWIDTH(72),
+  .NWORDS(16),
+  .AWIDTH(4),
   .AEVAL(4),
-  .AFVAL(510)
+  .AFVAL(14)
 ) DUT (
   .CLK(aclk_dut),
   .RCLK(macclk_dut),
   .WCLK(aclk_dut),
-  .DATA(wdata),
+  .DATA({awaddr[7:0], wdata}),
   .RE(ren),
   .RESET_N(arst_n),
   .WE(wen),
@@ -171,6 +174,7 @@ initial begin
   $display("Done with startup");
   #(3*ACLK_PER);
 
+  awaddr[7:0] <= 8'h01;
   wdata <= 64'hCAFEBEEF;
   wen <= 1'b1;
 
