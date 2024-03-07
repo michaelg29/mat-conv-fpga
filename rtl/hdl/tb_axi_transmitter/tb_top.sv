@@ -139,17 +139,35 @@ initial begin
 
   // code that executes only once
 	`uvm_info("tb_top", "Running testbench", UVM_NONE);
-  #(ACLK_PER);
+  #(MACCLK_PER);
   arst_n <= 1'b1;
-  #(ACLK_PER);
+  #(MACCLK_PER);
   `uvm_info("tb_top", "Done with startup", UVM_NONE);
-  #(3*ACLK_PER);
-  
-  
+  #(3*MACCLK_PER);
 
+  accept_w <= 2'b01;
+  w1_wdata <= 32'hCAFECAFE;
+  w1_wen   <= 1'b1;
+  #(MACCLK_PER);
+  w1_wen   <= 1'b1;
+  w1_wdata <= 32'hBEEFBEEF;
+  #(MACCLK_PER);
+  w1_wen   <= 1'b0;
+  #(MACCLK_PER);
+  
+  w0_wdata <= 32'hABABABAB;
+  w0_wen   <= 1'b1;
+  #(MACCLK_PER);
+  w0_wen   <= 1'b1;
+  w0_wdata <= 32'h12345678;
+  #(MACCLK_PER);
+  w0_wen   <= 1'b0;
+  #(MACCLK_PER);
+
+  #(5*MACCLK_PER);
   `uvm_info("tb_top", "Resetting", UVM_NONE);
   arst_n <= 1'b0;
-  #(10*ACLK_PER);
+  #(10*MACCLK_PER);
 
   `uvm_info("tb_top", "Exiting", UVM_NONE);
   $stop();

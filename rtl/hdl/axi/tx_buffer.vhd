@@ -232,8 +232,8 @@ begin
       tx_fifo_wen  <= '0';
       tx_fifo_data <= (others => '0');
     elsif (i_macclk'event and i_macclk = '1') then
-      tx_fifo_slot <= (i_w0_wen or i_w1_wen) xor tx_fifo_slot;
       if ((i_accept_w(0) and i_w0_wen) = '1') then
+        tx_fifo_slot <= not(tx_fifo_slot);
         if (tx_fifo_slot = '0') then
           tx_fifo_data(31 downto 0) <= i_w0_wdata;
         else
@@ -241,6 +241,7 @@ begin
           tx_fifo_wen <= '1';
         end if;
       elsif ((i_accept_w(1) and i_w1_wen) = '1') then
+        tx_fifo_slot <= not(tx_fifo_slot);
         if (tx_fifo_slot = '0') then
           tx_fifo_data(31 downto 0) <= i_w1_wdata;
         else
