@@ -30,7 +30,7 @@ entity fifo_DWxNW is
     EMPTY      : out std_logic;
     FULL       : out std_logic;
     OVERFLOW   : out std_logic;
-    Q          : out std_logic_vector(DWIDTH-2 downto 0);
+    Q          : out std_logic_vector(DWIDTH-1 downto 0);
     RDCNT      : out std_logic_vector(AWIDTH-1 downto 0);
     SB_CORRECT : out std_logic;
     UNDERFLOW  : out std_logic
@@ -98,8 +98,8 @@ signal RDEMPTY_net_0    : std_logic;
 signal WRFULL_net_0     : std_logic;
 signal OVERFLOW_net_0   : std_logic;
 signal Q_net_0          : std_logic_vector(DWIDTH-1 downto 0);
-signal RDCNT_net_0      : std_logic_vector(9 downto 0);
-signal WRCNT_net_0      : std_logic_vector(9 downto 0);
+signal RDCNT_net_0      : std_logic_vector(AWIDTH-1 downto 0);
+signal WRCNT_net_0      : std_logic_vector(AWIDTH-1 downto 0);
 signal SB_CORRECT_net_0 : std_logic;
 signal UNDERFLOW_net_0  : std_logic;
 signal RDEMPTY_net_1    : std_logic;
@@ -111,8 +111,8 @@ signal UNDERFLOW_net_1  : std_logic;
 signal SB_CORRECT_net_1 : std_logic;
 signal DB_DETECT_net_1  : std_logic;
 signal Q_net_1          : std_logic_vector(DWIDTH-1 downto 0);
-signal RDCNT_net_1      : std_logic_vector(9 downto 0);
-signal WRCNT_net_1      : std_logic_vector(9 downto 0);
+signal RDCNT_net_1      : std_logic_vector(AWIDTH-1 downto 0);
+signal WRCNT_net_1      : std_logic_vector(AWIDTH-1 downto 0);
 signal ACLR             : std_logic;
 ----------------------------------------------------------------------
 -- TiedOff Signals

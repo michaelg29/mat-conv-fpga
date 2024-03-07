@@ -22,7 +22,6 @@ entity axi_transmitter is
     -- interface with internal controller
     i_header_request    : in  std_logic;
     i_payload_request   : in  std_logic;
-    o_payload_done      : out std_logic;
     i_base_addr         : in  std_logic_vector(31 downto 0);
     i_new_addr          : in  std_logic;
 
@@ -113,7 +112,6 @@ begin
     if (i_aclk'event and i_aclk = '1') then
       if (i_arst_n = '0') then
         axi_tx_fsm_state  <= IDLE;
-        o_payload_done    <= '0';
         payload_count     <= 0;
         only_one_payload  <= '0';
 
@@ -144,44 +142,44 @@ begin
         when IDLE =>
           request_payload        <= '0';
           only_one_payload       <= '0';
+          -- if (i_header_request = '1') then
+            -- o_payload_done  <= '0';
+            -- header       <= i_header;
+            -- if ((i_header(4)(31 downto 16) = 0) or ( i_header(7)(0) = '0') or ( i_header(7)(10) = '1')) then -- no payload in tx packet or CMD not OK or PHY Timeout
+              -- axi_tx_fsm_state  <= SEND_HEADER;
+              -- axi_awaddr            <= i_header(5);
+              -- axi_awlen             <= x"4"; -- 5 QWords for header only
+              -- request_header        <= '1';
+              -- request_header_p      <= '1';
+            -- else
+              -- axi_tx_fsm_state   <= CHECK_PAYLOAD;
+              -- axi_awaddr             <= i_header(5) + x"28"; -- skip header
+              -- if (i_header(4)(31 downto 16) > 16) then
+                -- payload_size_rest      <= i_header(4)(31 downto 16) - x"10";
+                -- axi_awlen              <= x"F";
+                -- payload_count          <= 15;
+              -- else
+                -- payload_size_rest      <= (others=>'0');
+                -- axi_awlen              <= i_header(4)(19 downto 16) - '1'; -- payload size (minus 1)
+                -- payload_count          <= conv_integer(i_header(4)(31 downto 16) - '1');
+                -- if (i_header(4)(31 downto 16) = 1) then
+                  -- only_one_payload <= '1';
+                -- end if;
+              -- end if;
+            -- end if;
+          -- elsif (i_payload_request = '1') then
+            -- header          <= i_header;
+
+            -- axi_tx_fsm_state   <= CHECK_PAYLOAD;
+            -- axi_awaddr             <= i_header(5) + x"28"; -- skip header
+            -- payload_size_rest      <= i_header(4)(31 downto 16) - x"10";
+            -- axi_awlen              <= x"F";
+            -- payload_count          <= 15;
+
+
+          -- end if;
+
           if (i_header_request = '1') then
-            o_payload_done  <= '0';
-            header       <= i_header;
-            if ((i_header(4)(31 downto 16) = 0) or ( i_header(7)(0) = '0') or ( i_header(7)(10) = '1')) then -- no payload in tx packet or CMD not OK or PHY Timeout
-              axi_tx_fsm_state  <= SEND_HEADER;
-              axi_awaddr            <= i_header(5);
-              axi_awlen             <= x"4"; -- 5 QWords for header only
-              request_header        <= '1';
-              request_header_p      <= '1';
-            else
-              axi_tx_fsm_state   <= CHECK_PAYLOAD;
-              axi_awaddr             <= i_header(5) + x"28"; -- skip header
-              if (i_header(4)(31 downto 16) > 16) then
-                payload_size_rest      <= i_header(4)(31 downto 16) - x"10";
-                axi_awlen              <= x"F";
-                payload_count          <= 15;
-              else
-                payload_size_rest      <= (others=>'0');
-                axi_awlen              <= i_header(4)(19 downto 16) - '1'; -- payload size (minus 1)
-                payload_count          <= conv_integer(i_header(4)(31 downto 16) - '1');
-                if (i_header(4)(31 downto 16) = 1) then
-                  only_one_payload <= '1';
-                end if;
-              end if;
-            end if;
-          elsif (i_payload_request = '1') then
-            header          <= i_header;
-
-            axi_tx_fsm_state   <= CHECK_PAYLOAD;
-            axi_awaddr             <= i_header(5) + x"28"; -- skip header
-            payload_size_rest      <= i_header(4)(31 downto 16) - x"10";
-            axi_awlen              <= x"F";
-            payload_count          <= 15;
-
-
-          end if;
-
-          if (i_header_request = '1) then
             axi_tx_fsm_state <= CHECK_PAYLOAD;
             axi_awlen        <= x"3"; -- 8 QWords for header, requires 4 packets (minus 1)
           elsif (i_payload_request = '1') then
@@ -224,9 +222,8 @@ begin
           if (payload_count = 0) then
             if (only_one_payload = '0') then
               if (payload_size_rest = 0 ) then
-                axi_tx_fsm_state   <= REQ_HEADER;
+                axi_tx_fsm_state   <= CHECK_PAYLOAD;
 
-                o_payload_done         <= '1';
                 request_payload        <= '0';
               else
                 if (payload_size_rest > 16) then
