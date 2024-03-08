@@ -56,6 +56,10 @@ function do_sim {
     echo "Number of UVM_ERROR messages: $n_uvm_error"
     echo "Number of UVM_WARNING messages: $n_uvm_warning"
     echo -e "\n\n"
+
+    [ $n_uvm_error -gt 0 ] && return 1;
+
+    return 0;
 }
 
 # run all testcases
@@ -66,10 +70,12 @@ if [ -f args.ini ]; then
         name="${line%%:*}"
         args="${line##*:}"
         ! ([ -z "$line" ] || [ -z "${line%%#*}" ]) && do_sim "${name}" "${args}"
+        [ $? -gt 0 ] && exit 1
+        continue
     done
+
+    [ $? -gt 0 ] && echo "Exiting with error" && exit 1
 else
     do_sim "tc" ""
     [ $? -gt 0 ] && echo "Exiting with error" && exit 1
 fi
-
-echo "Exiting" && exit 0

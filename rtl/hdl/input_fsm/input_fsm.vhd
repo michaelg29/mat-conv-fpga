@@ -23,9 +23,9 @@ entity input_fsm is
     i_por_n           : in  std_logic;
 
     -- signals to and from Input FIFO
-    i_new_pkt         : in  std_logic;
-    i_waddr           : in  std_logic_vector(G_ADDR_PKT_WIDTH-1 downto 0);
-    i_wdata           : in  std_logic_vector(G_DATA_PKT_WIDTH-1 downto 0);
+    i_rx_pkt          : in  std_logic;
+    i_rx_addr         : in  std_logic_vector(G_ADDR_PKT_WIDTH-1 downto 0);
+    i_rx_data         : in  std_logic_vector(G_DATA_PKT_WIDTH-1 downto 0);
 
     -- signals to and from AXI Receiver
     i_write_blank_ack : in  std_logic;
@@ -190,9 +190,9 @@ begin
           cur_cmd_chksum   <= (others => '0');
         else
           cur_cmd_status   <= cur_cmd_status or new_cmd_status;
-          if (is_command_pkt(i_new_pkt, i_waddr) = '1') then
+          if (is_command_pkt(i_rx_pkt, i_rx_addr) = '1') then
             cur_cmd_chksum <= cur_cmd_chksum xor
-            i_wdata(31 downto 0) xor i_wdata(63 downto 32);
+            i_rx_data(31 downto 0) xor i_rx_data(63 downto 32);
           else
             cur_cmd_chksum <= cur_cmd_chksum;
           end if;
@@ -231,10 +231,10 @@ begin
 
           -- waiting for the first 64b packet in the command
           when WAIT_CMD_S_KEY =>
-            if (is_command_pkt(i_new_pkt, i_waddr) = '1') then
-              -- process S_KEY field, i_wdata(31 downto 0)
+            if (is_command_pkt(i_rx_pkt, i_rx_addr) = '1') then
+              -- process S_KEY field, i_rx_data(31 downto 0)
               --   [31:0]: S_KEY
-              if (i_wdata(31 downto 0) = MC_CMD_S_KEY) then
+              if (i_rx_data(31 downto 0) = MC_CMD_S_KEY) then
                 new_cmd_status <= (others => '0');
                 cur_cmd_err    <= '0';
               else
@@ -242,21 +242,21 @@ begin
                 cur_cmd_err    <= '1';
               end if;
 
-              -- process CMD fields, i_wdata(63 downto 32)
+              -- process CMD fields, i_rx_data(63 downto 32)
               --   [   31]: KERN_SIGNED
               --   [   30]: LOAD_TYPE
               --   [29: 0]: OUT_ADDR
-              cur_cmd_kern_signed <= i_wdata(32+31);
-              if (i_wdata(32+30) = MC_CMD_CMD_KERN) then
+              cur_cmd_kern_signed <= i_rx_data(32+31);
+              if (i_rx_data(32+30) = MC_CMD_CMD_KERN) then
                 cur_cmd_kern <= '1';
                 cur_cmd_subj <= '0';
-              else -- i_wdata(32+30) = MC_CMD_CMD_SUBJ
+              else -- i_rx_data(32+30) = MC_CMD_CMD_SUBJ
                 cur_cmd_kern <= '0';
                 cur_cmd_subj <= '1';
                 o_wen        <= '1';
               end if;
               -- write OUT_ADDR
-              o_wdata(31 downto 2) <= i_wdata(32+29 downto 32+0);
+              o_wdata(31 downto 2) <= i_rx_data(32+29 downto 32+0);
               o_addr(2 downto 0)   <= MC_ADDR_OUT_ADDR;
 
               -- next state
@@ -266,36 +266,36 @@ begin
 
           -- waiting for the second 64b packet in the command
           when WAIT_CMD_SIZE =>
-            if (is_command_pkt(i_new_pkt, i_waddr) = '1') then
-              -- process SIZE fields, i_wdata(31 downto 0)
+            if (is_command_pkt(i_rx_pkt, i_rx_addr) = '1') then
+              -- process SIZE fields, i_rx_data(31 downto 0)
               --   [31:30]: Reserved
               --   [29:15]: MAT_EL
               --   [14: 4]: MAT_ROWS
               --   [ 3: 0]: MAT_COLS
 
               -- exp_cols only matters for subject matrix
-              exp_cols <= i_wdata(3 downto 0);
+              exp_cols <= i_rx_data(3 downto 0);
               -- left shift by 7 bits for subject then truncate 3 bits
-              cur_cols <= unsigned(i_wdata(3 downto 0) & "0000");
+              cur_cols <= unsigned(i_rx_data(3 downto 0) & "0000");
 
               if (cur_cmd_kern = '1') then
                 -- size of kernel is given as a raw integer
                 -- take multiples of 8-bytes (truncate 3 LSbs)
-                cur_pkts <= unsigned("0000000" & i_wdata(29 downto 18));
+                cur_pkts <= unsigned("0000000" & i_rx_data(29 downto 18));
 
                 -- validate size of kernel (32 elements)
-                if (not(i_wdata(29 downto 15) = "000000000100000")) then
+                if (not(i_rx_data(29 downto 15) = "000000000100000")) then
                   new_cmd_status <= MC_STAT_ERR_SIZE;
                   cur_cmd_err    <= '1';
                 end if;
               else -- cur_cmd_subj = '1'
                 -- size of subject is given as a multiple of 128
                 -- pad with seven zeros then truncate 3 LSbs
-                cur_pkts <= unsigned(i_wdata(29 downto 15) & "0000");
+                cur_pkts <= unsigned(i_rx_data(29 downto 15) & "0000");
               end if;
 
-              -- process TX_ADDR fields, i_wdata(63 downto 32)
-              o_wdata(31 downto 2) <= i_wdata(32+29 downto 32+0);
+              -- process TX_ADDR fields, i_rx_data(63 downto 32)
+              o_wdata(31 downto 2) <= i_rx_data(32+29 downto 32+0);
               o_addr(2 downto 0)   <= MC_ADDR_TX_ADDR;
               o_wen                <= '1';
 
@@ -308,8 +308,8 @@ begin
 
           -- waiting for the third 64b packet in the command
           when WAIT_CMD_TID =>
-            if (is_command_pkt(i_new_pkt, i_waddr) = '1') then
-              -- process TRANS_ID fields, i_wdata(31 downto 0)
+            if (is_command_pkt(i_rx_pkt, i_rx_addr) = '1') then
+              -- process TRANS_ID fields, i_rx_data(31 downto 0)
 
               -- next state
               input_fsm_state <= WAIT_CMD_E_KEY;
@@ -321,14 +321,14 @@ begin
 
           -- waiting for the fourth 64b packet in the command
           when WAIT_CMD_E_KEY =>
-            if (is_command_pkt(i_new_pkt, i_waddr) = '1') then
-              -- process E_KEY fields, i_wdata(31 downto 0)
-              if (not(i_wdata(31 downto 0) = MC_CMD_E_KEY)) then
+            if (is_command_pkt(i_rx_pkt, i_rx_addr) = '1') then
+              -- process E_KEY fields, i_rx_data(31 downto 0)
+              if (not(i_rx_data(31 downto 0) = MC_CMD_E_KEY)) then
                 new_cmd_status <= MC_STAT_ERR_KEY;
                 cur_cmd_err    <= '1';
               end if;
 
-              -- process CHKSUM fields, i_wdata(63 downto 32)
+              -- process CHKSUM fields, i_rx_data(63 downto 32)
               -- cur_cmd_chksum not updated until next clock cycle
 
               -- next state
@@ -367,7 +367,7 @@ begin
               cur_pkts       <= unsigned(i_rdata(31 downto 13));
               cur_cols       <= unsigned(i_rdata(12 downto 5));
               cur_cmd_status <= i_rdata( 4 downto 0);
-            elsif (is_payload_pkt(i_new_pkt, i_waddr) = '1') then
+            elsif (is_payload_pkt(i_rx_pkt, i_rx_addr) = '1') then
               -- end of row logic
               if (cur_cols = zero_cols) then
                 cur_cols <= unsigned(exp_cols & "0000");
