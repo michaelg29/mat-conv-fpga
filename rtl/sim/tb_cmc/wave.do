@@ -1,6 +1,7 @@
 onerror {resume}
 quietly WaveActivateNextPane {} 0
-add wave -noupdate /tb_top/w_clk_dut
+add wave -noupdate /tb_top/*
+add wave -noupdate /tb_top/DUT/*
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {52468 ps} 0}
 quietly wave cursor active 1

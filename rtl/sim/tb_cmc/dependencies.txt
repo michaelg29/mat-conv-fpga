@@ -1,2 +1,2 @@
-../../hdl/mac
-../../hdl/tb_mac
+../../hdl/mem_wrapper
+../../hdl/tb_cmc
