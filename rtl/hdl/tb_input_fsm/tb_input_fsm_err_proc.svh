@@ -9,6 +9,7 @@ class tb_input_fsm_err_proc extends mat_conv_tc;
   // virtual interface
   virtual input_fsm_if vif;
 
+  // clock period definition
   time MACCLK_PER;
 
   // constructor

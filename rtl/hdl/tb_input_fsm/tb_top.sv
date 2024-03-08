@@ -19,8 +19,7 @@ logic w_macclk_dut = 1'b1;
 logic rst_n = 1'b0;
 logic por_n = 1'b1;
 
-`define ASSERT_EQ(a, b, format="%08h") if (a != b) `uvm_error("tb_top", $sformatf(`"Unexpected data in ``a``. Expected format, got format`", b, a))
-
+// interface to DUT instantiation
 input_fsm_if #(
   .DW(64)
 ) intf (
