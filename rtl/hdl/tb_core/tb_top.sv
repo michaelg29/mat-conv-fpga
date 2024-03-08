@@ -7,7 +7,7 @@ module tb_top
         parameter KERNEL_SIZE = 5,
         parameter int NUM_REPS = 2, //Number of times each test shall be reapeated with different values
         parameter string TC= "tb_core_io_pipeline", // Name of test case to run
-
+        parameter VERBOSE = 1,
         parameter MIN_PIXEL_VAL = 40'h160,
         parameter MAX_PIXEL_VAL = 40'h210,
         parameter MIN_KERNEL_VAL = 40'h160,
@@ -33,9 +33,6 @@ module tb_top
     var longint i1 = 0; // 5 pixels
     var longint j1 = 0; // 5 kernel values
     var longint k1 = 0; // sub
-    var longint i2 = 0; // 5 pixels
-    var longint j2 = 0; // 5 kernel values
-    var longint k2 = 0; // sub
     var longint oreg = 0;
 
     // use time to get 64-bit signed int (only need 40-bits for i and j)
@@ -220,29 +217,23 @@ module tb_top
 
                     // For each new values:
                     // First clock cycle : assign new values
-                    // Second clock cycle : wait for computation
-                    // Third clock cycle: check output values
-                    @(negedge i_clk);
+                    // Second clock cycle : check output values
                     
                     // New values
                     i_pixels = i;  
                     i_kernels = j; 
                     i_sub = k;
 
-                    // Wait for output result
-                    @(posedge i_clk);
-
-                    @(negedge i_clk);
+                    @(negedge i_clk); //assign new values
                     // Reset values
                     i_pixels = 0;  
                     i_kernels = 0; 
                     i_sub = 0;
 
-                    @(negedge i_clk); //computation wait
                     @(negedge i_clk); //o_res has correct value (output ready)
 
                     // Calculate value that should be obtained
-                    oreg = k;
+                    oreg = signed'(k[17:0]);
                     oreg += ROUNDING;
                     for (int s = 0 ; s < KERNEL_SIZE ; s++) begin
                         // Use variable part-select with fixed width
@@ -297,9 +288,6 @@ module tb_top
         i1 = 0;
         j1 = 0;
         k1 = 0;
-        i2 = 0;
-        j2 = 0;
-        k2 = 0;
 
         // Enable the core
         @(negedge i_clk);
@@ -333,15 +321,20 @@ module tb_top
 
                     @(negedge i_clk); // Load input/Get output result
                     count++;
-                    if(count > 2) data_ready = 1;
+                    if(count > 1) data_ready = 1;
 
-                    // Calculate value that should be obtained (thid clock cycle check)
-                    oreg = k1;
+                    // Calculate value that shoutb_core_io_no_pipeline: -gNUM_REPS=1 -gVERBOSE=1 -gTC="tb_core_io_no_pipeline" -gMIN_PIXEL_VAL="40'h0" -gMAX_PIXEL_VAL="40'hFF_FFFF_FFFF" -gMIN_KERNEL_VAL="40'h0" -gMAX_KERNEL_VAL="40'hFF_FFFF_FFFF" -gMIN_SUB_VAL="18'h0" -gMAX_SUB_VAL="18'h3FFFF" -gROUNDING="3'b100"
+                    oreg = signed'(k1[17:0]);
                     oreg += ROUNDING;
                     for (int s = 0 ; s < KERNEL_SIZE ; s++) begin
                         // Use variable part-select with fixed width
                         oreg += signed'(i1[8*s +: 8]) * signed'(j1[8*s +: 8]);
                     end
+
+                    if(VERBOSE) begin
+                        $display("oreg: 0x%X ; oreg20:3 0x%X ; o_res: 0x%X", oreg, oreg[20:3], o_res);
+                    end
+
 
                     // if not first or second clock cycles
                     if(data_ready == 1) begin
@@ -353,15 +346,10 @@ module tb_top
                         end
                     end
 
-                    // Get input from previous (ready for third clock cycle)
-                    i1 = i2;
-                    j1 = j2;
-                    k1 = k2;
-
-                    // Save current input for next check (ready for second clock cycle)
-                    i2 = i;
-                    j2 = j;
-                    k2 = k;
+                    // Save current input for next check
+                    i1 = i;
+                    j1 = j;
+                    k1 = k;
 
                 end
             end
