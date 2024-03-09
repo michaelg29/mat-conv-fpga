@@ -4,6 +4,24 @@ TB_TOP=${TB_TOP:="tb_top"}
 UVM_HOME=${UVM_HOME:="/home/`whoami`/intelFPGA/20.1/modelsim_ase/verilog_src/uvm-1.2"}
 echo "UVM_HOME: ${UVM_HOME}"
 
+tc_args=
+
+# parse arguments
+while :; do
+    case $1 in
+        -g?*)
+            tc_args="${1}"
+            ;;
+        -?*)
+            printf "WARN: Unknown option (ignored): %s\n" "$1" >&2
+            ;;
+        *)               # Default case: No more options, so break out of the loop.
+            break
+    esac
+
+    shift
+done
+
 # clean library list
 parent_pid=$$
 echo -n "" > /tmp/lib_list$$
@@ -64,18 +82,21 @@ function do_sim {
 
 # run all testcases
 mkdir -p ./logs
-if [ -f args.ini ]; then
+if [ -z "$args" ] && [ -f args.ini ]; then
     cat args.ini |
     while read line; do
         name="${line%%:*}"
         args="${line##*:}"
-        ! ([ -z "$line" ] || [ -z "${line%%#*}" ]) && do_sim "${name}" "${args}"
-        [ $? -gt 0 ] && exit 1
-        continue
+        if [ -z "$line" ] || [ -z "${line%%#*}" ]; then
+            continue
+        else
+            do_sim "${name}" "${args}" 
+            [ $? -gt 0 ] && exit 1
+        fi
     done
 
     [ $? -gt 0 ] && echo "Exiting with error" && exit 1
 else
-    do_sim "tc" ""
+    do_sim "tc" "${tc_args}"
     [ $? -gt 0 ] && echo "Exiting with error" && exit 1
 fi

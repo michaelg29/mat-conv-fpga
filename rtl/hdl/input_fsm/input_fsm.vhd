@@ -152,44 +152,46 @@ begin
     if (i_macclk'event and i_macclk = '1') then
       if (i_rst_n = '0' or i_por_n = '0') then
         -- active-low reset external signals
-        o_write_blank_en  <= '0';
-        o_drop_pkts       <= '0';
-        o_addr            <= (others => '0');
-        o_ren             <= '0';
-        o_wen             <= '0';
-        o_wdata           <= (others => '0');
-        o_cmd_valid       <= '0';
-        o_cmd_err         <= '0';
-        o_cmd_kern        <= '0';
-        o_cmd_subj        <= '0';
-        o_cmd_kern_signed <= '0';
-        o_eor             <= '0';
-        o_payload_done    <= '0';
+        o_write_blank_en    <= '0';
+        o_drop_pkts         <= '0';
+        o_addr              <= (others => '0');
+        o_ren               <= '0';
+        o_wen               <= '0';
+        o_wdata             <= (others => '0');
+        o_cmd_valid         <= '0';
+        o_cmd_err           <= '0';
+        o_cmd_kern          <= '0';
+        o_cmd_subj          <= '0';
+        o_cmd_kern_signed   <= '0';
+        o_eor               <= '0';
+        o_prepad_done       <= '0';
+        o_payload_done      <= '0';
 
         -- active-low reset internal signals
-        input_fsm_state   <= WAIT_CMD_S_KEY;
-        cur_cmd_chksum    <= (others => '0');
-        cur_cmd_status    <= MC_STAT_OKAY;
-        new_cmd_status    <= MC_STAT_OKAY;
-        cur_cmd_kern      <= '0';
-        cur_cmd_subj      <= '0';
-        cur_cmd_err       <= '0';
-        cur_cmd_cmplt     <= '0';
-        exp_cols          <= (others => '0');
-        cur_cols          <= (others => '0');
-        cur_pkts          <= (others => '0');
-        prepad_cnt        <= (others => '0');
-        write_blank_ack   <= '0';
+        input_fsm_state     <= FSM_RESTART;
+        cur_cmd_chksum      <= (others => '0');
+        cur_cmd_status      <= MC_STAT_OKAY;
+        new_cmd_status      <= MC_STAT_OKAY;
+        cur_cmd_kern        <= '0';
+        cur_cmd_subj        <= '0';
+        cur_cmd_kern_signed <= '0';
+        cur_cmd_err         <= '0';
+        cur_cmd_cmplt       <= '0';
+        exp_cols            <= (others => '0');
+        cur_cols            <= (others => '0');
+        cur_pkts            <= (others => '0');
+        prepad_cnt          <= (others => '0');
+        write_blank_ack     <= '0';
       else
         -- CDC signals
-        write_blank_ack  <= i_write_blank_ack;
+        write_blank_ack <= i_write_blank_ack;
 
         -- apply checksum and status changes
         if (input_fsm_state = FSM_RESTART) then
-          cur_cmd_status   <= (others => '0');
-          cur_cmd_chksum   <= (others => '0');
+          cur_cmd_status <= (others => '0');
+          cur_cmd_chksum <= (others => '0');
         else
-          cur_cmd_status   <= cur_cmd_status or new_cmd_status;
+          cur_cmd_status <= cur_cmd_status or new_cmd_status;
           if (is_command_pkt(i_rx_pkt, i_rx_addr) = '1') then
             cur_cmd_chksum <= cur_cmd_chksum xor
             i_rx_data(31 downto 0) xor i_rx_data(63 downto 32);
@@ -372,7 +374,7 @@ begin
               if (cur_cols = zero_cols) then
                 cur_cols <= unsigned(exp_cols & "0000");
                 cur_pkts <= cur_pkts;
-                o_eor    <= '1';
+                o_eor    <= cur_cmd_subj;
 
                 -- count number of pre-subject padding rows
                 if (prepad_cnt = "00") then
@@ -394,7 +396,7 @@ begin
 
             -- write blank logic
             if (cur_cols < burst_size) then
-              o_write_blank_en <= '1';
+              o_write_blank_en <= cur_cmd_subj;
             elsif (write_blank_ack = '1') then
               o_write_blank_en <= '0';
             end if;
