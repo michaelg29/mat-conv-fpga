@@ -7,8 +7,8 @@ USE altera_lnsim.altera_lnsim_components.all;
 
 entity cmc is
     port(i_addr: in std_logic_vector(10 downto 0);
-        i_core0, i_core1, i_core2,i_core3, i_core4: in std_logic_vector(17 downto 0);
-        o_core0, o_core1, o_core2,o_core3, o_core4: out std_logic_vector(17 downto 0);
+        i_core_0, i_core_1, i_core_2,i_core_3, i_core_4: in std_logic_vector(17 downto 0);
+        o_core_0, o_core_1, o_core_2,o_core_3, o_core_4, o_pixel: out std_logic_vector(17 downto 0);
         i_clk, i_en: in std_logic;
         i_val: in std_logic);
 end cmc;
@@ -93,8 +93,8 @@ architecture rtl of cmc is
       begin
 
         -- i_core_0 and o_core 4 assignment
-        o_core0 <= (others => '0');
-        o_core4 <= i_core4;
+        o_core_0 <= (others => '0');
+        o_pixel <= i_core_4;
 
         lsram_0: lsram_1024x18
         generic map(
@@ -112,7 +112,7 @@ architecture rtl of cmc is
             A_BLK => blk_const,
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
-            A_DOUT => o_core1,
+            A_DOUT => o_core_1,
             A_WEN => (others => '0'),
             A_REN => lsram0_read,
             A_DOUT_EN => '1',
@@ -122,7 +122,7 @@ architecture rtl of cmc is
             B_ADDR => i_addr_signal,
             B_BLK => blk_const,
             B_CLK => i_clk,
-            B_DIN => i_core0,
+            B_DIN => i_core_0,
             B_DOUT => open, 
             B_WEN => lsram0_write,
             B_REN => '0',
@@ -149,7 +149,7 @@ architecture rtl of cmc is
             A_BLK => blk_const,
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
-            A_DOUT => o_core2,
+            A_DOUT => o_core_2,
             A_WEN => (others => '0'),
             A_REN => lsram1_read,
             A_DOUT_EN => '1',
@@ -159,7 +159,7 @@ architecture rtl of cmc is
             B_ADDR => i_addr_signal,
             B_BLK => blk_const,
             B_CLK => i_clk,
-            B_DIN => i_core1,
+            B_DIN => i_core_1,
             B_DOUT => open, 
             B_WEN => lsram1_write,
             B_REN => '0',
@@ -186,7 +186,7 @@ architecture rtl of cmc is
             A_BLK => blk_const,
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
-            A_DOUT => o_core3,
+            A_DOUT => o_core_3,
             A_WEN => (others => '0'),
             A_REN => lsram2_read,
             A_DOUT_EN => '1',
@@ -196,7 +196,7 @@ architecture rtl of cmc is
             B_ADDR => i_addr_signal,
             B_BLK => blk_const,
             B_CLK => i_clk,
-            B_DIN => i_core2,
+            B_DIN => i_core_2,
             B_DOUT => open, 
             B_WEN => lsram2_write,
             B_REN => '0',
@@ -223,7 +223,7 @@ architecture rtl of cmc is
             A_BLK => blk_const,
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
-            A_DOUT => o_core4,
+            A_DOUT => o_core_4,
             A_WEN => (others => '0'),
             A_REN => lsram3_read,
             A_DOUT_EN => '1',
@@ -233,7 +233,7 @@ architecture rtl of cmc is
             B_ADDR => i_addr_signal,
             B_BLK => blk_const,
             B_CLK => i_clk,
-            B_DIN => i_core3,
+            B_DIN => i_core_3,
             B_DOUT => open, 
             B_WEN => lsram3_write,
             B_REN => '0',
