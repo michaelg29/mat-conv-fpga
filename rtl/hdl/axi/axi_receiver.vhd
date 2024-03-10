@@ -66,7 +66,7 @@ entity axi_receiver is
     i_rx_fifo_af          : in  std_logic;
     o_rx_valid            : out std_logic;
     o_rx_addr             : out std_logic_vector(G_ADDR_PKT_WIDTH-1 downto 0);
-    o_rx_data             : out std_logic_vector(G_DATA_PKT_WIDTH downto 0);
+    o_rx_data             : out std_logic_vector(G_DATA_PKT_WIDTH-1 downto 0);
 
     -- interface with internal controller
     i_rx_drop_pkts        : in  std_logic;

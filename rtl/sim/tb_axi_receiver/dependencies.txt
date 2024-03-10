@@ -1,2 +1,3 @@
+../../hdl/mat_conv_pkg
 ../../hdl/axi
 ../../hdl/tb_axi_receiver

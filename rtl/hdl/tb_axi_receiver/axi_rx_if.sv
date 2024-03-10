@@ -35,7 +35,7 @@ interface axi_rx_if #(
 
   // write response channel
   logic [3:0] o_rx_axi_bid ;
-  logic [31:0] o_rx_axi_bresp ;
+  logic [1:0] o_rx_axi_bresp ;
   logic o_rx_axi_bvalid ;
   logic i_rx_axi_bready ;
 

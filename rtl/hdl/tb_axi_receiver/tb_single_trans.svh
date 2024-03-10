@@ -22,6 +22,9 @@ class tb_single_trans extends mat_conv_tc;
 
     `uvm_info("tb_single_trans", "Executing testcase", UVM_NONE);
 
+    #(MACCLK_PER);
+    vif.i_rx_axi_wdata = $urandom(100);
+
   endtask // run
 
 endclass // tb_single_trans

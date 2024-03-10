@@ -96,6 +96,57 @@ axi_receiver #(
     .o_write_blank_ack(intf.o_write_blank_ack)
   );
 
+
+
+//FIFO
+logic wen = 1'b0;
+logic ren = 1'b0;
+
+wire aempty;
+wire afull;
+wire db_detect;
+wire empty;
+wire full;
+wire overflow;
+//wire [63:0] q;
+wire [71:0] q;
+//wire [9:0] rdcnt;
+wire [3:0] rdcnt;
+wire sb_correct;
+wire underflow;
+
+logic [31:0] awaddr;
+logic [63:0] wdata = '0;
+
+fifo_DWxNW #(
+  .DWIDTH(72),
+  .NWORDS(16),
+  .AWIDTH(4),
+  .AEVAL(4),
+  .AFVAL(14)
+) fifo_DUT (
+  .CLK(aclk_dut),
+  .RCLK(macclk_dut),
+  .WCLK(aclk_dut),
+  .DATA({awaddr[7:0], wdata}),
+  .RE(ren),
+  .RESET_N(arst_n),
+  .WE(wen),
+
+  .AEMPTY(aempty),
+  .AFULL(afull),
+  .DB_DETECT(db_detect),
+  .EMPTY(empty),
+  .FULL(full),
+  .OVERFLOW(overflow),
+  .Q(q),
+  .RDCNT(rdcnt),
+  .SB_CORRECT(sb_correct),
+  .UNDERFLOW(underflow)
+);
+
+
+
 // Clock generation
 always #(MACCLK_PER / 2) begin
 	w_macclk_dut <= ~w_macclk_dut;
@@ -133,7 +184,7 @@ initial begin
   #(5*MACCLK_PER);
 
   `uvm_info("tb_top", "Exiting", UVM_NONE);
-  $stop();
+  $finish(0);
 end
 
 endmodule
