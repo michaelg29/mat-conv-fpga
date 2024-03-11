@@ -13,7 +13,8 @@ module tb_top
 
         parameter MIN_ADDR = 11'h0,
         parameter MAX_ADDR = 11'h7FF,
-        parameter WRITE_DELAY = 4, //delay between valid address and valid input data
+        parameter WRITE_VALID_DELAY = 2, //delay between valid address and valid input data
+        parameter WRITE_DELAY = 2, //delay between valid input write data and write complete
         parameter READ_DELAY = 2 //delay between valid address and valid output data
     );
 
@@ -59,24 +60,20 @@ module tb_top
 
         .i_val(i_val),
         .i_addr(i_addr),
-        .i_core0(i_core[0]),
-        .i_core1(i_core[1]),
-        .i_core2(i_core[2]),
-        .i_core3(i_core[3]),
-        .i_core4(i_core[4]),
+        .i_core_0(i_core[0]),
+        .i_core_1(i_core[1]),
+        .i_core_2(i_core[2]),
+        .i_core_3(i_core[3]),
+        .i_core_4(i_core[4]),
 
-        .o_core0(o_core[0]),
-        .o_core1(o_core[1]),
-        .o_core2(o_core[2]),
-        .o_core3(o_core[3]),
-        .o_core4(o_core[4])
+        .o_core_0(o_core[0]),
+        .o_core_1(o_core[1]),
+        .o_core_2(o_core[2]),
+        .o_core_3(o_core[3]),
+        .o_core_4(o_core[4]),
 
-        //.o_pixel(o_pixel)
+        .o_pixel(o_pixel)
     );
-    //TODO remove this workaround once CMC is fixed
-    always @(posedge i_clk) begin
-        o_pixel <= i_core[4];
-    end
 
     //Always enabled
     assign i_en = 1'b1;
@@ -187,7 +184,7 @@ module tb_top
 
         var longint addr;
         var int port;
-        logic [KERNEL_SIZE:0][17:0] o_expected;
+        logic [KERNEL_SIZE:0][17:0] o_expected; //o_core_0 to o_core_KERNELSIZE concatenated to o_pixel
 
         begin
 
@@ -196,6 +193,9 @@ module tb_top
             i_addr = 0;
             i_core = 0;
             @(negedge i_clk);
+
+            //Reset o_expected
+            o_expected = 0;
 
             //First port output is always 0
             o_expected[0] = 0;
@@ -206,39 +206,60 @@ module tb_top
                 // Loop through all ports
                 for(port = 0 ; port < KERNEL_SIZE ; port++) begin
 
-                    //Calculate input value (address + port number)
-                    i_core[port] = addr+port;
-                    o_expected[port+1] = addr+port;
+                    if(VERBOSE) begin
+                        for (int i = 0 ; i<KERNEL_SIZE; i++) begin
+                            $display("o_expected[%d] = 0x%X",i,o_expected[i]);
+                        end
+                        $display("addr+port: 0x%X", addr+port);
+                    end
 
-                    //Perform write (4 clock cycles delay)
+                    //Perform write enable (4 clock cycles delay)
                     i_addr = addr[10:0];
-                    i_core[port] = addr+port;
                     i_val = 1'b1;
                     @(negedge i_clk);
-                    //TODO: i_val = 1'b0;
+                    i_val = 1'b0;
 
-                    //Wait for write data
+                    //Wait for write valid input data
+                    for(int j=0; j<WRITE_VALID_DELAY; j++) @(negedge i_clk);
+
+                    //Give valid input value
+                    i_core[port] = addr+port;
+                    @(negedge i_clk);
+                    i_core = 0;
+
+                    //Wait for write to complete
                     for(int i=0; i<WRITE_DELAY; i++) @(negedge i_clk);
 
+
+                    //Perform read (2 clock cycle delays)
                     if(port == (KERNEL_SIZE-1)) begin //if last port
                         //Perform read (no delay, data is bypassed)
+                        //@(negedge i_clk); //delay is added for uniformity
                     end else begin //if other ports
                         //Perform read (2 clock cycles delay)
                         i_val = 1'b1;
                         @(negedge i_clk);
-                        //TODO: i_val = 1'b0;
+                        i_val = 1'b0;
 
                         //Wait for read data
                         for(int i=0; i<READ_DELAY; i++) @(negedge i_clk);
                     end
 
+                    //Wait for read data
+                    //for(int i=0; i<READ_DELAY; i++) @(negedge i_clk);
+
+                    //Calculate input value (address + port number)
+                    o_expected[port+1] = addr+port;
 
                     //Check result
-                    if(o_expected != {o_core,o_pixel}) begin
+                    if(o_expected != {o_pixel,o_core}) begin
                         `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X ; port = %d\noutput = 0x%X ; expected = 0x%X",addr,port,{o_core,o_pixel},o_expected));
                         @(negedge i_clk);
                         $finish(2);
                     end
+
+                    //Reset o_expect
+                    o_expected = 0;
 
                 end
 

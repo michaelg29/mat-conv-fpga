@@ -71,8 +71,8 @@ architecture rtl of cmc is
       -- SB_CORRECT and DB_DETECT signal for ECC
       signal a0_sb, b0_sb,a1_sb, b1_sb, a2_sb, b2_sb, a3_sb, b3_sb: std_logic;
       signal a0_db, b0_db,a1_db, b1_db, a2_db, b2_db, a3_db, b3_db: std_logic;
-      signal lsram0_read, lsram1_read, lsram2_read, lsram3_read: std_logic;
-      signal lsram0_write, lsram1_write, lsram2_write, lsram3_write: std_logic_vector (1 downto 0);
+      signal lsram_read: std_logic;
+      signal lsram_write: std_logic_vector (1 downto 0);
 
       -- Address signal
       signal i_read_addr: std_logic_vector(10 downto 0);
@@ -109,7 +109,7 @@ architecture rtl of cmc is
             A_DIN => (others => 'X'),
             A_DOUT => o_core_1,
             A_WEN => (others => '0'),
-            A_REN => lsram0_read,
+            A_REN => lsram_read,
             A_DOUT_EN => '1',
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
@@ -119,7 +119,7 @@ architecture rtl of cmc is
             B_CLK => i_clk,
             B_DIN => i_core_0,
             B_DOUT => open, 
-            B_WEN => lsram0_write,
+            B_WEN => lsram_write,
             B_REN => '0',
             B_DOUT_EN => '0',
             B_DOUT_SRST_N => '1',
@@ -146,7 +146,7 @@ architecture rtl of cmc is
             A_DIN => (others => 'X'),
             A_DOUT => o_core_2,
             A_WEN => (others => '0'),
-            A_REN => lsram1_read,
+            A_REN => lsram_read,
             A_DOUT_EN => '1',
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
@@ -156,7 +156,7 @@ architecture rtl of cmc is
             B_CLK => i_clk,
             B_DIN => i_core_1,
             B_DOUT => open, 
-            B_WEN => lsram1_write,
+            B_WEN => lsram_write,
             B_REN => '0',
             B_DOUT_EN => '0',
             B_DOUT_SRST_N => '1',
@@ -183,7 +183,7 @@ architecture rtl of cmc is
             A_DIN => (others => 'X'),
             A_DOUT => o_core_3,
             A_WEN => (others => '0'),
-            A_REN => lsram2_read,
+            A_REN => lsram_read,
             A_DOUT_EN => '1',
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
@@ -193,7 +193,7 @@ architecture rtl of cmc is
             B_CLK => i_clk,
             B_DIN => i_core_2,
             B_DOUT => open, 
-            B_WEN => lsram2_write,
+            B_WEN => lsram_write,
             B_REN => '0',
             B_DOUT_EN => '0',
             B_DOUT_SRST_N => '1',
@@ -220,7 +220,7 @@ architecture rtl of cmc is
             A_DIN => (others => 'X'),
             A_DOUT => o_core_4,
             A_WEN => (others => '0'),
-            A_REN => lsram3_read,
+            A_REN => lsram_read,
             A_DOUT_EN => '1',
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
@@ -230,7 +230,7 @@ architecture rtl of cmc is
             B_CLK => i_clk,
             B_DIN => i_core_3,
             B_DOUT => open, 
-            B_WEN => lsram3_write,
+            B_WEN => lsram_write,
             B_REN => '0',
             B_DOUT_EN => '0',
             B_DOUT_SRST_N => '1',
@@ -258,71 +258,25 @@ architecture rtl of cmc is
         end process;
 
         -- LSRAM read and write processes
-        lsram0_process: process(i_val,i_val_write,i_clk)
+        lsram_process: process(i_val,i_val_write,i_clk)
         begin
             if rising_edge(i_clk) and i_en = '1' then 
-                if i_val = '1' then
-                    lsram0_read <= '1';
-                    lsram0_write <= "00"; -- assert write to 0 to make sure
-                elsif i_val_write = '1' then
-                    lsram0_read <= '0';
-                    lsram0_write <= "11";
-                else
-                    lsram0_read <= '0';
-                    lsram0_write <= "00";
-                end if;
-            end if;
-        end process;
-                
-        lsram1_process: process(i_val,i_val_write,i_clk)
-        begin
-            if rising_edge(i_clk) and i_en = '1' then 
-                if i_val = '1' then
-                    lsram1_read <= '1';
-                    lsram1_write <= "00"; -- assert write to 0 to make sure
-                elsif i_val_write = '1' then
-                    lsram1_read <= '0';
-                    lsram1_write <= "11";
-                else
-                    lsram1_read <= '0';
-                    lsram1_write <= "00";
-                end if;
-            end if;
-        end process;
 
-        lsram2_process: process(i_val,i_val_write,i_clk)
-        begin
-            if rising_edge(i_clk) and i_en = '1' then 
+                --Read enable
                 if i_val = '1' then
-                    lsram2_read <= '1';
-                    lsram2_write <= "00"; -- assert write to 0 to make sure
-                elsif i_val_write = '1' then
-                    lsram2_read <= '0';
-                    lsram2_write <= "11";
-                else
-                    lsram2_read <= '0';
-                    lsram2_write <= "00";
+                    lsram_read <= '1';
+                else 
+                    lsram_read <= '0';
                 end if;
-            end if;
-        end process;
 
-        lsram3_process: process(i_val,i_val_write,i_clk)
-        begin
-            if rising_edge(i_clk) and i_en = '1' then 
-                if i_val = '1' then
-                    lsram3_read <= '1';
-                    lsram3_write <= "00"; -- assert write to 0 to make sure
-                elsif i_val_write = '1' then
-                    lsram3_read <= '0';
-                    lsram3_write <= "11";
+                --Write enable
+                if i_val_write = '1' then
+                    lsram_write <= "11";
                 else
-                    lsram3_read <= '0';
-                    lsram3_write <= "00";
+                    lsram_write <= "00";
                 end if;
-            end if;
-        end process;
-                
-                
 
+            end if;
+        end process;              
 
 end rtl;
