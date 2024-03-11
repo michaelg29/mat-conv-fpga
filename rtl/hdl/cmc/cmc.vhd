@@ -267,6 +267,9 @@ architecture rtl of cmc is
                 elsif i_val_write = '1' then
                     lsram0_read <= '0';
                     lsram0_write <= "11";
+                else
+                    lsram0_read <= '0';
+                    lsram0_write <= "00";
                 end if;
             end if;
         end process;
@@ -280,6 +283,9 @@ architecture rtl of cmc is
                 elsif i_val_write = '1' then
                     lsram1_read <= '0';
                     lsram1_write <= "11";
+                else
+                    lsram1_read <= '0';
+                    lsram1_write <= "00";
                 end if;
             end if;
         end process;
@@ -293,6 +299,9 @@ architecture rtl of cmc is
                 elsif i_val_write = '1' then
                     lsram2_read <= '0';
                     lsram2_write <= "11";
+                else
+                    lsram2_read <= '0';
+                    lsram2_write <= "00";
                 end if;
             end if;
         end process;
@@ -306,6 +315,9 @@ architecture rtl of cmc is
                 elsif i_val_write = '1' then
                     lsram3_read <= '0';
                     lsram3_write <= "11";
+                else
+                    lsram3_read <= '0';
+                    lsram3_write <= "00";
                 end if;
             end if;
         end process;
