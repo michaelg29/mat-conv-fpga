@@ -14,6 +14,10 @@ entity cmc is
 end cmc;
 
 architecture rtl of cmc is
+
+    --ECC enable control
+    constant ECC_EN: std_logic := '0';
+
     component lsram_1024x18 is
         generic(
           -- static signals on port A
@@ -27,7 +31,7 @@ architecture rtl of cmc is
           B_DOUT_BYPASS   : std_logic;
       
           -- static common signals
-          ECC_EN          : std_logic := '1';
+          ECC_EN          : std_logic := ECC_EN;
           ECC_DOUT_BYPASS : std_logic := '0';
           DELEN           : std_logic;
           SECURITY        : std_logic
@@ -65,29 +69,53 @@ architecture rtl of cmc is
         );
       end component;
       
-      -- BLK signal
-      signal blk_const: std_logic_vector (2 downto 0) := (others => '1');
-      
       -- SB_CORRECT and DB_DETECT signal for ECC
-      signal a0_sb, b0_sb,a1_sb, b1_sb, a2_sb, b2_sb, a3_sb, b3_sb: std_logic;
-      signal a0_db, b0_db,a1_db, b1_db, a2_db, b2_db, a3_db, b3_db: std_logic;
+      --signal a0_sb, b0_sb,a1_sb, b1_sb, a2_sb, b2_sb, a3_sb, b3_sb: std_logic;
+      --signal a0_db, b0_db,a1_db, b1_db, a2_db, b2_db, a3_db, b3_db: std_logic;
       signal lsram_read: std_logic;
       signal lsram_write: std_logic_vector (1 downto 0);
 
       -- Address signal
       signal i_read_addr: std_logic_vector(10 downto 0);
       signal i_write_addr: std_logic_vector(10 downto 0);
-      signal i_addr_delay1: std_logic_vector(10 downto 0);
 
       -- Valid write signal 
       signal i_val_write: std_logic;
-      signal i_val_delay1: std_logic := 'X';
+
+      -- Output signals
+      signal o_core_s0, o_core_s1, o_core_s2, o_core_s3, o_core_s4:std_logic_vector(17 downto 0);
 
       begin
 
         -- i_core_0 and o_core 4 assignment
         o_core_0 <= (others => '0');
         i_read_addr <= i_addr;
+        -- enable read
+        lsram_read <= i_val;
+
+
+        -- if ECC enabled, simply connect
+        ECC_process: process(i_clk,i_en,o_core_s0,o_core_s1,o_core_s2,o_core_s3,o_core_s4)
+        begin
+        if ECC_EN = '1' then
+            --DON'T DELAY OUTPUT
+            o_core_1 <= o_core_s1;
+            o_core_2 <= o_core_s2;
+            o_core_3 <= o_core_s3;
+            o_core_4 <= o_core_s4;
+        -- if ECC disabled, need to simulate ECC delay
+        else
+            --DELAY OUTPUT BY 1 CLK CYCLE
+            if rising_edge(i_clk) and i_en = '1' then
+                o_core_1 <= o_core_s1;
+                o_core_2 <= o_core_s2;
+                o_core_3 <= o_core_s3;
+                o_core_4 <= o_core_s4;
+            end if;
+        end if;
+        end process;
+
+
 
 
         lsram_0: lsram_1024x18
@@ -103,10 +131,10 @@ architecture rtl of cmc is
         )
         port map(
             A_ADDR => i_read_addr,
-            A_BLK => blk_const,
+            A_BLK => "111",
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
-            A_DOUT => o_core_1,
+            A_DOUT => o_core_s1,
             A_WEN => (others => '0'),
             A_REN => lsram_read,
             A_DOUT_EN => '1',
@@ -114,7 +142,7 @@ architecture rtl of cmc is
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
             B_ADDR => i_write_addr,
-            B_BLK => blk_const,
+            B_BLK => "111",
             B_CLK => i_clk,
             B_DIN => i_core_0,
             B_DOUT => open, 
@@ -140,10 +168,10 @@ architecture rtl of cmc is
         )
         port map(
             A_ADDR => i_read_addr,
-            A_BLK => blk_const,
+            A_BLK => "111",
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
-            A_DOUT => o_core_2,
+            A_DOUT => o_core_s2,
             A_WEN => (others => '0'),
             A_REN => lsram_read,
             A_DOUT_EN => '1',
@@ -151,7 +179,7 @@ architecture rtl of cmc is
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
             B_ADDR => i_write_addr,
-            B_BLK => blk_const,
+            B_BLK => "111",
             B_CLK => i_clk,
             B_DIN => i_core_1,
             B_DOUT => open, 
@@ -177,10 +205,10 @@ architecture rtl of cmc is
             )
         port map(
             A_ADDR => i_read_addr,
-            A_BLK => blk_const,
+            A_BLK => "111",
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
-            A_DOUT => o_core_3,
+            A_DOUT => o_core_s3,
             A_WEN => (others => '0'),
             A_REN => lsram_read,
             A_DOUT_EN => '1',
@@ -188,7 +216,7 @@ architecture rtl of cmc is
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
             B_ADDR => i_write_addr,
-            B_BLK => blk_const,
+            B_BLK => "111",
             B_CLK => i_clk,
             B_DIN => i_core_2,
             B_DOUT => open, 
@@ -214,10 +242,10 @@ architecture rtl of cmc is
         )
         port map(
             A_ADDR => i_read_addr,
-            A_BLK => blk_const,
+            A_BLK => "111",
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
-            A_DOUT => o_core_4,
+            A_DOUT => o_core_s4,
             A_WEN => (others => '0'),
             A_REN => lsram_read,
             A_DOUT_EN => '1',
@@ -225,7 +253,7 @@ architecture rtl of cmc is
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
             B_ADDR => i_write_addr,
-            B_BLK => blk_const,
+            B_BLK => "111",
             B_CLK => i_clk,
             B_DIN => i_core_3,
             B_DOUT => open, 
@@ -243,16 +271,14 @@ architecture rtl of cmc is
         i_val_write_delay: process(i_val, i_clk)
         begin
             if rising_edge(i_clk) and i_en = '1' then
-                i_val_delay1 <= i_val;
-                i_val_write <= i_val_delay1;
+                i_val_write <= i_val;
             end if;
         end process;
 
         i_addr_write_delay: process (i_addr, i_clk)
         begin
             if rising_edge(i_clk) and i_en = '1' then
-                i_addr_delay1 <= i_addr;
-                i_write_addr <= i_addr_delay1;
+                i_write_addr <= i_addr;
             end if;
         end process;
 
@@ -260,13 +286,6 @@ architecture rtl of cmc is
         lsram_process: process(i_val,i_val_write,i_clk)
         begin
             if rising_edge(i_clk) and i_en = '1' then 
-
-                --Read enable
-                if i_val = '1' then
-                    lsram_read <= '1';
-                else 
-                    lsram_read <= '0';
-                end if;
 
                 --Write enable
                 if i_val_write = '1' then
@@ -280,7 +299,7 @@ architecture rtl of cmc is
         
         o_pixel_process: process(i_en, i_clk,i_val_write)
         begin
-            if rising_edge(i_clk) and i_en = '1' and i_val_write = '1' then
+            if rising_edge(i_clk) and i_en = '1' and lsram_write = "11" then
                 o_pixel <= i_core_4;
             end if;
         end process;

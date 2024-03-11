@@ -62,6 +62,18 @@ end lsram_1024x18;
 
 architecture rtl of lsram_1024x18 is
 
+  --ECC enable
+  function setup1(s:std_logic) 
+        return string is
+    begin
+        if s = '1' then
+            return "TRUE";
+        else
+            return "FALSE";
+        end if;
+  end function;
+  constant ECC_ENs: string := setup1(ECC_EN);
+
   -- from altera_lnsim_components.vhd
   component altera_syncram
     generic (
@@ -246,8 +258,8 @@ begin
       read_during_write_mode_port_a  => ( "NEW_DATA_WITH_NBE_READ" ),
       read_during_write_mode_port_b  => ( "NEW_DATA_WITH_NBE_READ" ),
       -- ECC status ports setting
-      enable_ecc                     => ( "FALSE" ),
-      ecc_pipeline_stage_enabled	   => ( "FALSE" ),
+      enable_ecc                     => ( ECC_ENs ),
+      ecc_pipeline_stage_enabled	   => ( ECC_ENs ),
 
       width_eccstatus                => ( 2 ),
       -- global parameters

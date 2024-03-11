@@ -203,7 +203,7 @@ begin
   lsram_0: altera_syncram
     generic map (
       operation_mode                 => ( "BIDIR_DUAL_PORT" ),
-      optimization_option            => ( "AUTO" ),
+      --optimization_option            => ( "AUTO" ),
 
       -- port a parameters
       width_a                        => ( 18 ),

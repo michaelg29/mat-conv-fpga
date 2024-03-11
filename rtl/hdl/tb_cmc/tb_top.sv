@@ -220,7 +220,7 @@ module tb_top
                     i_val = 1'b0;
 
                     //Wait for write valid input data
-                    for(int j=0; j<WRITE_VALID_DELAY; j++) @(negedge i_clk);
+                    for(int j=0; j<WRITE_VALID_DELAY-1; j++) @(negedge i_clk);
 
                     //Give valid input value
                     i_core[port] = addr+port;
