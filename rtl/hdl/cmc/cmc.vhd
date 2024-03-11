@@ -74,27 +74,22 @@ architecture rtl of cmc is
       signal lsram0_read, lsram1_read, lsram2_read, lsram3_read: std_logic;
       signal lsram0_write, lsram1_write, lsram2_write, lsram3_write: std_logic_vector (1 downto 0);
 
-      -- Address process states
-      signal i_addr_signal : std_logic_vector(10 downto 0);
-      type addr_state is (initial, new_addr, latch_addr);
-      signal address_state: addr_state;
+      -- Address signal
+      signal i_read_addr: std_logic_vector(10 downto 0);
+      signal i_write_addr: std_logic_vector(10 downto 0);
+      signal i_addr_delay1: std_logic_vector(10 downto 0);
 
-      -- Read and write proces states
-      type read_and_write_state is (initial, 
-                            write_0_s, write_0_c, read_0_s, read_0_c,
-                            write_1_s, write_1_c, read_1_s, read_1_c,
-                            write_2_s, write_2_c, read_2_s, read_2_c,
-                            write_3_s, write_3_c, read_3_s, read_3_c);
-      signal lsram_state: read_and_write_state;
-
-      -- signal for clock latch
-      -- signal clk_latch: std_logic;
+      -- Valid write signal 
+      signal i_val_write: std_logic;
+      signal i_val_delay1: std_logic := 'X';
 
       begin
 
         -- i_core_0 and o_core 4 assignment
         o_core_0 <= (others => '0');
         o_pixel <= i_core_4;
+        i_read_addr <= i_addr;
+
 
         lsram_0: lsram_1024x18
         generic map(
@@ -108,7 +103,7 @@ architecture rtl of cmc is
             SECURITY => '0'
         )
         port map(
-            A_ADDR => i_addr_signal,
+            A_ADDR => i_read_addr,
             A_BLK => blk_const,
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
@@ -119,7 +114,7 @@ architecture rtl of cmc is
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
-            B_ADDR => i_addr_signal,
+            B_ADDR => i_write_addr,
             B_BLK => blk_const,
             B_CLK => i_clk,
             B_DIN => i_core_0,
@@ -145,7 +140,7 @@ architecture rtl of cmc is
             SECURITY => '0'
         )
         port map(
-            A_ADDR => i_addr_signal,
+            A_ADDR => i_read_addr,
             A_BLK => blk_const,
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
@@ -156,7 +151,7 @@ architecture rtl of cmc is
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
-            B_ADDR => i_addr_signal,
+            B_ADDR => i_write_addr,
             B_BLK => blk_const,
             B_CLK => i_clk,
             B_DIN => i_core_1,
@@ -182,7 +177,7 @@ architecture rtl of cmc is
             SECURITY => '0'
             )
         port map(
-            A_ADDR => i_addr_signal,
+            A_ADDR => i_read_addr,
             A_BLK => blk_const,
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
@@ -193,7 +188,7 @@ architecture rtl of cmc is
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
-            B_ADDR => i_addr_signal,
+            B_ADDR => i_write_addr,
             B_BLK => blk_const,
             B_CLK => i_clk,
             B_DIN => i_core_2,
@@ -219,7 +214,7 @@ architecture rtl of cmc is
             SECURITY => '0'
         )
         port map(
-            A_ADDR => i_addr_signal,
+            A_ADDR => i_read_addr,
             A_BLK => blk_const,
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
@@ -230,7 +225,7 @@ architecture rtl of cmc is
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
-            B_ADDR => i_addr_signal,
+            B_ADDR => i_write_addr,
             B_BLK => blk_const,
             B_CLK => i_clk,
             B_DIN => i_core_3,
@@ -244,100 +239,77 @@ architecture rtl of cmc is
             ARST_N => '1',
             BUSY => open);
         
-        -- LSRAM address FSM to latch address for one extra clock cycle
-        lsram_address_state   : process(i_clk, i_val, i_en)
+        
+        -- Processes to delay i_val and i_addr for two clock cycles for write operation
+        i_val_write_delay: process(i_val, i_clk)
         begin
             if rising_edge(i_clk) and i_en = '1' then
-            case address_state is
-                when initial =>
-                    if i_val = '1' then address_state <= new_addr; end if;
-                when new_addr =>
-                    address_state <= latch_addr; 
-                when latch_addr =>
-                    address_state <= initial;
-                end case;
+                i_val_delay1 <= i_val;
+                i_val_write <= i_val_delay1;
             end if;
         end process;
 
-        lsram_address_value : process(address_state)
+        i_addr_write_delay: process (i_addr, i_clk)
         begin
             if rising_edge(i_clk) and i_en = '1' then
-                case address_state is
-                    when initial => i_addr_signal <= (others => 'X');
-                    when new_addr => i_addr_signal <= i_addr;
-                    when latch_addr => i_addr_signal <= i_addr;
-                end case;
+                i_addr_delay1 <= i_addr;
+                i_write_addr <= i_addr_delay1;
             end if;
         end process;
 
-
-        -- LSRAM read and write FSM 
-        lsram_read_and_write_state: process(i_clk, i_val, i_en)
+        -- LSRAM read and write processes
+        lsram0_process: process(i_val,i_val_write,i_clk)
         begin
-            if rising_edge(i_clk) and i_en = '1' then
-            case lsram_state is
-                when initial =>
-                    if i_val = '1' then lsram_state <= write_0_s; 
-                    else lsram_state <= initial; end if;
-                when write_0_s => lsram_state <= write_0_c;
-                when write_0_c => lsram_state <= read_0_s;
-                when read_0_s => lsram_state <= read_0_c;
-                when read_0_c => lsram_state <= write_1_s;
-                when write_1_s => lsram_state <= write_1_c;
-                when write_1_c => lsram_state <= read_1_s;
-                when read_1_s => lsram_state <= read_1_c;
-                when read_1_c => lsram_state <= write_2_s;
-                when write_2_s => lsram_state <= write_2_c;
-                when write_2_c => lsram_state <= read_2_s;
-                when read_2_s => lsram_state <= read_2_c;
-                when read_2_c => lsram_state <= write_3_s;
-                when write_3_s => lsram_state <= write_3_c;
-                when write_3_c => lsram_state <= read_3_s;
-                when read_3_s => lsram_state <= read_3_c;
-                when read_3_c => lsram_state <= initial;
-                end case;
-            end if;
-        end process;
-
-        lsram_read_and_write: process(lsram_state)
-        begin
-            if rising_edge(i_clk) and i_en = '1' then
-            case lsram_state is
-                when initial => lsram3_read <= '0';
-                when write_0_s => lsram0_write <= "11";
-                when write_0_c => lsram0_write <= "11";
-                when read_0_s =>
-                    lsram0_write <= "00";
+            if rising_edge(i_clk) and i_en = '1' then 
+                if i_val = '1' then
                     lsram0_read <= '1';
-                when read_0_c => lsram0_read <= '1';
-                when write_1_s =>
+                    lsram0_write <= "00"; -- assert write to 0 to make sure
+                elsif i_val_write = '1' then
                     lsram0_read <= '0';
-                    lsram1_write <= "11";
-                when write_1_c => lsram1_write <= "11";
-                when read_1_s => 
-                    lsram1_write <= "00";
+                    lsram0_write <= "11";
+                end if;
+            end if;
+        end process;
+                
+        lsram1_process: process(i_val,i_val_write,i_clk)
+        begin
+            if rising_edge(i_clk) and i_en = '1' then 
+                if i_val = '1' then
                     lsram1_read <= '1';
-                when read_1_c => lsram1_read <= '1';
-                when write_2_s => 
+                    lsram1_write <= "00"; -- assert write to 0 to make sure
+                elsif i_val_write = '1' then
                     lsram1_read <= '0';
-                    lsram2_write <= "11";
-                when write_2_c => lsram2_write <= "11";
-                when read_2_s =>
-                    lsram2_write <= "00";
-                    lsram2_read <= '1';
-                when read_2_c => lsram2_read <= '1';
-                when write_3_s => 
-                    lsram2_read <= '0';
-                    lsram3_write <= "11";
-                when write_3_c => lsram3_write <= "11";
-                when read_3_s =>
-                    lsram3_write <= "00";
-                    lsram3_read <= '1';
-                when read_3_c => lsram3_read <= '1';
-                end case;
+                    lsram1_write <= "11";
+                end if;
             end if;
         end process;
 
+        lsram2_process: process(i_val,i_val_write,i_clk)
+        begin
+            if rising_edge(i_clk) and i_en = '1' then 
+                if i_val = '1' then
+                    lsram2_read <= '1';
+                    lsram2_write <= "00"; -- assert write to 0 to make sure
+                elsif i_val_write = '1' then
+                    lsram2_read <= '0';
+                    lsram2_write <= "11";
+                end if;
+            end if;
+        end process;
+
+        lsram3_process: process(i_val,i_val_write,i_clk)
+        begin
+            if rising_edge(i_clk) and i_en = '1' then 
+                if i_val = '1' then
+                    lsram3_read <= '1';
+                    lsram3_write <= "00"; -- assert write to 0 to make sure
+                elsif i_val_write = '1' then
+                    lsram3_read <= '0';
+                    lsram3_write <= "11";
+                end if;
+            end if;
+        end process;
+                
                 
 
 
