@@ -280,7 +280,7 @@ architecture rtl of cmc is
         
         o_pixel_process: process(i_en, i_clk,i_val_write)
         begin
-            if rising_edge(i_clk) and i_en = '1' then
+            if rising_edge(i_clk) and i_en = '1' and i_val_write = '1' then
                 o_pixel <= i_core_4;
             end if;
         end process;
