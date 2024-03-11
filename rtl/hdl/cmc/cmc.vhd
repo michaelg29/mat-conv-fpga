@@ -87,7 +87,6 @@ architecture rtl of cmc is
 
         -- i_core_0 and o_core 4 assignment
         o_core_0 <= (others => '0');
-        o_pixel <= i_core_4;
         i_read_addr <= i_addr;
 
 
@@ -277,6 +276,14 @@ architecture rtl of cmc is
                 end if;
 
             end if;
-        end process;              
+        end process;   
+        
+        o_pixel_process: process(i_en, i_clk)
+        begin
+            if rising_edge(i_clk) and i_en = '1' then
+                o_pixel <= i_core_4;
+            end if;
+        end process;
+        
 
 end rtl;
