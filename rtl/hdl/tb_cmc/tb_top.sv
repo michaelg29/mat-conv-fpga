@@ -294,62 +294,84 @@ module tb_top
             i_val = 1'b0;
             @(negedge i_clk);
 
+
+            i_core = {{KERNEL_SIZE{18'hBEEF}}};
+
+
             //Next inputs are valid
             i_val = 1'b1;
 
-            // Loop through all addresses to write (need +WRITE_DELAY due to timing delays)
-            for(addr = MIN_ADDR ; addr <= MAX_ADDR+WRITE_DELAY ; addr++) begin
+            // Loop through all addresses to write (need +WRITE_VALID_DELAY due to timing delays)
+            for(addr = 0 ; addr < (MAX_ADDR-MIN_ADDR+1)+WRITE_VALID_DELAY ; addr++) begin
 
+
+                /*
+                    WRITE OPERATION
+                */
                 //Generate random input
-                randval = addr+port;
-                i_core = {{18{1'b0}},{(KERNEL_SIZE-1){randval[17:0]}}}; //first output port is always 0
+                randval = addr+10;
                 //assert(std::randomize(i_val)); //NEED LICENSE
 
                 //Save output for latest comparison
-                o_expected[addr]= i_val;
+                o_expected[addr]= {{KERNEL_SIZE{randval[17:0]}},{18{1'b0}}};
 
                 //Give addr
                 i_addr = addr;
-                if(MAX_ADDR-addr < WRITE_DELAY) begin
+                if((MAX_ADDR-MIN_ADDR) < addr) begin
                     //Done with all addresses, still need to give inputs
                     i_val = 1'b0;
                 end
 
                 //Give input
-                if(addr-MIN_ADDR >= WRITE_DELAY) begin //input is only valid after WRITE_DELAY clock cycles, need to wait
-                    i_core = o_expected[addr-WRITE_DELAY];
+                if(addr >= WRITE_VALID_DELAY) begin //input is only valid after WRITE_DELAY clock cycles, need to wait
+                    i_core = o_expected[addr-WRITE_VALID_DELAY][KERNEL_SIZE:1];
                 end
                 @(negedge i_clk);
 
+                /*
+                Check o_pixel
+                */
+                if((addr >= WRITE_VALID_DELAY)) begin
+                    if(o_expected[addr-WRITE_VALID_DELAY][KERNEL_SIZE] != o_pixel) begin
+                        `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X\noutput = 0x%X ; expected = 0x%X",addr,o_pixel,o_expected[addr][KERNEL_SIZE-WRITE_VALID_DELAY]));
+                        @(negedge i_clk);
+                        $finish(2);
+                    end
+                end
             end
 
+            @(negedge i_clk);
 
             //Next outputs are valid
             i_val = 1'b1;
 
             // Loop through all addresses to read
-            for(addr = MIN_ADDR ; addr <= MAX_ADDR+READ_DELAY ; addr++) begin
+            for(addr = 0 ; addr < (MAX_ADDR-MIN_ADDR+1)+READ_DELAY ; addr++) begin
 
                 //Give addr
-                if(MAX_ADDR-addr < READ_DELAY) begin
+                i_addr = addr;
+                if((MAX_ADDR-MIN_ADDR) < addr) begin
                     //Done with all addresses, still wait for next outputs
                     i_val = 1'b0;
                 end
 
                 //Get output
-                @(negedge i_clk);
-                if(addr-MIN_ADDR >= READ_DELAY) begin //output is only valid after READ_DELAY clock cycles, need to wait
+                if(addr > READ_DELAY) begin //output is only valid after READ_DELAY clock cycles, need to wait
 
-                    //Check result
-                    if(o_expected[addr] != {o_core,o_pixel}) begin
-                        `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X\noutput = 0x%X ; expected = 0x%X",addr,{o_core,o_pixel},o_expected[addr]));
+                    //Check result (everything but o_pixel)
+                    if(o_expected[addr-READ_DELAY-1][KERNEL_SIZE-1:0] != o_core) begin
+                        `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X\noutput = 0x%X ; expected = 0x%X",addr-READ_DELAY+1,o_core,o_expected[addr-READ_DELAY-1][KERNEL_SIZE-1:0]));
                         @(negedge i_clk);
                         $finish(2);
                     end
 
                 end
+                @(negedge i_clk);
 
             end
+
+            @(negedge i_clk);
+            @(negedge i_clk);
 
         end
 

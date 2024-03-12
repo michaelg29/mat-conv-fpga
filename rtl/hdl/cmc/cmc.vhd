@@ -74,6 +74,7 @@ architecture rtl of cmc is
       --signal a0_db, b0_db,a1_db, b1_db, a2_db, b2_db, a3_db, b3_db: std_logic;
       signal lsram_read: std_logic;
       signal lsram_write: std_logic_vector (1 downto 0);
+      signal lsram_addr: std_logic_vector(10 downto 0);
 
       -- Address signal
       signal i_read_addr: std_logic_vector(10 downto 0);
@@ -141,7 +142,7 @@ architecture rtl of cmc is
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
-            B_ADDR => i_write_addr,
+            B_ADDR => lsram_addr,
             B_BLK => "111",
             B_CLK => i_clk,
             B_DIN => i_core_0,
@@ -178,7 +179,7 @@ architecture rtl of cmc is
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
-            B_ADDR => i_write_addr,
+            B_ADDR => lsram_addr,
             B_BLK => "111",
             B_CLK => i_clk,
             B_DIN => i_core_1,
@@ -215,7 +216,7 @@ architecture rtl of cmc is
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
-            B_ADDR => i_write_addr,
+            B_ADDR => lsram_addr,
             B_BLK => "111",
             B_CLK => i_clk,
             B_DIN => i_core_2,
@@ -252,7 +253,7 @@ architecture rtl of cmc is
             A_DOUT_SRST_N => '1',
             A_SB_CORRECT => open,
             A_DB_DETECT => open,
-            B_ADDR => i_write_addr,
+            B_ADDR => lsram_addr,
             B_BLK => "111",
             B_CLK => i_clk,
             B_DIN => i_core_3,
@@ -268,16 +269,10 @@ architecture rtl of cmc is
         
         
         -- Processes to delay i_val and i_addr for two clock cycles for write operation
-        i_val_write_delay: process(i_val, i_clk)
+        i_write_delay: process(i_val, i_clk)
         begin
             if rising_edge(i_clk) and i_en = '1' then
                 i_val_write <= i_val;
-            end if;
-        end process;
-
-        i_addr_write_delay: process (i_addr, i_clk)
-        begin
-            if rising_edge(i_clk) and i_en = '1' then
                 i_write_addr <= i_addr;
             end if;
         end process;
@@ -290,6 +285,7 @@ architecture rtl of cmc is
                 --Write enable
                 if i_val_write = '1' then
                     lsram_write <= "11";
+                    lsram_addr <= i_write_addr;
                 else
                     lsram_write <= "00";
                 end if;
