@@ -86,13 +86,6 @@ architecture rtl of cmc is
       -- Output signals
       signal o_core_s0, o_core_s1, o_core_s2, o_core_s3, o_core_s4:std_logic_vector(17 downto 0);
 
-      -- signal for latching read data for four clock cycles
-      signal lsram0_dout, lsram1_dout, lsram2_dout, lsram3_dout: std_logic_vector(17 downto 0);
-      signal read_latch: std_logic;
-      type read_signal_state is (read_reset, read_state0, read_state1, read_state2, read_state3);
-      signal read_signal_control: read_signal_state;
-
-
       begin
 
         -- i_core_0 and o_core 4 assignment
@@ -123,45 +116,7 @@ architecture rtl of cmc is
         end if;
         end process;
 
-        -- latch read data for four clock cycles processes
-        read_data_state: process(i_clk, i_val, i_en)
-        begin
-            if rising_edge(i_clk) and i_en = '1' then
-            case read_signal_control is
-                when read_reset =>
-                    read_latch <= '0';
-                    if i_val = '1' then
-                        read_signal_control <= read_state0;
-                    end if;
-                when read_state0 =>
-                    read_signal_control <= read_state1;
-                when read_state1 =>
-                    read_latch <= '1';
-                    read_signal_control <= read_state2;
-                when read_state2 => 
-                    read_signal_control <= read_state3;
-                when read_state3 => 
-                    read_signal_control <= read_reset;
-                end case;
-            end if;
-        end process;
 
-
-
-        read_data_process: process(read_latch,i_clk,i_en)
-        begin
-            if rising_edge(i_clk) and i_en = '1'  and read_latch = '0' then
-                o_core_s1 <= lsram0_dout;
-                o_core_s2 <= lsram1_dout;
-                o_core_s3 <= lsram2_dout;
-                o_core_s4 <= lsram3_dout;
-            elsif rising_edge(i_clk) and i_en = '1' and read_latch = '1' then
-                o_core_s1 <= o_core_s1;
-                o_core_s2 <= o_core_s2;
-                o_core_s3 <= o_core_s3;
-                o_core_s4 <= o_core_s4;
-            end if;
-        end process;
 
 
         lsram_0: lsram_1024x18
@@ -180,7 +135,7 @@ architecture rtl of cmc is
             A_BLK => "111",
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
-            A_DOUT => lsram0_dout,
+            A_DOUT => o_core_s1,
             A_WEN => (others => '0'),
             A_REN => lsram_read,
             A_DOUT_EN => '1',
@@ -217,7 +172,7 @@ architecture rtl of cmc is
             A_BLK => "111",
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
-            A_DOUT => lsram1_dout,
+            A_DOUT => o_core_s2,
             A_WEN => (others => '0'),
             A_REN => lsram_read,
             A_DOUT_EN => '1',
@@ -254,7 +209,7 @@ architecture rtl of cmc is
             A_BLK => "111",
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
-            A_DOUT => lsram2_dout,
+            A_DOUT => o_core_s3,
             A_WEN => (others => '0'),
             A_REN => lsram_read,
             A_DOUT_EN => '1',
@@ -291,7 +246,7 @@ architecture rtl of cmc is
             A_BLK => "111",
             A_CLK => i_clk,
             A_DIN => (others => 'X'),
-            A_DOUT => lsram3_dout,
+            A_DOUT => o_core_s4,
             A_WEN => (others => '0'),
             A_REN => lsram_read,
             A_DOUT_EN => '1',
