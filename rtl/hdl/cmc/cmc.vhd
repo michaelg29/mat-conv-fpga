@@ -85,13 +85,6 @@ architecture rtl of cmc is
 
       -- Output signals
       signal o_core_s0, o_core_s1, o_core_s2, o_core_s3, o_core_s4:std_logic_vector(17 downto 0);
-      signal lsram0_din, lsram1_din, lsram2_din, lsram3_din, i_core4_din: std_logic_vector(17 downto 0);
-      signal i_core_0_d1, i_core_0_d2, i_core_0_d3,
-      i_core_1_d1,i_core_1_d2,i_core_1_d3,
-      i_core_2_d1,i_core_2_d2,i_core_2_d3,
-      i_core_3_d1,i_core_3_d2,i_core_3_d3,
-      i_core_4_d1,i_core_4_d2,i_core_4_d3: std_logic_vector (17 downto 0);
-
 
       begin
 
@@ -152,7 +145,7 @@ architecture rtl of cmc is
             B_ADDR => lsram_addr,
             B_BLK => "111",
             B_CLK => i_clk,
-            B_DIN => lsram0_din,
+            B_DIN => i_core_0,
             B_DOUT => open, 
             B_WEN => lsram_write,
             B_REN => '0',
@@ -189,7 +182,7 @@ architecture rtl of cmc is
             B_ADDR => lsram_addr,
             B_BLK => "111",
             B_CLK => i_clk,
-            B_DIN =>lsram1_din,
+            B_DIN => i_core_1,
             B_DOUT => open, 
             B_WEN => lsram_write,
             B_REN => '0',
@@ -226,7 +219,7 @@ architecture rtl of cmc is
             B_ADDR => lsram_addr,
             B_BLK => "111",
             B_CLK => i_clk,
-            B_DIN => lsram2_din,
+            B_DIN => i_core_2,
             B_DOUT => open, 
             B_WEN => lsram_write,
             B_REN => '0',
@@ -263,7 +256,7 @@ architecture rtl of cmc is
             B_ADDR => lsram_addr,
             B_BLK => "111",
             B_CLK => i_clk,
-            B_DIN => lsram3_din,
+            B_DIN => i_core_3,
             B_DOUT => open, 
             B_WEN => lsram_write,
             B_REN => '0',
@@ -303,40 +296,9 @@ architecture rtl of cmc is
         o_pixel_process: process(i_en, i_clk,i_val_write)
         begin
             if rising_edge(i_clk) and i_en = '1' and lsram_write = "11" then
-                o_pixel <= i_core4_din;
+                o_pixel <= i_core_4;
             end if;
         end process;
 
-        -- delay i_core_* signal for four clock cycles after i_val is asserted
-        data_in_delay_process: process(i_en, i_clk,i_val)
-        begin
-            if rising_edge(i_clk) and i_en = '1' then
-                if i_val = '1' then
-                    i_core_0_d1 <= i_core_0;
-                    i_core_1_d1 <= i_core_1;
-                    i_core_2_d1 <= i_core_2;
-                    i_core_3_d1 <= i_core_3;
-                    i_core_4_d1 <= i_core_4;
-                else
-                    i_core_0_d2 <= i_core_0_d1;
-                    i_core_1_d2 <= i_core_1_d1;
-                    i_core_2_d2 <= i_core_2_d1;
-                    i_core_3_d2 <= i_core_3_d1;
-                    i_core_3_d2 <= i_core_3_d1;
-                    i_core_4_d2 <= i_core_4_d1;
 
-                    i_core_0_d3 <= i_core_0_d2;
-                    i_core_1_d3 <= i_core_1_d2;
-                    i_core_2_d3 <= i_core_2_d2;
-                    i_core_3_d3 <= i_core_3_d2;
-                    i_core_4_d3 <= i_core_4_d2;
-
-                    lsram0_din <= i_core_0_d3;
-                    lsram1_din <= i_core_1_d3;
-                    lsram2_din <= i_core_2_d3;
-                    lsram3_din <= i_core_3_d3;
-                    i_core4_din <= i_core_4_d3;
-                end if;
-            end if;
-        end process;
 end rtl;
