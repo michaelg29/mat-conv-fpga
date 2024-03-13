@@ -79,6 +79,8 @@ architecture rtl of cmc is
       -- Address signal
       signal i_read_addr: std_logic_vector(10 downto 0);
       signal i_write_addr: std_logic_vector(10 downto 0);
+      signal i_write_addr_delay1: std_logic_vector(10 downto 0);
+      signal i_write_addr_delay2: std_logic_vector(10 downto 0);
 
       -- Valid write signal 
       signal i_val_write: std_logic;
