@@ -83,10 +83,6 @@ architecture rtl of cmc is
       -- Valid write signal 
       signal i_val_write: std_logic;
 
-      -- write delay signal
-      signal i_val_write_d1, i_val_write_d2: std_logic;
-      signal i_write_addr_d1, i_write_addr_d2: std_logic_vector (10 downto 0); 
-
       -- Output signals
       signal o_core_s0, o_core_s1, o_core_s2, o_core_s3, o_core_s4:std_logic_vector(17 downto 0);
 
@@ -273,16 +269,11 @@ architecture rtl of cmc is
         
         
         -- Processes to delay i_val and i_addr for two clock cycles for write operation
-        i_write_delay: process(i_val, i_clk, i_en)
+        i_write_delay: process(i_val, i_clk)
         begin
             if rising_edge(i_clk) and i_en = '1' then
-                i_val_write <= i_val_write_d2;
-                i_val_write_d2 <= i_val_write_d1;
-                i_val_write_d1 <= i_val;
-
-                i_write_addr <= i_write_addr_d2;
-                i_write_addr_d2 <= i_write_addr_d1;
-                i_write_addr_d1 <= i_addr;
+                i_val_write <= i_val;
+                i_write_addr <= i_addr;
             end if;
         end process;
 
