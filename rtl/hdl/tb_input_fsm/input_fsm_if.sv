@@ -1,4 +1,5 @@
 
+`include "../tb_common/mat_conv.svh"
 `include "uvm_macros.svh"
 
 // interface to wrap around the Input FSM
@@ -44,5 +45,69 @@ interface input_fsm_if #(
   wire           eor;
   wire           prepad_done;
   wire           payload_done;
+
+  // clocked block
+  clocking cb @ (posedge macclk);
+    input write_blank_en, drop_pkts, addr, ren, wen, wdata, cmd_valid, cmd_err, cmd_kern, cmd_subj, cmd_kern_signed, eor, prepad_done, payload_done;
+    output rx_pkt, rx_addr, rx_data, write_blank_ack, rdata, rvalid, state_reg_pls, proc_error, res_written;
+  endclocking;
+
+  task send_cmd(
+    input logic [29:0] out_addr,
+    input logic        cmd_type,
+    input logic        kern_signed,
+    input logic [29:0] size,
+    input logic [31:0] tx_addr,
+    input logic [31:0] trans_id,
+    input logic [31:0] s_key = 32'hCAFECAFE,
+    input logic [31:0] e_key = 32'hDEADBEEF,
+    input logic        invalid_chksum = '0
+  );
+    // calculate checksum
+    automatic logic [31:0] chksum = s_key ^
+      {kern_signed, cmd_type, out_addr} ^
+      {2'b0, size} ^
+      tx_addr ^
+      trans_id ^
+      32'b0 ^
+      e_key;
+
+    // invalidate checksum
+    if ((invalid_chksum = '1)) chksum = chksum + 1;
+
+    cb.rx_pkt <= 1'b1;
+
+    // S_KEY, CMD
+    cb.rx_addr <= 8'h80;
+    cb.rx_data <= {kern_signed, cmd_type, out_addr};
+    @cb;
+
+    // check output
+    `ASSERT_EQ(cb.addr, 3'b001, %3b);
+    `ASSERT_EQ(cb.wen, 1'b1, %b);
+    `ASSERT_EQ(cb.wdata, {out_addr, 2'b0}, %08x);
+
+    // SIZE, TX_ADDR
+    cb.rx_addr <= 8'h88;
+    cb.rx_data <= {tx_addr, size};
+    @cb;
+
+    // check output
+    `ASSERT_EQ(cb.addr, 3'b010, %3b);
+    `ASSERT_EQ(cb.wen, 1'b1, %b);
+    `ASSERT_EQ(cb.wdata, {out_addr, 2'b0}, %08x);
+
+    // TRANS_ID, reserved
+    cb.rx_addr <= 8'h90;
+    cb.rx_data <= {32'b0, trans_id};
+    @cb;
+
+    // E_KEY, CHKSUM
+    cb.rx_addr <= 8'h98;
+    cb.rx_data <= {chksum, e_key};
+    @cb;
+
+    cb.rx_pkt <= 1'b0;
+  endtask
 
 endinterface // input_fsm_if

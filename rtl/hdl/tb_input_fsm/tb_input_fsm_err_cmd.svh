@@ -24,29 +24,16 @@ class tb_input_fsm_err_cmd extends mat_conv_tc;
 
     #(MACCLK_PER);
 
-    // incorrect S_KEY, okay CMD
-    vif.rx_pkt = 1'b1;
-    vif.rx_addr = 8'h80;
-    vif.rx_data = 64'h0000000012345678;
-    #(MACCLK_PER);
-
-    // incorrect SIZE, okay TX_ADDR
-    vif.rx_pkt = 1'b1;
-    vif.rx_addr = 8'h88;
-    vif.rx_data = 64'h0000000012345678;
-    #(MACCLK_PER)
-
-    // okay TRANS_ID, okay reserved
-    vif.rx_pkt = 1'b1;
-    vif.rx_addr = 8'h90;
-    vif.rx_data = 64'h0000000100000000;
-    #(MACCLK_PER);
-
-    // incorrect E_KEY, incorrect CHKSUM
-    vif.rx_pkt = 1'b1;
-    vif.rx_addr = 8'h98;
-    vif.rx_data = 64'h0000000000000000;
-    #(MACCLK_PER);
+    // send command
+    vif.send_cmd(
+      '0, '0, '0, // cmd
+      '0,         // size
+      '0,         // tx_addr
+      '0,         // trans_id
+      '0,         // s_key
+      '0,         // e_key
+      1'b1        // invalid_chksum
+    );
 
     // spin one cycle
     vif.rx_pkt = 1'b0;
@@ -55,6 +42,7 @@ class tb_input_fsm_err_cmd extends mat_conv_tc;
     // check cluster control output
     `ASSERT_EQ(vif.cmd_kern, 1'b0, %b);
     `ASSERT_EQ(vif.cmd_subj, 1'b0, %b);
+    `ASSERT_EQ(vif.cmd_kern_signed, 1'b0, %b);
     #(MACCLK_PER);
 
     // check global status output
