@@ -54,7 +54,9 @@ module tb_top
     //========================================
 
     //TODO fix port naming
-    cmc DUT(
+    cmc #(
+        .ECC_EN(1'b0)
+    ) DUT (
         .i_clk(i_clk),
         .i_en(i_en),
 
@@ -258,7 +260,6 @@ module tb_top
                     if(!res) begin
                         `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X ; port = %d\noutput = 0x%X ; expected = 0x%X",addr,port,{o_pixel,o_core},o_expected));
                         @(negedge i_clk);
-                        $finish(2);
                     end
 
                     //Reset o_expect
@@ -338,7 +339,6 @@ module tb_top
                     if(o_expected[addr-WRITE_VALID_DELAY][KERNEL_SIZE] != o_pixel) begin
                         `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X\noutput = 0x%X ; expected = 0x%X",addr,o_pixel,o_expected[addr][KERNEL_SIZE-WRITE_VALID_DELAY]));
                         @(negedge i_clk);
-                        $finish(2);
                     end
                 end
             end
@@ -365,7 +365,6 @@ module tb_top
                     if(o_expected[addr-READ_DELAY-1][KERNEL_SIZE-1:0] != o_core) begin
                         `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X\noutput = 0x%X ; expected = 0x%X",addr-READ_DELAY+1,o_core,o_expected[addr-READ_DELAY-1][KERNEL_SIZE-1:0]));
                         @(negedge i_clk);
-                        $finish(2);
                     end
 
                 end

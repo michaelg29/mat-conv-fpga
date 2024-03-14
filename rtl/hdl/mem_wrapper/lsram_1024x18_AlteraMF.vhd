@@ -66,7 +66,7 @@ architecture rtl of lsram_1024x18 is
   component altera_syncram
     generic (
       operation_mode                 : string := "BIDIR_DUAL_PORT";
-      optimization_option            : string := "AUTO";
+      --optimization_option            : string := "AUTO";
       -- port a parameters
       width_a                        : integer := 1;
       widthad_a                      : integer := 1;

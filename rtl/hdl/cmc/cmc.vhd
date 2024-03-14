@@ -2,21 +2,25 @@ library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 
+library mem_wrapper_library;
+use mem_wrapper_library.all;
+
 LIBRARY altera_lnsim;
 USE altera_lnsim.altera_lnsim_components.all;
 
 entity cmc is
+    generic(
+    ECC_EN: integer := 0
+    ); 
     port(i_addr: in std_logic_vector(10 downto 0);
         i_core_0, i_core_1, i_core_2,i_core_3, i_core_4: in std_logic_vector(17 downto 0);
         o_core_0, o_core_1, o_core_2,o_core_3, o_core_4, o_pixel: out std_logic_vector(17 downto 0);
         i_clk, i_en: in std_logic;
-        i_val: in std_logic);
+        i_val: in std_logic
+        );
 end cmc;
 
 architecture rtl of cmc is
-
-    --ECC enable control
-    constant ECC_EN: std_logic := '0';
 
     component lsram_1024x18 is
         generic(
@@ -31,7 +35,9 @@ architecture rtl of cmc is
           B_DOUT_BYPASS   : std_logic;
       
           -- static common signals
-          ECC_EN          : std_logic := ECC_EN;
+          --convert the integer generic to std_logic
+          --(cannot pass std_logic from verilog to VHDL generics apparently)
+          ECC_EN          : std_logic := std_logic(to_unsigned(ECC_EN, 1)(0));
           ECC_DOUT_BYPASS : std_logic := '0';
           DELEN           : std_logic;
           SECURITY        : std_logic
@@ -102,26 +108,33 @@ architecture rtl of cmc is
 
 
         -- if ECC enabled, simply connect
-        ECC_process: process(i_clk,i_en,o_core_s0,o_core_s1,o_core_s2,o_core_s3,o_core_s4)
-        begin
-        if ECC_EN = '1' then
-            --DON'T DELAY OUTPUT
-            o_core_1 <= o_core_s1;
-            o_core_2 <= o_core_s2;
-            o_core_3 <= o_core_s3;
-            o_core_4 <= o_core_s4;
-        -- if ECC disabled, need to simulate ECC delay
-        else
-            --DELAY OUTPUT BY 1 CLK CYCLE
-            if rising_edge(i_clk) and i_en = '1' then
+        g_ECC: if ECC_EN = 1 generate
+            p_ECC: process
+            begin
+                --DON'T DELAY OUTPUT
                 o_core_1 <= o_core_s1;
                 o_core_2 <= o_core_s2;
                 o_core_3 <= o_core_s3;
                 o_core_4 <= o_core_s4;
-            end if;
-        end if;
-        end process;
+            end process;
+        end generate g_ECC;
 
+        --if-else generate not supported. Need to add all if statements
+        g_ECCn: if ECC_EN = 0 generate
+            -- if ECC disabled, need to simulate ECC delay
+            p_ECCn: process(i_clk)
+            begin
+                if rising_edge(i_clk) then
+                    --DELAY OUTPUT BY 1 CLK CYCLE
+                    if i_en = '1' then
+                        o_core_1 <= o_core_s1;
+                        o_core_2 <= o_core_s2;
+                        o_core_3 <= o_core_s3;
+                        o_core_4 <= o_core_s4;
+                    end if;
+                end if;
+            end process;
+        end generate g_ECCn;
 
 
 
@@ -306,8 +319,13 @@ architecture rtl of cmc is
         
         o_pixel_process: process(i_en, i_clk,i_val_write)
         begin
-            if rising_edge(i_clk) and i_en = '1' and lsram_write = "11" then
-                o_pixel <= i_core_4;
+            if rising_edge(i_clk) then
+
+                --Bypass i_core_4 to o_pixel when i_core_* are valid
+                if i_en = '1' and lsram_write = "11" then
+                    o_pixel <= i_core_4;
+
+                end if;
             end if;
         end process;
 
