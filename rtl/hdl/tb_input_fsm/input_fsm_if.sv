@@ -1,3 +1,4 @@
+`timescale 1 ps/ 1 ps
 
 `include "../tb_common/mat_conv.svh"
 `include "uvm_macros.svh"
@@ -47,11 +48,12 @@ interface input_fsm_if #(
   wire           payload_done;
 
   // clocked block
-  clocking cb @ (posedge macclk);
-    input write_blank_en, drop_pkts, addr, ren, wen, wdata, cmd_valid, cmd_err, cmd_kern, cmd_subj, cmd_kern_signed, eor, prepad_done, payload_done;
+  clocking cb @(posedge macclk);
+    input #0 write_blank_en, drop_pkts, addr, ren, wen, wdata, cmd_valid, cmd_err, cmd_kern, cmd_subj, cmd_kern_signed, eor, prepad_done, payload_done;
     output rx_pkt, rx_addr, rx_data, write_blank_ack, rdata, rvalid, state_reg_pls, proc_error, res_written;
   endclocking;
 
+  // issue a command to the interface in 4 64b packets
   task send_cmd(
     input logic [29:0] out_addr,
     input logic        cmd_type,
@@ -61,7 +63,7 @@ interface input_fsm_if #(
     input logic [31:0] trans_id,
     input logic [31:0] s_key = 32'hCAFECAFE,
     input logic [31:0] e_key = 32'hDEADBEEF,
-    input logic        invalid_chksum = '0
+    input logic        invalid_chksum = 1'b0
   );
     // calculate checksum
     automatic logic [31:0] chksum = s_key ^
@@ -72,30 +74,39 @@ interface input_fsm_if #(
       32'b0 ^
       e_key;
 
-    // invalidate checksum
-    if ((invalid_chksum = '1)) chksum = chksum + 1;
+    `uvm_info("input_fsm_if", $sformatf("Sending command %08x", {kern_signed, cmd_type, out_addr}), UVM_NONE);
 
+    // invalidate checksum
+    if ((invalid_chksum == 1'b1)) begin
+      `uvm_info("input_fsm_if", "Invalidating checksum", UVM_NONE);
+      chksum = chksum + 1;
+    end
+    `uvm_info("input_fsm_if", $sformatf("Checksum is %08x", chksum), UVM_NONE);
+
+    @cb;
     cb.rx_pkt <= 1'b1;
 
     // S_KEY, CMD
     cb.rx_addr <= 8'h80;
-    cb.rx_data <= {kern_signed, cmd_type, out_addr};
+    cb.rx_data <= {kern_signed, cmd_type, out_addr, s_key};
     @cb;
 
     // check output
-    `ASSERT_EQ(cb.addr, 3'b001, %3b);
-    `ASSERT_EQ(cb.wen, 1'b1, %b);
-    `ASSERT_EQ(cb.wdata, {out_addr, 2'b0}, %08x);
+    if ((cmd_type == 1'b1)) begin
+      `ASSERT_EQ(cb.addr, 3'b001, %3b);
+      `ASSERT_EQ(cb.wen, 1'b1, %b);
+      `ASSERT_EQ(cb.wdata, {out_addr, 2'b0}, %08x);
+    end
 
     // SIZE, TX_ADDR
     cb.rx_addr <= 8'h88;
-    cb.rx_data <= {tx_addr, size};
+    cb.rx_data <= {tx_addr, 2'b0, size};
     @cb;
 
     // check output
     `ASSERT_EQ(cb.addr, 3'b010, %3b);
     `ASSERT_EQ(cb.wen, 1'b1, %b);
-    `ASSERT_EQ(cb.wdata, {out_addr, 2'b0}, %08x);
+    `ASSERT_EQ(cb.wdata, tx_addr, %08x);
 
     // TRANS_ID, reserved
     cb.rx_addr <= 8'h90;
@@ -108,6 +119,8 @@ interface input_fsm_if #(
     @cb;
 
     cb.rx_pkt <= 1'b0;
+
+    #(1ps);
   endtask
 
 endinterface // input_fsm_if

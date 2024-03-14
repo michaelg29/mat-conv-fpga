@@ -10,7 +10,7 @@ tc_args=
 while :; do
     case $1 in
         -g?*)
-            tc_args="${1}"
+            tc_args="${tc_args} ${1}"
             ;;
         -?*)
             printf "WARN: Unknown option (ignored): %s\n" "$1" >&2
@@ -82,7 +82,7 @@ function do_sim {
 
 # run all testcases
 mkdir -p ./logs
-if [ -z "$args" ] && [ -f args.ini ]; then
+if [ -z "$tc_args" ] && [ -f args.ini ]; then
     cat args.ini |
     while read line; do
         name="${line%%:*}"

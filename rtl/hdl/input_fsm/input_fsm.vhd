@@ -259,7 +259,8 @@ begin
               end if;
               -- write OUT_ADDR
               o_wdata(31 downto 2) <= i_rx_data(32+29 downto 32+0);
-              o_addr(2 downto 0)   <= MC_ADDR_OUT_ADDR;
+              o_wdata( 1 downto 0) <= (others => '0');
+              o_addr ( 2 downto 0) <= MC_ADDR_OUT_ADDR;
 
               -- next state
               input_fsm_state <= WAIT_CMD_SIZE;
@@ -297,9 +298,9 @@ begin
               end if;
 
               -- process TX_ADDR fields, i_rx_data(63 downto 32)
-              o_wdata(31 downto 2) <= i_rx_data(32+29 downto 32+0);
-              o_addr(2 downto 0)   <= MC_ADDR_TX_ADDR;
-              o_wen                <= '1';
+              o_wdata            <= i_rx_data(32+31 downto 32+0);
+              o_addr(2 downto 0) <= MC_ADDR_TX_ADDR;
+              o_wen              <= '1';
 
               -- next state
               input_fsm_state <= WAIT_CMD_TID;
@@ -460,7 +461,6 @@ begin
 
           -- waiting for error acknowledgement
           when WAIT_ERR_ACK =>
-            --o_cmd_stat_valid <= '0';
             if (i_state_reg_pls = '1') then
               if (cur_cmd_cmplt = '1') then
                 -- load in saved processing state
