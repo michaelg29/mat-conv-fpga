@@ -1,0 +1,3 @@
+../../hdl/mem_wrapper
+../../hdl/cmc
+../../hdl/tb_cmc
