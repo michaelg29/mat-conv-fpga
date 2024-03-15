@@ -385,7 +385,7 @@ begin
                 else
                   prepad_cnt <= prepad_cnt;
                 end if;
-              else
+              elsif (i_proc_error = '0') then
                 cur_cols <= cur_cols - 1;
                 cur_pkts <= cur_pkts - 1;
                 o_eor    <= '0';
@@ -466,6 +466,12 @@ begin
                 -- load in saved processing state
                 o_addr          <= MC_ADDR_STATE;
                 o_ren           <= '1';
+
+                -- clear error
+                o_cmd_err       <= '0';
+                cur_cmd_err     <= '0';
+
+                -- resume processing
                 input_fsm_state <= PAYLOAD_RX;
               else
                 -- restart command

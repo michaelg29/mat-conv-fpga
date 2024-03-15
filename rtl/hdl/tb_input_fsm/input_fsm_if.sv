@@ -120,7 +120,7 @@ interface input_fsm_if #(
 
     cb.rx_pkt <= 1'b0;
 
-    #(1ps);
+    #(1ps); // resynchronize with external tb (read right after rising edge)
   endtask
 
 endinterface // input_fsm_if
