@@ -80,7 +80,6 @@ architecture rtl of input_fsm is
   -- command signals
   signal cur_cmd_chksum      : std_logic_vector(31 downto 0);
   signal cur_cmd_status      : std_logic_vector(MC_STAT_NBITS-1 downto 0);
-  signal new_cmd_status      : std_logic_vector(MC_STAT_NBITS-1 downto 0);
   signal cur_cmd_err         : std_logic;
   signal cur_cmd_kern        : std_logic;
   signal cur_cmd_subj        : std_logic;
@@ -171,7 +170,6 @@ begin
         input_fsm_state     <= FSM_RESTART;
         cur_cmd_chksum      <= (others => '0');
         cur_cmd_status      <= MC_STAT_OKAY;
-        new_cmd_status      <= MC_STAT_OKAY;
         cur_cmd_kern        <= '0';
         cur_cmd_subj        <= '0';
         cur_cmd_kern_signed <= '0';
@@ -186,12 +184,10 @@ begin
         -- CDC signals
         write_blank_ack <= i_write_blank_ack;
 
-        -- apply checksum and status changes
+        -- apply checksum changes
         if (input_fsm_state = FSM_RESTART) then
-          cur_cmd_status <= (others => '0');
           cur_cmd_chksum <= (others => '0');
         else
-          cur_cmd_status <= cur_cmd_status or new_cmd_status;
           if (is_command_pkt(i_rx_pkt, i_rx_addr) = '1') then
             cur_cmd_chksum <= cur_cmd_chksum xor
             i_rx_data(31 downto 0) xor i_rx_data(63 downto 32);
@@ -205,9 +201,10 @@ begin
 
           when FSM_RESTART =>
             -- reset internal signals
+            cur_cmd_status    <= MC_STAT_OKAY;
             cur_cmd_kern      <= '0';
             cur_cmd_subj      <= '0';
-            new_cmd_status    <= (others => '0');
+            cur_cmd_status    <= (others => '0');
             cur_cmd_err       <= '0';
             cur_cmd_cmplt     <= '0';
             exp_cols          <= (others => '0');
@@ -236,12 +233,9 @@ begin
             if (is_command_pkt(i_rx_pkt, i_rx_addr) = '1') then
               -- process S_KEY field, i_rx_data(31 downto 0)
               --   [31:0]: S_KEY
-              if (i_rx_data(31 downto 0) = MC_CMD_S_KEY) then
-                new_cmd_status <= (others => '0');
-                cur_cmd_err    <= '0';
-              else
-                new_cmd_status <= MC_STAT_ERR_KEY;
-                cur_cmd_err    <= '1';
+              if not(i_rx_data(31 downto 0) = MC_CMD_S_KEY) then
+                cur_cmd_status(MC_STAT_ERR_KEY_IDX) <= '1';
+                cur_cmd_err                         <= '1';
               end if;
 
               -- process CMD fields, i_rx_data(63 downto 32)
@@ -288,8 +282,8 @@ begin
 
                 -- validate size of kernel (32 elements)
                 if (not(i_rx_data(29 downto 15) = "000000000100000")) then
-                  new_cmd_status <= MC_STAT_ERR_SIZE;
-                  cur_cmd_err    <= '1';
+                  cur_cmd_status(MC_STAT_ERR_SIZE_IDX) <= '1';
+                  cur_cmd_err                          <= '1';
                 end if;
               else -- cur_cmd_subj = '1'
                 -- size of subject is given as a multiple of 128
@@ -327,8 +321,8 @@ begin
             if (is_command_pkt(i_rx_pkt, i_rx_addr) = '1') then
               -- process E_KEY fields, i_rx_data(31 downto 0)
               if (not(i_rx_data(31 downto 0) = MC_CMD_E_KEY)) then
-                new_cmd_status <= MC_STAT_ERR_KEY;
-                cur_cmd_err    <= '1';
+                cur_cmd_status(MC_STAT_ERR_KEY_IDX) <= '1';
+                cur_cmd_err                         <= '1';
               end if;
 
               -- process CHKSUM fields, i_rx_data(63 downto 32)
@@ -343,8 +337,8 @@ begin
           when CHECK_CHKSUM =>
             -- check the checksum (should be zeroed out after receiving all fields including the command checksum)
             if (not(cur_cmd_chksum = ((cur_cmd_chksum'range) => '0'))) then
-              new_cmd_status <= MC_STAT_ERR_CKSM;
-              cur_cmd_err    <= '1';
+              cur_cmd_status(MC_STAT_ERR_CKSM_IDX) <= '1';
+              cur_cmd_err                          <= '1';
 
               -- next state
               input_fsm_state <= ACK_STAT_TX;
@@ -366,10 +360,11 @@ begin
           when PAYLOAD_RX =>
             -- update counters
             if (i_rvalid = '1') then
-              -- copy loaded state to counter
+              -- copy saved state to counter
               cur_pkts       <= unsigned(i_rdata(31 downto 13));
               cur_cols       <= unsigned(i_rdata(12 downto 5));
-              cur_cmd_status <= i_rdata( 4 downto 0);
+              -- clear status code
+              cur_cmd_status <= MC_STAT_OKAY;
             elsif (is_payload_pkt(i_rx_pkt, i_rx_addr) = '1') then
               -- end of row logic
               if (cur_cols = zero_cols) then
@@ -405,7 +400,7 @@ begin
             -- next state logic
             if (i_proc_error = '1') then
               -- processing error
-              new_cmd_status  <= MC_STAT_ERR_PROC;
+              cur_cmd_status(MC_STAT_ERR_PROC_IDX) <= '1';
               cur_cmd_err     <= '1';
               input_fsm_state <= ACK_STAT_TX;
             elsif (cur_pkts = zero_pkts) then
@@ -440,7 +435,7 @@ begin
             o_addr                <= MC_ADDR_STATE;
             o_wdata(31 downto 13) <= std_logic_vector(cur_pkts);
             o_wdata(12 downto  5) <= std_logic_vector(cur_cols);
-            o_wdata( 4 downto  0) <= cur_cmd_status or new_cmd_status;
+            o_wdata( 4 downto  0) <= cur_cmd_status;
             o_wen                 <= '1';
 
             -- broadcast status
@@ -486,10 +481,10 @@ begin
           -- unknown state
           when others =>
             -- go into processing error state
-            new_cmd_status  <= MC_STAT_ERR_PROC;
-            cur_cmd_err     <= '1';
-            cur_cmd_cmplt   <= '0';
-            input_fsm_state <= ACK_STAT_TX;
+            cur_cmd_status(MC_STAT_ERR_PROC_IDX) <= '1';
+            cur_cmd_err                          <= '1';
+            cur_cmd_cmplt                        <= '0';
+            input_fsm_state                      <= ACK_STAT_TX;
 
         end case;
       end if;
