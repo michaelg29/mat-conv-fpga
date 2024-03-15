@@ -237,14 +237,13 @@ module tb_top
                     oreg += ROUNDING;
                     for (int s = 0 ; s < KERNEL_SIZE ; s++) begin
                         // Use variable part-select with fixed width
-                        oreg += signed'(i[8*s +: 8]) * signed'(j[8*s +: 8]);
+                        oreg += signed'({1'b0,i[8*s +: 8]}) * signed'(j[8*s +: 8]);
                     end
 
                     // Compare output to valid result
                     if(oreg[20:3] != o_res) begin
                         `uvm_error("tb_top", $sformatf("Test failed at i = %d ; j = %d ; k = %d\no_res = 0x%X ; expected = 0x%X",i,j,k,o_res,oreg[20:3]));
                         @(negedge i_clk);
-                        $finish(2);
                     end
 
                 end
@@ -328,7 +327,7 @@ module tb_top
                     oreg += ROUNDING;
                     for (int s = 0 ; s < KERNEL_SIZE ; s++) begin
                         // Use variable part-select with fixed width
-                        oreg += signed'(i1[8*s +: 8]) * signed'(j1[8*s +: 8]);
+                        oreg += signed'({1'b0,i1[8*s +: 8]}) * signed'(j1[8*s +: 8]);
                     end
 
                     if(VERBOSE) begin
@@ -342,7 +341,6 @@ module tb_top
                         if(oreg[20:3] != o_res) begin
                             `uvm_error("tb_top", $sformatf("Test failed at i = %d ; j = %d ; k = %d\no_res = 0x%X ; expected = 0x%X",i,j,k,o_res,oreg[20:3]));
                             @(negedge i_clk);
-                            $finish(2);
                         end
                     end
 

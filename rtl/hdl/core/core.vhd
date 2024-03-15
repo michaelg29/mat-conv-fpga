@@ -53,15 +53,15 @@ signal en_clk: std_logic;
                                i_c => MAC0_P, i_d => MAC1_P, i_clk => en_clk, o_p => MAC2_P);
 
   MAC0_A1 <= i_k0(7) & signed(i_k0);
-  MAC0_B1 <= '0' & signed(i_s0);
+  MAC0_B1 <= signed('0' & i_s0);
   MAC0_A2 <= i_k1(7) & signed(i_k1);
-  MAC0_B2 <= '0' & signed(i_s1);
+  MAC0_B2 <= signed('0' & i_s1);
   MAC0_C <= resize(signed(i_sub), 44);
   
   MAC1_A1 <= i_k2(7) & signed(i_k2);
-  MAC1_B1 <= '0' & signed(i_s2);
+  MAC1_B1 <= signed('0' & i_s2);
   MAC1_A2 <= i_k3(7) & signed(i_k3);
-  MAC1_B2 <= '0' & signed(i_s3);
+  MAC1_B2 <= signed('0' & i_s3);
   
   MAC2_A2 <= k4_p_reg;
   MAC2_B2 <= s4_p_reg;        
