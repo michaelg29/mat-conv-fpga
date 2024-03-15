@@ -288,36 +288,42 @@ architecture rtl of cmc is
         
         
         -- Processes to delay i_val and i_addr for two clock cycles for write operation
-        i_write_delay: process(i_val, i_clk, i_en)
+        i_write_delay: process(i_clk)
         begin
-            if rising_edge(i_clk) and i_en = '1' then
-                i_val_write <= i_val_write_d2;
-                i_val_write_d2 <= i_val_write_d1;
-                i_val_write_d1 <= i_val;
+            if rising_edge(i_clk) then
+                if i_en = '1' then
+                    i_val_write <= i_val_write_d2;
+                    i_val_write_d2 <= i_val_write_d1;
+                    i_val_write_d1 <= i_val;
 
-                i_write_addr <= i_write_addr_d2;
-                i_write_addr_d2 <= i_write_addr_d1;
-                i_write_addr_d1 <= i_addr;
+                    i_write_addr <= i_write_addr_d2;
+                    i_write_addr_d2 <= i_write_addr_d1;
+                    i_write_addr_d1 <= i_addr;
+                end if;
             end if;
         end process;
 
         -- LSRAM read and write processes
-        lsram_process: process(i_val,i_val_write,i_clk)
+        lsram_process: process(i_clk)
         begin
-            if rising_edge(i_clk) and i_en = '1' then 
+            if rising_edge(i_clk) then 
 
-                --Write enable
-                if i_val_write = '1' then
-                    lsram_write <= "11";
-                    lsram_addr <= i_write_addr;
-                else
-                    lsram_write <= "00";
+                if i_en = '1' then
+
+                    --Write enable
+                    if i_val_write = '1' then
+                        lsram_write <= "11";
+                        lsram_addr <= i_write_addr;
+                    else
+                        lsram_write <= "00";
+                    end if;
+
                 end if;
 
             end if;
         end process;   
         
-        o_pixel_process: process(i_en, i_clk,i_val_write)
+        o_pixel_process: process(i_clk)
         begin
             if rising_edge(i_clk) then
 
