@@ -53,7 +53,6 @@ module tb_top
     // DUT
     //========================================
 
-    //TODO fix port naming
     cmc #(
         .ECC_EN(1'b0)
     ) DUT (
