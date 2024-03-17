@@ -125,7 +125,7 @@ begin
           i_core_0 => c0_res, i_core_1 => c1_res, i_core_2 => c2_res, i_core_3 => c3_res, i_core_4 => c4_res,
           o_core_0 => c0_sub, o_core_1 => c1_sub, o_core_2 => c2_sub, o_core_3 => c3_sub, o_core_4 => c4_sub, 
           o_pixel=> pixel_unrounded,
-          i_clk => i_clk, i_en => valid_rx_pixels, i_val => valid_rx_pixels);
+          i_clk => i_clk, i_en => '1', i_val => valid_rx_pixels);
 
 
 
