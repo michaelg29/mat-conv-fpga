@@ -486,7 +486,7 @@ module tb_top
                         mac = 0; //sub is 0
                         mac += ROUNDING;
                         for (int s = 0 ; s < KERNEL_SIZE ; s++) begin
-                            mac += signed'(o_kernels[core][s]) * signed'(i_pixels[s+j]);
+                            mac += signed'(o_kernels[core][s]) * signed'({1'b0,i_pixels[s+j]});
                         end
                         oreg[0][core] = mac;
 
@@ -534,7 +534,7 @@ module tb_top
                         mac = 0; //sub is 0
                         mac += ROUNDING;
                         for (int s = 0 ; s < KERNEL_SIZE ; s++) begin
-                            mac += signed'(o_kernels[core][s]) * signed'(i_pixels[NUM_ITER+i+s]);
+                            mac += signed'(o_kernels[core][s]) * signed'({1'b0,i_pixels[NUM_ITER+i+s]});
                         end
                         oreg[0][core] = mac;
                     end
