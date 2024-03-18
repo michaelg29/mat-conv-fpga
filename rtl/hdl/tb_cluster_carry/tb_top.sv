@@ -12,6 +12,7 @@ module tb_top
         parameter string TC= "tb_cluster_carry_io_mem_pipeline", // Name of test case to run
 
         parameter ROUNDING = 3'b100,
+        parameter WRITE_VALID_DELAY = 4, //delay between valid address and valid input data
         parameter READ_DELAY = 2, //delay between valid address and valid output data of CMC
         parameter CORE_DELAY = 2, //delay from input to output of core
         parameter NUM_PIXEL_REPS = 2,
@@ -50,17 +51,6 @@ module tb_top
     logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] i_kernels = 0;
     //logic [17:0] i_sub; //connect to CMC 
     //logic [KERNEL_SIZE-1:0][17:0] o_res; //connect to CMC
-
-    // Variables declarations (packed arrays)
-    var longint i1 = 0; // 5 pixels
-    var longint j1 = 0; // 5 kernel values
-    var longint k1 = 0; // sub
-    var [READ_DELAY+CORE_DELAY-1:0][KERNEL_SIZE-1:0][43:0] oreg = 0; //calculate result at input of cluster feeder, get output at output of cores
-
-    // use time to get 64-bit signed int (only need 40-bits for i and j)
-    var longint i;
-    var longint j;
-    var longint k;
 
 
     /*
@@ -294,10 +284,11 @@ module tb_top
 
                 //Calculate pixel
                 for (int krow = 0 ; krow < KERNEL_SIZE ; krow++) begin //for rows
+                    subres = res + ROUNDING;
                     for (int kcol = 0 ; kcol < KERNEL_SIZE ; kcol++) begin //for columns
-                        subres = kgen[krow][kcol] * imgen[row+krow][col+kcol];
-                        res += subres;
+                        subres += kgen[krow][kcol] * imgen[row+krow][col+kcol];
                     end
+                    res = subres[20:3];
                 end
 
                 imconv[row][col] = res;
@@ -398,8 +389,9 @@ module tb_top
         ref logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] i_kernels;
 
 
-        //Cores output
-        longint mac = 0;
+        //Expected CMC outputs
+        logic [KERNEL_SIZE:0][17:0] o_expected; //o_core_0 to o_core_KERNELSIZE concatenated to o_pixel
+
 
         //Result image
         int res;
@@ -412,13 +404,12 @@ module tb_top
             kernel = kernel_gen();
 
             //Generate image
-             `uvm_info("tb_top", "Generating subject image with padding", UVM_NONE);
+            `uvm_info("tb_top", "Generating subject image with padding", UVM_NONE);
             image = image_gen();
 
             //Calculate result
-             `uvm_info("tb_top", "Calculating result", UVM_NONE);
+            `uvm_info("tb_top", "Calculating result", UVM_NONE);
             res_image = image_conv(image, kernel);
-
 
             display_conv(image, kernel, res_image);
 
@@ -426,10 +417,67 @@ module tb_top
             //Load kernel values
             i_kernels = kernel;
             @(negedge i_clk);
+            
+
+            // Reset all signals to 0
+            i_addr = 0;
+            i_pixels_cores = 0;
+            i_val = 1'b0;
+            @(negedge i_clk);
 
 
+            //Next inputs are valid
+            i_val = 1'b1;
+
+            /*
+            NOTE:
+            This assumes the whole image is assigned to the cluster
+            */
+
+            //Loop through rows of input image
+            for (int row = 0 ; row < NUM_ROWS+2*PADDING ; row++) begin
+
+                //Reset address counter for new row
+                i_addr = 0;
+
+                for (int col = 0 ; col < NUM_COLS ; col++) begin //for columns
+
+                    //Same row
+                    if(col >= READ_DELAY) begin //input to cores is only valid after READ_DELAY clock cycles, need to wait
+                        i_pixels_cores = image[row][col-READ_DELAY +: KERNEL_SIZE];
+                    end else if(row > 0) begin //if give input of previous row, but address of new row
+                        i_pixels_cores = image[row-1][col+NUM_COLS-READ_DELAY +: KERNEL_SIZE];
+                    end
+                    @(negedge i_clk);
+
+                    //Increment address by 1
+                    i_addr++;
+
+
+                    /*
+                    Check o_pixel
+                    */
+                    //if((addr >= WRITE_VALID_DELAY)) begin //if first valid o_pixel of the row
+                        if((row*NUM_COLS+col) >= (KERNEL_SIZE*NUM_COLS+WRITE_VALID_DELAY)) begin //if valid outputs
+                            $display("R%d:C%d -> out: 0x%X , expect: 0x%X", row, col, o_pixel, res_image[row-KERNEL_SIZE][col]);
+                            if(res_image[row-KERNEL_SIZE][col] != o_pixel) begin
+                                `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X, row %d, col %d\noutput = 0x%X ; expected = 0x%X",i_addr,row,col,o_pixel,res_image[row-KERNEL_SIZE][col]));
+                                @(negedge i_clk);
+                            end
+                        end
+                    //end
+
+                end
+            end
+
+            //Next inputs are NOT valid
+            i_val = 1'b0;
+
+            //Loop through all remaining addresses (2 clock cycles)
+            //TODO
             @(negedge i_clk);
             @(negedge i_clk);
+
 
         end
 
