@@ -284,11 +284,11 @@ module tb_top
 
                 //Calculate pixel
                 for (int krow = 0 ; krow < KERNEL_SIZE ; krow++) begin //for rows
-                    subres = res + ROUNDING;
+                    subres = signed'(res) + ROUNDING;
                     for (int kcol = 0 ; kcol < KERNEL_SIZE ; kcol++) begin //for columns
                         subres += signed'(kgen[krow][kcol]) * signed'({1'b0 , imgen[row+krow][col+kcol]});
                     end
-                    res = subres[20:3];
+                    res = signed'(subres[20:3]);
                 end
 
                 imconv[row][col] = signed'(res);
@@ -475,10 +475,10 @@ module tb_top
                             end
 
                             if(VERBOSE) begin
-                                $display("R%d:C%d -> out: %d , expect: %d", res_row, res_col, o_pixel, signed'(res_image[res_row][res_col]));
+                                $display("R%d:C%d -> out: %d , expect: %d", res_row, res_col, signed'(o_pixel), signed'(res_image[res_row][res_col]));
                             end
-                            if(signed'(res_image[res_row][res_col]) != o_pixel) begin
-                                `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X, row %d, col %d\noutput = %d ; expected = %d",i_addr,res_row,res_col,o_pixel,signed'(res_image[res_row][res_col])));
+                            if(signed'(res_image[res_row][res_col]) != signed'(o_pixel)) begin
+                                `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X, row %d, col %d\noutput = %d ; expected = %d",i_addr,res_row,res_col,signed'(o_pixel),signed'(res_image[res_row][res_col])));
                             end
 
                         end
@@ -498,10 +498,10 @@ module tb_top
                 res_col = NUM_COLS-WRITE_VALID_DELAY+i;
 
                 if(VERBOSE) begin
-                    $display("R%d:C%d -> out: %d , expect: %d", res_row, res_col, o_pixel, signed'(res_image[res_row][res_col]));
+                    $display("R%d:C%d -> out: %d , expect: %d", res_row, res_col, signed'(o_pixel), signed'(res_image[res_row][res_col]));
                 end 
-                if(signed'(res_image[res_row][res_col]) != o_pixel) begin
-                    `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X, row %d, col %d\noutput = %d ; expected = %d",i_addr,res_row,res_col,o_pixel,signed'(res_image[res_row][res_col])));
+                if(signed'(res_image[res_row][res_col]) != signed'(o_pixel)) begin
+                    `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X, row %d, col %d\noutput = %d ; expected = %d",i_addr,res_row,res_col,signed'(o_pixel),signed'(res_image[res_row][res_col])));
                 end
             end
             
