@@ -297,7 +297,7 @@ architecture rtl of cmc is
                     i_val_write_d2 <= i_val_write_d1;
                     i_val_write_d1 <= i_val;
 
-                    i_write_addr <= i_val_write_d3;
+                    i_write_addr <= i_write_addr_d3;
                     i_write_addr_d3 <= i_write_addr_d2;
                     i_write_addr_d2 <= i_write_addr_d1;
                     i_write_addr_d1 <= i_addr;
