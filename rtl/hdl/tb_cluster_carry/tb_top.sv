@@ -12,7 +12,7 @@ module tb_top
         parameter string TC= "tb_cluster_carry_io_mem_pipeline", // Name of test case to run
 
         parameter ROUNDING = 3'b100,
-        parameter WRITE_VALID_DELAY = 4, //delay between valid address and valid input data
+        parameter WRITE_VALID_DELAY = 5, //delay between valid address and valid input data
         parameter READ_DELAY = 2, //delay between valid address and valid output data of CMC
         parameter CORE_DELAY = 2, //delay from input to output of core
         parameter NUM_PIXEL_REPS = 2,
@@ -223,7 +223,7 @@ module tb_top
             
         for (int row = 0 ; row < KERNEL_SIZE ; row++) begin //for rows
             for (int col = 0 ; col < KERNEL_SIZE ; col++) begin //for columns
-                kgen[row][col] = row+col;
+                kgen[row][col] = signed'(row+col-col*col);
             end
         end
 
@@ -256,7 +256,7 @@ module tb_top
                 if((col >= NUM_COLS+PADDING) || (col < PADDING)) begin //first and last columns are padding columns
                     imgen[row][col] = 0;
                 end else begin
-                    imgen[row][col] = row+col;
+                    imgen[row][col] = unsigned'(row+col+col*col);
                 end
 
             end
@@ -286,12 +286,12 @@ module tb_top
                 for (int krow = 0 ; krow < KERNEL_SIZE ; krow++) begin //for rows
                     subres = res + ROUNDING;
                     for (int kcol = 0 ; kcol < KERNEL_SIZE ; kcol++) begin //for columns
-                        subres += kgen[krow][kcol] * imgen[row+krow][col+kcol];
+                        subres += signed'(kgen[krow][kcol]) * signed'({1'b0 , imgen[row+krow][col+kcol]});
                     end
                     res = subres[20:3];
                 end
 
-                imconv[row][col] = res;
+                imconv[row][col] = signed'(res);
             end
         end
 
@@ -314,7 +314,7 @@ module tb_top
 
             s = $sformatf("Row %d: ", row);
             for (int col = 0 ; col < KERNEL_SIZE ; col++) begin //for columns
-                s = $sformatf("%s %d ", s, kgen[row][col]);
+                s = $sformatf("%s %d ", s, signed'(kgen[row][col]));
             end
 
             $display("%s",s);
@@ -339,7 +339,7 @@ module tb_top
 
             s = $sformatf("Row %d: ", row);
             for (int col = 0 ; col < NUM_COLS ; col++) begin //for columns
-                s = $sformatf("%s %d ", s, imconv[row][col]);
+                s = $sformatf("%s %d ", s, signed'(imconv[row][col]));
             end
 
             $display("%s",s);
@@ -393,8 +393,9 @@ module tb_top
         logic [KERNEL_SIZE:0][17:0] o_expected; //o_core_0 to o_core_KERNELSIZE concatenated to o_pixel
 
 
-        //Result image
-        int res;
+        //Result image offsets
+        int res_row;
+        int res_col;
 
         begin
 
@@ -411,7 +412,9 @@ module tb_top
             `uvm_info("tb_top", "Calculating result", UVM_NONE);
             res_image = image_conv(image, kernel);
 
-            display_conv(image, kernel, res_image);
+            if(VERBOSE) begin
+                display_conv(image, kernel, res_image);
+            end
 
 
             //Load kernel values
@@ -442,11 +445,13 @@ module tb_top
 
                 for (int col = 0 ; col < NUM_COLS ; col++) begin //for columns
 
-                    //Same row
-                    if(col >= READ_DELAY) begin //input to cores is only valid after READ_DELAY clock cycles, need to wait
-                        i_pixels_cores = image[row][col-READ_DELAY +: KERNEL_SIZE];
+                    //Address is in same row
+                    if(col > READ_DELAY) begin //input to cores is only valid after READ_DELAY clock cycles, need to wait
+                        i_pixels_cores = image[row][col-READ_DELAY-1 +: KERNEL_SIZE];
+
+                    //Address is in next row
                     end else if(row > 0) begin //if give input of previous row, but address of new row
-                        i_pixels_cores = image[row-1][col+NUM_COLS-READ_DELAY +: KERNEL_SIZE];
+                        i_pixels_cores = image[row-1][col+NUM_COLS-READ_DELAY-1 +: KERNEL_SIZE];
                     end
                     @(negedge i_clk);
 
@@ -458,12 +463,24 @@ module tb_top
                     Check o_pixel
                     */
                     //if((addr >= WRITE_VALID_DELAY)) begin //if first valid o_pixel of the row
-                        if((row*NUM_COLS+col) >= (KERNEL_SIZE*NUM_COLS+WRITE_VALID_DELAY)) begin //if valid outputs
-                            $display("R%d:C%d -> out: 0x%X , expect: 0x%X", row, col, o_pixel, res_image[row-KERNEL_SIZE][col]);
-                            if(res_image[row-KERNEL_SIZE][col] != o_pixel) begin
-                                `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X, row %d, col %d\noutput = 0x%X ; expected = 0x%X",i_addr,row,col,o_pixel,res_image[row-KERNEL_SIZE][col]));
-                                @(negedge i_clk);
+                        if((row*NUM_COLS+col) >= ((KERNEL_SIZE-1)*NUM_COLS+WRITE_VALID_DELAY)) begin //if valid outputs
+
+                            //Calculate effective offsets
+                            if(col >= WRITE_VALID_DELAY) begin //Address is in same row
+                                res_row = row-(KERNEL_SIZE-1);
+                                res_col = col-WRITE_VALID_DELAY;
+                            end else begin //Address is in next row
+                                res_row = row-(KERNEL_SIZE-1)-1;
+                                res_col = col+NUM_COLS-WRITE_VALID_DELAY;
                             end
+
+                            if(VERBOSE) begin
+                                $display("R%d:C%d -> out: %d , expect: %d", res_row, res_col, o_pixel, signed'(res_image[res_row][res_col]));
+                            end
+                            if(signed'(res_image[res_row][res_col]) != o_pixel) begin
+                                `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X, row %d, col %d\noutput = %d ; expected = %d",i_addr,res_row,res_col,o_pixel,signed'(res_image[res_row][res_col])));
+                            end
+
                         end
                     //end
 
@@ -473,8 +490,21 @@ module tb_top
             //Next inputs are NOT valid
             i_val = 1'b0;
 
-            //Loop through all remaining addresses (2 clock cycles)
-            //TODO
+            //Loop through all remaining addresses (WRITE_VALID_DELAY clock cycles)
+            for (int i = 0 ; i < WRITE_VALID_DELAY ; i++) begin
+                @(negedge i_clk);
+
+                res_row = NUM_ROWS-1;
+                res_col = NUM_COLS-WRITE_VALID_DELAY+i;
+
+                if(VERBOSE) begin
+                    $display("R%d:C%d -> out: %d , expect: %d", res_row, res_col, o_pixel, signed'(res_image[res_row][res_col]));
+                end 
+                if(signed'(res_image[res_row][res_col]) != o_pixel) begin
+                    `uvm_error("tb_top", $sformatf("Test failed at addr = 0x%X, row %d, col %d\noutput = %d ; expected = %d",i_addr,res_row,res_col,o_pixel,signed'(res_image[res_row][res_col])));
+                end
+            end
+            
             @(negedge i_clk);
             @(negedge i_clk);
 
