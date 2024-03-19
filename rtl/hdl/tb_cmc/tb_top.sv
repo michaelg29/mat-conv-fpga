@@ -13,7 +13,7 @@ module tb_top
 
         parameter MIN_ADDR = 11'h0,
         parameter MAX_ADDR = 11'h7FF,
-        parameter WRITE_VALID_DELAY = 4, //delay between valid address and valid input data
+        parameter WRITE_VALID_DELAY = 5, //delay between valid address and valid input data
         parameter WRITE_DELAY = 2, //delay between valid input write data and write complete
         parameter READ_DELAY = 2 //delay between valid address and valid output data
     );
