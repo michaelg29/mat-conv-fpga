@@ -1,0 +1,10 @@
+../../hdl/mat_conv_pkg
+../../hdl/math_block
+../../hdl/core
+../../hdl/mem_wrapper
+../../hdl/cmc
+../../hdl/cluster_feeder
+../../hdl/kernel_register_file
+../../hdl/saturator
+../../hdl/cluster
+../../hdl/tb_cluster
