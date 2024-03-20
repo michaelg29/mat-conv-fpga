@@ -100,6 +100,31 @@ class tb_input_fsm_err_cmd extends mat_conv_tc;
 
     #(3*MACCLK_PER);
 
+    // send whole payload to check status at end
+    vif.rx_pkt = 1'b1;
+    vif.rx_addr = 0;
+    #(4*MACCLK_PER);
+    vif.rx_pkt = 1'b0;
+    #(MACCLK_PER);
+
+    // check output
+    `ASSERT_EQ(vif.payload_done, 1'b1, %b);
+    #(4*MACCLK_PER);
+    `ASSERT_EQ(vif.payload_done, 1'b1, %b);
+
+    // Output FSM "completes transmission"
+    vif.res_written = 1'b1;
+    #(2*MACCLK_PER);
+
+    // check output for all okay status
+    `ASSERT_EQ(vif.drop_pkts, 1'b0, %b);
+    `ASSERT_EQ(vif.cmd_valid, 1'b1, %b);
+    `ASSERT_EQ(vif.cmd_err, 1'b0, %b);
+    `ASSERT_EQ(vif.addr, 3'b100, %3b);
+    `ASSERT_EQ(vif.wen, 1'b1, %b);
+    `ASSERT_EQ(vif.wdata[4:0], 5'h0, %08x); // only care about status field (5 LSBs)
+    #(MACCLK_PER);
+
   endtask // run
 
 endclass // tb_input_fsm_err_cmd

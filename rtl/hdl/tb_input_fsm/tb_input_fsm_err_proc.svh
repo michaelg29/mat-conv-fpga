@@ -63,8 +63,9 @@ class tb_input_fsm_err_proc extends mat_conv_tc;
     // raise processing error
     vif.rx_pkt = 1'b1;
     vif.proc_error = 1'b1;
-    #(2*MACCLK_PER);
+    #(MACCLK_PER);
     vif.proc_error = 1'b0;
+    #(MACCLK_PER);
 
     // check output
     `ASSERT_EQ(vif.drop_pkts, 1'b1, %b);
@@ -76,8 +77,7 @@ class tb_input_fsm_err_proc extends mat_conv_tc;
     // [31:13] cur_pkts - 0x3F584, 259680 - 220 = 259460
     // [12: 5] cur_cols - 0x14, 1920/8 - 220 = 20
     // [ 4: 0] status   - 0x01, MC_STAT_ERR_PROC
-    `ASSERT_EQ(vif.wdata, 32'h7EB08281, %08x);
-    // TODO error here
+    `ASSERT_EQ(vif.wdata, 32'h7EB08281, %08x); // TODO error here
     #(MACCLK_PER);
 
     // check output
@@ -134,6 +134,29 @@ class tb_input_fsm_err_proc extends mat_conv_tc;
     `ASSERT_EQ(vif.eor, 1'b0, %b);
     `ASSERT_EQ(vif.prepad_done, 1'b0, %b);
     `ASSERT_EQ(vif.payload_done, 1'b0, %b);
+    #(MACCLK_PER);
+
+    // send rest of payload
+    vif.rx_pkt = 1'b1;
+    vif.rx_addr = 0;
+    #((1082*1921-225)*MACCLK_PER);
+
+    // check output
+    `ASSERT_EQ(vif.payload_done, 1'b1, %b);
+    #(4*MACCLK_PER);
+    `ASSERT_EQ(vif.payload_done, 1'b1, %b);
+
+    // Output FSM "completes transmission"
+    vif.res_written = 1'b1;
+    #(2*MACCLK_PER);
+
+    // check output for all okay status
+    `ASSERT_EQ(vif.drop_pkts, 1'b0, %b);
+    `ASSERT_EQ(vif.cmd_valid, 1'b1, %b);
+    `ASSERT_EQ(vif.cmd_err, 1'b0, %b);
+    `ASSERT_EQ(vif.addr, 3'b100, %3b);
+    `ASSERT_EQ(vif.wen, 1'b1, %b);
+    `ASSERT_EQ(vif.wdata[4:0], 5'h0, %08x);
     #(MACCLK_PER);
 
     #(3*MACCLK_PER);

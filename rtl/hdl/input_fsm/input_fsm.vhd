@@ -391,10 +391,10 @@ begin
             end if;
 
             -- write blank logic
-            if (cur_cols < burst_size) then
-              o_write_blank_en <= cur_cmd_subj;
-            elsif (write_blank_ack = '1') then
+            if (write_blank_ack = '1') then
               o_write_blank_en <= '0';
+            elsif (cur_cols < burst_size) then
+              o_write_blank_en <= cur_cmd_subj;
             end if;
 
             -- next state logic
@@ -465,6 +465,7 @@ begin
                 -- clear error
                 o_cmd_err       <= '0';
                 cur_cmd_err     <= '0';
+                cur_cmd_status  <= (others => '0');
 
                 -- resume processing
                 input_fsm_state <= PAYLOAD_RX;
@@ -472,7 +473,9 @@ begin
                 -- restart command
                 input_fsm_state <= FSM_RESTART;
               end if;
-              o_drop_pkts <= '0';
+
+              -- clear error
+              o_drop_pkts       <= '0';
             end if;
 
             -- clear signals from previous states
