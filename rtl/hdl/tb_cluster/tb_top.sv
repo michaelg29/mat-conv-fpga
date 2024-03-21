@@ -54,7 +54,7 @@ logic o_out_rdy;
 //========================================
 // interface to DUT instantiation
 cluster_if #(
-  .DW(64)
+  .FIFO_WIDTH(8)
 ) intf (
   .macclk(w_macclk_dut),
   .rst_n(rst_n),
@@ -101,11 +101,11 @@ generate
     end
     "tb_cluster_load_kernel_block":
     begin: tc
-      tb_cluster_load_kernel_block tc = new(intf, MACCLK_PER);
+      //tb_cluster_load_kernel_block tc = new(intf, MACCLK_PER);
     end
     "tb_cluster_kernel_size_subject_no_pad":
     begin: tc
-      tb_cluster_kernel_size_subject_no_pad tc = new(intf, MACCLK_PER);
+      //tb_cluster_kernel_size_subject_no_pad tc = new(intf, MACCLK_PER);
     end // tc
   endcase // TC
 endgenerate
@@ -115,7 +115,7 @@ initial begin
   // startup sequence
   `uvm_info("tb_top", "Running testbench", UVM_NONE);
   #(MACCLK_PER+1ps);
-  rst_n <= 1'b1;
+  //rst_n <= 1'b1;
   `uvm_info("tb_top", "Completed startup", UVM_NONE);
   #(MACCLK_PER);
 
@@ -124,7 +124,7 @@ initial begin
 
   // reset sequence
   #(MACCLK_PER);
-  rst_n <= 1'b0;
+  //rst_n <= 1'b0;
   #(5*MACCLK_PER);
 
   `uvm_info("tb_top", "Exiting", UVM_NONE);

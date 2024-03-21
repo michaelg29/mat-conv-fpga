@@ -5,8 +5,7 @@
 
 // interface to wrap around the cluster
 interface cluster_if #(
-  parameter DW=64,
-  parameter AW=8
+  parameter FIFO_WIDTH=8
 ) (
   // clock and reset interface
   input logic i_clk,
@@ -15,7 +14,6 @@ interface cluster_if #(
 
   import uvm_pkg::*;
 
-  reg i_clk;
   logic i_newrow;
   logic i_is_kern;
   logic i_cmd_kern_signed;

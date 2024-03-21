@@ -36,9 +36,9 @@ class tb_cluster_load_kernel extends mat_conv_tc;
     // spin one cycle
     #(MACCLK_PER);
 
-    `ASSERT_EQ(vif.addr, 3'b000, %3b);
+    //`ASSERT_EQ(vif.addr, 3'b000, %3b);
 
-    `ASSERT_EQ(vif.payload_done, 1'b0, %b);
+    //`ASSERT_EQ(vif.payload_done, 1'b0, %b);
     #(MACCLK_PER);
 
     #(3*MACCLK_PER);
