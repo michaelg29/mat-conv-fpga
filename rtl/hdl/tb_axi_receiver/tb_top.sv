@@ -5,10 +5,10 @@
 `include "uvm_macros.svh"
 
 module tb_top #(
-  parameter string TC="tb_single_trans" // Name of test case to run
+  parameter string TC="tb_axi_rx_single_trans" // Name of test case to run
 );
 
-import tb_template_pkg::*;
+import tb_axi_rx_pkg::*;
 import uvm_pkg::*;
 
 // generics
@@ -155,9 +155,9 @@ end
 // instantiate testcase
 generate
   case (TC)
-    "tb_single_trans":
+    "tb_axi_rx_single_trans":
     begin: tc
-      tb_single_trans tc = new(intf, MACCLK_PER);
+      tb_axi_rx_single_trans tc = new(intf, MACCLK_PER);
     end
     default:
     begin: tc

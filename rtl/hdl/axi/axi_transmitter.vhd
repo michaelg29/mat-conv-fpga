@@ -77,7 +77,7 @@ entity axi_transmitter is
   );
 end axi_transmitter;
 
-architecture arch_imp of axi_transmitter is
+architecture rtl of axi_transmitter is
 
   ---------------------------------------------------------------------------------------------------
   -- Signal declarations
@@ -86,34 +86,36 @@ architecture arch_imp of axi_transmitter is
     IDLE,
     CHECK_PAYLOAD,
     SEND_ADDRESS,
-    SEND_PAYLOAD
+    SEND_PAYLOAD,
+    ACK_BRESP
   );
   signal axi_tx_fsm_state  : TYPE_AXI_TX_FSM_STATE;
 
+  -- payload status
   signal payload_size_rest : std_logic_vector(15 downto 0);
   signal payload_count     : integer range 0 to 15;
-  signal only_one_payload  : std_logic;
 
   signal request_payload   : std_logic;
   signal request_payload_p : std_logic;
 
-  -- AXI4FULL signals
+  -- AXI interface signals
   signal axi_awaddr        : std_logic_vector(31 downto 0);
   signal axi_awvalid       : std_logic;
   signal axi_wdata         : std_logic_vector(63 downto 0);
   signal axi_wlast         : std_logic;
   signal axi_wvalid        : std_logic;
   signal axi_awlen         : std_logic_vector( 3 downto 0);
+  signal axi_bready        : std_logic;
 
 begin
 
+  -- main AXI FSM process
   p_main: process (i_aclk)
   begin
     if (i_aclk'event and i_aclk = '1') then
       if (i_arst_n = '0') then
         axi_tx_fsm_state  <= IDLE;
         payload_count     <= 0;
-        only_one_payload  <= '0';
 
         request_payload   <= '0';
         request_payload_p <= '0';
@@ -124,13 +126,14 @@ begin
         axi_awvalid       <= '0';
         axi_wvalid        <= '0';
         axi_wlast         <= '0';
+        axi_bready        <= '0';
 
       else
         -- update output address
         if (i_new_addr = '1') then
           -- new base address
           axi_awaddr <= i_base_addr;
-        elsif (i_tx_axi_wready = '1') then
+        elsif ((axi_wvalid and i_tx_axi_wready) = '1') then
           -- successful write, increment address
           axi_awaddr <= axi_awaddr + x"8";
         else
@@ -140,67 +143,33 @@ begin
         request_payload_p <= '0';
         case (axi_tx_fsm_state) is
         when IDLE =>
-          request_payload        <= '0';
-          only_one_payload       <= '0';
-          -- if (i_header_request = '1') then
-            -- o_payload_done  <= '0';
-            -- header       <= i_header;
-            -- if ((i_header(4)(31 downto 16) = 0) or ( i_header(7)(0) = '0') or ( i_header(7)(10) = '1')) then -- no payload in tx packet or CMD not OK or PHY Timeout
-              -- axi_tx_fsm_state  <= SEND_HEADER;
-              -- axi_awaddr            <= i_header(5);
-              -- axi_awlen             <= x"4"; -- 5 QWords for header only
-              -- request_header        <= '1';
-              -- request_header_p      <= '1';
-            -- else
-              -- axi_tx_fsm_state   <= CHECK_PAYLOAD;
-              -- axi_awaddr             <= i_header(5) + x"28"; -- skip header
-              -- if (i_header(4)(31 downto 16) > 16) then
-                -- payload_size_rest      <= i_header(4)(31 downto 16) - x"10";
-                -- axi_awlen              <= x"F";
-                -- payload_count          <= 15;
-              -- else
-                -- payload_size_rest      <= (others=>'0');
-                -- axi_awlen              <= i_header(4)(19 downto 16) - '1'; -- payload size (minus 1)
-                -- payload_count          <= conv_integer(i_header(4)(31 downto 16) - '1');
-                -- if (i_header(4)(31 downto 16) = 1) then
-                  -- only_one_payload <= '1';
-                -- end if;
-              -- end if;
-            -- end if;
-          -- elsif (i_payload_request = '1') then
-            -- header          <= i_header;
+          request_payload  <= '0';
+          axi_tx_fsm_state <= CHECK_PAYLOAD;
 
-            -- axi_tx_fsm_state   <= CHECK_PAYLOAD;
-            -- axi_awaddr             <= i_header(5) + x"28"; -- skip header
-            -- payload_size_rest      <= i_header(4)(31 downto 16) - x"10";
-            -- axi_awlen              <= x"F";
-            -- payload_count          <= 15;
-
-
-          -- end if;
-
-          if (i_header_request = '1') then
-            axi_tx_fsm_state <= CHECK_PAYLOAD;
-            axi_awlen        <= x"3"; -- 8 QWords for header, requires 4 packets (minus 1)
-          elsif (i_payload_request = '1') then
-            axi_tx_fsm_state <= CHECK_PAYLOAD;
-            axi_awlen        <= x"F"; -- payload size (minus 1)
-          else
-            axi_tx_fsm_state <= IDLE;
-            axi_awlen        <= (others => '0');
-          end if;
-
+        -- check available payload
         when CHECK_PAYLOAD =>
-          if (i_pkt_cnt >= payload_count + 1) then
-            axi_tx_fsm_state  <= SEND_ADDRESS;
-            request_payload   <= '1';
-            request_payload_p <= '1';
-            o_pkt_read        <= '1'; -- read first packet
+          if ((i_header_request or i_payload_request) = '1') then
+            -- start transaction
+            if (i_pkt_cnt >= payload_count + 1) then
+              axi_tx_fsm_state  <= SEND_ADDRESS;
+              request_payload   <= '1';
+              request_payload_p <= '1';
+              o_pkt_read        <= '1'; -- read first packet
+            end if;
+
+            -- header is 4 packets
+            axi_awlen(1 downto 0) <= x"3";
+            if (i_payload_request = '1') then
+              -- payload burst is 16 packets
+              axi_awlen(3 downto 2) <= "11";
+            end if;
           end if;
 
+        -- send address to start burst
         when SEND_ADDRESS =>
           o_pkt_read         <= '0';
           if (i_tx_axi_awready = '1' and axi_awvalid = '1') then
+            -- write address handshake complete
             axi_tx_fsm_state <= SEND_PAYLOAD;
             axi_awvalid      <= '0';
           else
@@ -211,55 +180,62 @@ begin
         when SEND_PAYLOAD =>
           -- signal valid write data
           if (request_payload_p = '1') then
-            axi_wvalid   <= '1';
-            axi_wdata <= i_pkt;
+            axi_wvalid <= '1';
+            axi_bready <= '1';
+            axi_wdata  <= i_pkt;
           elsif ((payload_count = 0) and (i_tx_axi_wready = '1')) then
-            axi_wvalid   <= '0';
+            axi_wvalid <= '0';
           end if;
 
+          -- read from FIFO when current wdata accepted
+          -- next data is available next CC
           o_pkt_read <= request_payload and axi_wvalid and i_tx_axi_wready;
 
           if (payload_count = 0) then
-            if (only_one_payload = '0') then
-              if (payload_size_rest = 0 ) then
-                axi_tx_fsm_state   <= CHECK_PAYLOAD;
+            -- determine how many more to send
+            if (payload_size_rest = 0 ) then
+              axi_tx_fsm_state   <= CHECK_PAYLOAD;
 
-                request_payload        <= '0';
+              request_payload        <= '0';
+            else
+              if (payload_size_rest > 16) then
+                payload_size_rest      <= payload_size_rest - x"10";
+                axi_awlen              <= x"F";
+                payload_count          <= 15;
               else
-                if (payload_size_rest > 16) then
-                  payload_size_rest      <= payload_size_rest - x"10";
-                  axi_awlen              <= x"F";
-                  payload_count          <= 15;
+                payload_size_rest      <= (others=>'0');
+                if (only_one_payload = '1') then
+                  axi_awlen              <= x"0";
+                  payload_count          <= 0;
                 else
-                  payload_size_rest      <= (others=>'0');
-                  if (only_one_payload = '1') then
-                    axi_awlen              <= x"0";
-                    payload_count          <= 0;
-                  else
-                    axi_awlen              <= payload_size_rest(3 downto 0) - '1'; -- payload size (minus 1)
-                    payload_count          <= conv_integer(payload_size_rest - '1');
-                  end if;
+                  axi_awlen              <= payload_size_rest(3 downto 0) - '1'; -- payload size (minus 1)
+                  payload_count          <= conv_integer(payload_size_rest - '1');
                 end if;
-
-                axi_tx_fsm_state   <= CHECK_PAYLOAD;
-                axi_awaddr             <= axi_awaddr + x"80";
-
               end if;
+
+              axi_tx_fsm_state <= CHECK_PAYLOAD;
+              axi_awaddr       <= axi_awaddr + x"80";
+
             end if;
 
           elsif (i_tx_axi_wready = '1') then
+            -- decrement counter
             payload_count <= payload_count - 1;
           end if;
 
-          if (only_one_payload = '1' ) then
-            axi_wlast     <= '1';
-            if (i_tx_axi_wready = '1') then
-              only_one_payload <= '0';
-            end if;
-          elsif ((payload_count = 1) and (i_tx_axi_wready = '1')) then
+          -- wlast generation
+          if ((payload_count = 1) and (i_tx_axi_wready = '1')) then
             axi_wlast     <= '1';
           else
             axi_wlast     <= '0';
+          end if;
+          
+        -- check write response channel
+        when ACK_BRESP =>
+          if ((axi_bready and i_tx_axi_bvalid) = '1') then
+            -- transition to send new packet
+            axi_bready <= '0';
+            
           end if;
 
         when others =>
@@ -288,7 +264,7 @@ begin
   o_tx_axi_wstrb   <= (others=>'1');
   o_tx_axi_wlast   <= axi_wlast;
   o_tx_axi_wvalid  <= axi_wvalid;
-  o_tx_axi_bready  <= '1';
+  o_tx_axi_bready  <= axi_bready;
 
   -- The AXI transmitter reads are not supported
   o_tx_axi_arid    <= (others=>'0');
@@ -303,4 +279,4 @@ begin
   o_tx_axi_rready  <= '0';
   ----------------------
 
-end arch_imp;
+end rtl;

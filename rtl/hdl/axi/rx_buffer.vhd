@@ -3,8 +3,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-use work.all;
-
+---------------------------------
+-- AXI Receiver and Input FIFO --
+---------------------------------
 entity rx_buffer is
   generic (
     -- packet widths
@@ -63,8 +64,9 @@ entity rx_buffer is
     o_rx_axi_rvalid       : out std_logic;
     i_rx_axi_rready       : in  std_logic;
 
-    -- FIFO interface
+    -- input FIFO interface
     i_rx_fifo_read        : in  std_logic;
+    o_rx_rvalid           : out std_logic;
     o_rx_data             : out std_logic_vector(G_DATA_PKT_WIDTH-1 downto 0);
     o_rx_addr             : out std_logic_vector(G_ADDR_PKT_WIDTH-1 downto 0);
     o_rx_fifo_e           : out std_logic;
@@ -75,6 +77,9 @@ entity rx_buffer is
     o_rx_fifo_db          : out std_logic;
     o_rx_fifo_sb          : out std_logic;
 
+    -- output FIFO interface
+    i_tx_fifo_af          : in  std_logic;
+
     -- interface with internal controller
     i_rx_drop_pkts        : in  std_logic;
     i_write_blank_en      : in  std_logic;
@@ -83,16 +88,17 @@ entity rx_buffer is
 end rx_buffer;
 
 architecture rtl of rx_buffer is
-
-
-
   ---------------------------------------------------------------------------------------------------
   -- Signal declarations
   ---------------------------------------------------------------------------------------------------
 
+  -- internal signals interfacing with the Input FIFO
+  signal rx_fifo_ren   : std_logic;
   signal rx_fifo_af    : std_logic;
   signal rx_fifo_valid : std_logic;
   signal rx_fifo_data  : std_logic_vector(G_ADDR_PKT_WIDTH+G_DATA_PKT_WIDTH-1 downto 0);
+  signal rx_fifo_e     : std_logic;
+
   ---------------------------------------------------------------------------------------------------
   -- Component declarations
   ---------------------------------------------------------------------------------------------------
@@ -158,6 +164,9 @@ architecture rtl of rx_buffer is
       o_rx_addr             : out std_logic_vector(G_ADDR_PKT_WIDTH-1 downto 0);
       o_rx_data             : out std_logic_vector(G_DATA_PKT_WIDTH downto 0);
 
+      -- interface with output FIFO
+      i_tx_fifo_af          : in  std_logic;
+
       -- interface with internal controller
       i_rx_drop_pkts        : in  std_logic;
       i_write_blank_en      : in  std_logic;
@@ -198,6 +207,7 @@ architecture rtl of rx_buffer is
 
 begin
 
+  -- AXI Receiver
   u_axi_receiver : axi_receiver
     generic map (
       G_DATA_PKT_WIDTH => G_DATA_PKT_WIDTH,
@@ -247,12 +257,14 @@ begin
       o_rx_valid            => rx_fifo_valid,
       o_rx_addr             => rx_fifo_data(G_ADDR_PKT_WIDTH+G_DATA_PKT_WIDTH-1 downto G_DATA_PKT_WIDTH),
       o_rx_data             => rx_fifo_data(G_DATA_PKT_WIDTH-1 downto 0),
+      i_tx_fifo_af          => i_tx_fifo_af,
 
       i_rx_drop_pkts        => i_rx_drop_pkts,
       i_write_blank_en      => i_write_blank_en,
       o_write_blank_ack     => o_write_blank_ack
     );
 
+  -- Input FIFO
   u_rx_fifo : fifo_DWxNW
     generic map(
       DWIDTH     => ( 72 ),
@@ -268,13 +280,13 @@ begin
       WCLK       => i_aclk,
       RESET_N    => i_arst_n,
       DATA       => rx_fifo_data,
-      RE         => i_rx_fifo_read,
+      RE         => rx_fifo_ren,
       WE         => rx_fifo_valid,
       -- Outputs
       AEMPTY     => o_rx_fifo_ae,
       AFULL      => rx_fifo_af,
       DB_DETECT  => o_rx_fifo_db,
-      EMPTY      => o_rx_fifo_e,
+      EMPTY      => rx_fifo_e,
       FULL       => open,
       OVERFLOW   => o_rx_fifo_oflow,
       Q          => o_rx_data,
@@ -282,5 +294,19 @@ begin
       SB_CORRECT => o_rx_fifo_sb,
       UNDERFLOW  => o_rx_fifo_uflow
     );
+
+  -- process to set read signals on the Input FIFO
+  p_fifo_read : process (i_macclk)
+  begin
+    if (i_macclk'event and i_macclk = '1') then
+      if (i_arst_n = '0') then -- TODO need reset synchronous to
+        rx_fifo_ren <= '0';
+        o_rx_rvalid <= '0';
+      else
+        rx_fifo_ren <= i_rx_fifo_read and not(rx_fifo_e);
+        o_rx_rvalid <= rx_fifo_ren;
+      end if;
+    end if;
+  end process p_fifo_read;
 
 end rtl;

@@ -1,5 +1,5 @@
 
-package tb_template_pkg;
+package tb_axi_rx_pkg;
 
   import uvm_pkg::*;
 
@@ -11,6 +11,6 @@ package tb_template_pkg;
   `include "../tb_common/mat_conv_tc.svh"
 
   // testcases
-  `include "tb_single_trans.svh"
+  `include "tb_axi_rx_single_trans.svh"
 
 endpackage // tb_axi_rx_pkg

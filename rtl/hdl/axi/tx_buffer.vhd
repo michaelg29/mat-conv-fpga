@@ -3,6 +3,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+-------------------------------------
+-- AXI Transmitter and Output FIFO --
+-------------------------------------
 entity tx_buffer is
   generic (
     -- FIFO capacity
@@ -83,14 +86,17 @@ entity tx_buffer is
 end tx_buffer;
 
 architecture rtl of tx_buffer is
+
   ---------------------------------------------------------------------------------------------------
   -- Signal declarations
   ---------------------------------------------------------------------------------------------------
 
+  -- internal signals interfacing with the Output FIFO
   signal tx_fifo_data       : std_logic_vector(63 downto 0);
   signal tx_fifo_wen        : std_logic;
   signal tx_fifo_slot       : std_logic;
 
+  -- internal signals interfacing with the AXI Transmitter
   signal payload_fifo_count : std_logic_vector(AWIDTH-1 downto 0);
   signal payload_read       : std_logic;
   signal payload_data       : std_logic_vector(63 downto 0);
@@ -200,60 +206,50 @@ architecture rtl of tx_buffer is
 
 begin
 
-  o_tx_axi_awid       <= (others => '0');
-  o_tx_axi_awaddr     <= (others => '0');
-  o_tx_axi_awlen      <= (others => '0');
-  o_tx_axi_awsize     <= (others => '0');
-  o_tx_axi_awburst    <= (others => '0');
-  o_tx_axi_awlock     <= '0';
-  o_tx_axi_awcache    <= (others => '0');
-  o_tx_axi_awprot     <= (others => '0');
-  o_tx_axi_awvalid    <= '0';
-  o_tx_axi_wdata      <= (others => '0');
-  o_tx_axi_wstrb      <= (others => '0');
-  o_tx_axi_wlast      <= '0';
-  o_tx_axi_wvalid     <= '0';
-  o_tx_axi_bready     <= '0';
-  o_tx_axi_arid       <= (others => '0');
-  o_tx_axi_araddr     <= (others => '0');
-  o_tx_axi_arlen      <= (others => '0');
-  o_tx_axi_arsize     <= (others => '0');
-  o_tx_axi_arburst    <= (others => '0');
-  o_tx_axi_arlock     <= '0';
-  o_tx_axi_arcache    <= (others => '0');
-  o_tx_axi_arprot     <= (others => '0');
-  o_tx_axi_arvalid    <= '0';
-  o_tx_axi_rready     <= '0';
-
-  p_fifo_arbitrate : process(i_arst_n, i_macclk)
+  -- process to arbitrate 64-bit writes to the Output FIFO
+  p_fifo_arbitrate : process(i_macclk)
   begin
-    if (i_arst_n = '0') then
-      tx_fifo_slot <= '0';
-      tx_fifo_wen  <= '0';
-      tx_fifo_data <= (others => '0');
-    elsif (i_macclk'event and i_macclk = '1') then
-      if ((i_accept_w(0) and i_w0_wen) = '1') then
-        tx_fifo_slot <= not(tx_fifo_slot);
-        if (tx_fifo_slot = '0') then
-          tx_fifo_data(31 downto 0) <= i_w0_wdata;
-        else
-          tx_fifo_data(63 downto 32) <= i_w0_wdata;
-          tx_fifo_wen <= '1';
-        end if;
-      elsif ((i_accept_w(1) and i_w1_wen) = '1') then
-        tx_fifo_slot <= not(tx_fifo_slot);
-        if (tx_fifo_slot = '0') then
-          tx_fifo_data(31 downto 0) <= i_w1_wdata;
-        else
-          tx_fifo_data(63 downto 32) <= i_w1_wdata;
-          tx_fifo_wen <= '1';
-        end if;
+    if (i_macclk'event and i_macclk = '1') then
+      if (i_arst_n = '0') then
+        tx_fifo_slot <= '0';
+        tx_fifo_wen  <= '0';
+        tx_fifo_data <= (others => '0');
       else
-        tx_fifo_wen <= '0';
+        -- accept write from writer 0 when enabled
+        if ((i_accept_w(0) and i_w0_wen) = '1') then
+          tx_fifo_slot <= not(tx_fifo_slot);
+          if (tx_fifo_slot = '0') then
+            -- copy to the 32 LSbs
+            tx_fifo_data(31 downto 0) <= i_w0_wdata;
+          else
+            -- copy to the 32 MSbs
+            tx_fifo_data(63 downto 32) <= i_w0_wdata;
+            -- write a full 64-bit packet
+            tx_fifo_wen <= '1';
+          end if;
+
+        -- accept write from writer 1 when enabled
+        elsif ((i_accept_w(1) and i_w1_wen) = '1') then
+          tx_fifo_slot <= not(tx_fifo_slot);
+          if (tx_fifo_slot = '0') then
+            -- copy to the 32 LSbs
+            tx_fifo_data(31 downto 0) <= i_w1_wdata;
+          else
+            -- copy to the 32 MSbs
+            tx_fifo_data(63 downto 32) <= i_w1_wdata;
+            -- write a full 64-bit packet
+            tx_fifo_wen <= '1';
+          end if;
+
+        -- no write or not enabled
+        else
+          tx_fifo_wen <= '0';
+        end if;
       end if;
     end if;
   end process p_fifo_arbitrate;
 
+  -- Output FIFO
   u_tx_fifo : fifo_DWxNW
     generic map(
       DWIDTH     => ( 64 ),
@@ -283,5 +279,32 @@ begin
       SB_CORRECT => o_tx_fifo_sb,
       UNDERFLOW  => o_tx_fifo_uflow
     );
+
+  -- AXI Transmitter
+  -- u_axi_transmitter : axi_transmitter
+  o_tx_axi_awid       <= (others => '0');
+  o_tx_axi_awaddr     <= (others => '0');
+  o_tx_axi_awlen      <= (others => '0');
+  o_tx_axi_awsize     <= (others => '0');
+  o_tx_axi_awburst    <= (others => '0');
+  o_tx_axi_awlock     <= '0';
+  o_tx_axi_awcache    <= (others => '0');
+  o_tx_axi_awprot     <= (others => '0');
+  o_tx_axi_awvalid    <= '0';
+  o_tx_axi_wdata      <= (others => '0');
+  o_tx_axi_wstrb      <= (others => '0');
+  o_tx_axi_wlast      <= '0';
+  o_tx_axi_wvalid     <= '0';
+  o_tx_axi_bready     <= '0';
+  o_tx_axi_arid       <= (others => '0');
+  o_tx_axi_araddr     <= (others => '0');
+  o_tx_axi_arlen      <= (others => '0');
+  o_tx_axi_arsize     <= (others => '0');
+  o_tx_axi_arburst    <= (others => '0');
+  o_tx_axi_arlock     <= '0';
+  o_tx_axi_arcache    <= (others => '0');
+  o_tx_axi_arprot     <= (others => '0');
+  o_tx_axi_arvalid    <= '0';
+  o_tx_axi_rready     <= '0';
 
 end rtl;

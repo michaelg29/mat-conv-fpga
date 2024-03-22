@@ -4,7 +4,7 @@
 import uvm_pkg::*;
 
 // testcase single AXI transaction
-class tb_single_trans extends mat_conv_tc;
+class tb_axi_rx_single_trans extends mat_conv_tc;
 
   // virtual interface
   virtual axi_rx_if vif;
@@ -20,11 +20,11 @@ class tb_single_trans extends mat_conv_tc;
 
   task automatic run;
 
-    `uvm_info("tb_single_trans", "Executing testcase", UVM_NONE);
+    `uvm_info("tb_axi_rx_single_trans", "Executing testcase", UVM_NONE);
 
     #(MACCLK_PER);
     vif.i_rx_axi_wdata = $urandom(100);
 
   endtask // run
 
-endclass // tb_single_trans
+endclass // tb_axi_rx_single_trans

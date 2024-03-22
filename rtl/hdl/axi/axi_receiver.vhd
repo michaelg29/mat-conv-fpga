@@ -68,6 +68,9 @@ entity axi_receiver is
     o_rx_addr             : out std_logic_vector(G_ADDR_PKT_WIDTH-1 downto 0);
     o_rx_data             : out std_logic_vector(G_DATA_PKT_WIDTH-1 downto 0);
 
+    -- interface with output FIFO
+    i_tx_fifo_af          : in  std_logic;
+
     -- interface with internal controller
     i_rx_drop_pkts        : in  std_logic;
     i_write_blank_en      : in  std_logic;
@@ -75,7 +78,7 @@ entity axi_receiver is
   );
 end axi_receiver;
 
-architecture arch_imp of axi_receiver is
+architecture rtl of axi_receiver is
 
   -- AXI signals
   signal axi_awready      : std_logic;
@@ -85,7 +88,7 @@ architecture arch_imp of axi_receiver is
 
   -- The axi_awv_awr_flag flag marks the presence of write address valid
   signal axi_awv_awr_flag : std_logic;
-  
+
   -- registers for CDC
   signal rx_drop_pkts_cdc : std_logic;
   signal write_blank_cdc  : std_logic;
@@ -102,7 +105,7 @@ begin
   o_rx_axi_bvalid    <= axi_bvalid;
   o_rx_axi_bid       <= i_rx_axi_awid;
 
-  -- The AXI slave reads are not supported
+  -- The AXI receiver reads are not supported
   o_rx_axi_arready   <= '0';
   o_rx_axi_rdata     <= (others=>'0');
   o_rx_axi_rresp     <= "10"; --SLVERR
@@ -122,7 +125,7 @@ begin
         axi_awv_awr_flag <= '0';
       else
         if (axi_awready = '0' and i_rx_axi_awvalid = '1' and axi_awv_awr_flag = '0') then
-          -- slave is ready to accept an address and
+          -- receiver is ready to accept an address and
           -- associated control signals
           axi_awv_awr_flag  <= '1'; -- used for generation of bresp() and bvalid
           axi_awready <= '1';
@@ -143,12 +146,15 @@ begin
       if i_arst_n = '0' then
         axi_wready <= '0';
       else
-        if i_rx_fifo_af = '1' then
+        -- disable if either FIFO is backed up
+        if (i_rx_fifo_af or i_tx_fifo_af) = '1' then
           axi_wready <= '0';
 
+        -- acknowledge write
         elsif (axi_wready = '0' and i_rx_axi_wvalid = '1' and axi_awv_awr_flag = '1') then
           axi_wready <= '1';
 
+        -- de-assert after final packet
         elsif (i_rx_axi_wlast = '1' and axi_wready = '1') then
           axi_wready <= '0';
         end if;
@@ -157,7 +163,7 @@ begin
   end process p_wready;
 
   -- Implement write response logic generation
-  -- The write response and response valid signals are asserted by the slave
+  -- The receiver asserts the write response and response valid signals
   -- when axi_wready, i_rx_axi_wvalid, axi_wready and i_rx_axi_wvalid are asserted.
   -- This marks the acceptance of address and indicates the status of
   -- write transaction.
@@ -198,7 +204,7 @@ begin
         -- perform CDC on control signals from Input FSM
         rx_drop_pkts_cdc <= i_rx_drop_pkts;
         write_blank_cdc  <= i_write_blank_en;
-      
+
         -- output write data
         if (write_blank_en = '1') then
           -- output blank packet
@@ -224,4 +230,4 @@ begin
     end if;
   end process p_output;
 
-end arch_imp;
+end rtl;
