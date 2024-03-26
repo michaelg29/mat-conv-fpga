@@ -70,7 +70,7 @@ signal i_sel_intl, i_new_intl: std_logic;
 begin
 
     i_sel_intl <= i_sel AND i_new;
-    i_new_intl <= (i_sel NAND i_new) and i_new;
+    i_new_intl <= not(i_sel) and i_new;
 
 
 pipeline_sel_mux0_out <= i_pixel_5 when i_sel_intl = '1' else

@@ -2,13 +2,22 @@ library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 
-
-
-
-entity krf is port ( i_clk, i_rst, i_valid : in std_logic;
-                      i_data: in std_logic_vector(63 downto 0);
-                      o_kr_0, o_kr_1, o_kr_2, o_kr_3, o_kr_4 : out std_logic_vector(39 downto 0)); 
-end krf; 
+--------------------------
+-- Kernel register file --
+--------------------------
+entity krf is
+  port (
+    i_clk   : in  std_logic;
+    i_rst_n : in  std_logic;
+    i_valid : in  std_logic;
+    i_data  : in std_logic_vector(63 downto 0);
+    o_kr_0  : out std_logic_vector(39 downto 0);
+    o_kr_1  : out std_logic_vector(39 downto 0);
+    o_kr_2  : out std_logic_vector(39 downto 0);
+    o_kr_3  : out std_logic_vector(39 downto 0);
+    o_kr_4  : out std_logic_vector(39 downto 0)
+  );
+end krf;
 
 architecture rtl of krf is
 
@@ -25,13 +34,13 @@ architecture rtl of krf is
     --TODO: TMR. RTG4_FPGA_Fabric_User_Guide_UG0574_V6, 3.1.2 STMR-D Flip-Flop, USE LIBERO TOOL
     signal reg_0, reg_1, reg_2, reg_3, reg_4 : std_logic_vector(39 downto 0);
 
-    signal fsm_clk: std_logic;
+    --signal fsm_clk: std_logic;
 
-    begin
+begin
 
     --using this in the event that a i_rst rising edge occurs at the same time as a clock rising edge:
     --we want to latch the data immediatly, and not at the next clock cycle
-    fsm_clk <= i_clk and i_valid and i_rst;
+    --fsm_clk <= i_clk and i_valid and i_rst;
 
     o_kr_0 <= reg_0;
     o_kr_1 <= reg_1;
@@ -39,17 +48,18 @@ architecture rtl of krf is
     o_kr_3 <= reg_3;
     o_kr_4 <= reg_4;
 
-    process(fsm_clk, i_rst)
-        begin
-            if rising_edge(i_rst) then
-                krf_fsm_state <= RESET;
-                reg_0 <= (others => '0');
-                reg_1 <= (others => '0');
-                reg_2 <= (others => '0');
-                reg_3 <= (others => '0');
-                reg_4 <= (others => '0');
-
-            elsif rising_edge(fsm_clk) then
+    process (i_clk, i_rst_n)
+    --process(fsm_clk, i_rst)
+    begin
+        if (i_rst_n = '0') then
+            krf_fsm_state <= RESET;
+            reg_0 <= (others => '0');
+            reg_1 <= (others => '0');
+            reg_2 <= (others => '0');
+            reg_3 <= (others => '0');
+            reg_4 <= (others => '0');
+        elsif (i_clk'event and i_clk = '1') then
+            if (i_valid = '1') then
                 case (krf_fsm_state) is
 
                     when RESET =>
@@ -59,7 +69,7 @@ architecture rtl of krf is
 
                     when PACK1_LOADED =>
                         reg_1(15 downto 0) <= i_data(63 downto 48);
-                        reg_2 <= i_data(47 downto 8);                        
+                        reg_2 <= i_data(47 downto 8);
                         reg_3(39 downto 32) <= i_data(7 downto 0);
                         krf_fsm_state <= PACK2_LOADED;
 
@@ -78,6 +88,7 @@ architecture rtl of krf is
                         krf_fsm_state <= READY;
 
                 end case;
-            end if;            
+            end if;
+        end if;
     end process;
 end rtl;

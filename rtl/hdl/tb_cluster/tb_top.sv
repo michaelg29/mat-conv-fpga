@@ -17,7 +17,7 @@ module tb_top #(
 import tb_cluster_pkg::*;
 import uvm_pkg::*;
 
-//Set seed for randomization
+// seed for randomization
 bit [31:0] dummy = $urandom(SEED);
 
 // generics
@@ -30,9 +30,10 @@ bit [31:0] dummy = $urandom(SEED);
 //========================================
 // Signals
 //========================================
-//clock
-reg i_clk;
+// clock and reset
 time MACCLK_PER = `MACCLK_PER_PS * 1ps;
+logic w_macclk_dut = 1'b1;
+logic rst_n = 1'b0;
 
 //DUT signals
 //IN INTERFACE
@@ -45,36 +46,31 @@ time MACCLK_PER = `MACCLK_PER_PS * 1ps;
 cluster_if #(
   .FIFO_WIDTH(8)
 ) intf (
-  .i_clk(i_clk)
-); 
+  .i_clk(i_clk),
+  .i_rst_n(rst_n)
+);
 
 //DUT
 cluster DUT(
-    .i_clk(i_clk),
-
-    .i_newrow(intf.i_newrow),
-    .i_is_kern(intf.i_is_kern),
-    .i_cmd_kern_signed(intf.i_cmd_kern_signed),
-    .i_is_subj(intf.i_is_subj),
-    .i_new_pkt(intf.i_new_pkt),
-    .i_discont(intf.i_discont),
-    .i_pkt(intf.i_pkt),
-    .o_out_rdy(intf.o_out_rdy), //TODO remove
-    .o_pixel(intf.o_pixel)
+  .i_clk(w_macclk_dut),
+  .i_newrow(intf.i_newrow),
+  .i_is_kern(intf.i_is_kern),
+  .i_cmd_kern_signed(intf.i_cmd_kern_signed),
+  .i_is_subj(intf.i_is_subj),
+  .i_new_pkt(intf.i_new_pkt),
+  .i_discont(intf.i_discont),
+  .i_pkt(intf.i_pkt),
+  .o_out_rdy(intf.o_out_rdy), //TODO remove
+  .o_pixel(intf.o_pixel)
 );
 
 
 //========================================
 // Clocks
 //========================================
-const int clk_period = 200; //ns (5MHz)
 
-initial begin
-    i_clk = 0;
-end
-
-always #(clk_period / 2) begin
-    i_clk <= ~i_clk;
+always #(MACCLK_PER / 2) begin
+    w_macclk_dut <= ~w_macclk_dut;
 end
 
 
@@ -97,6 +93,10 @@ generate
       tb_cluster_kernel_size_subject_no_pad tc = new(intf, MACCLK_PER);
     end // tc
     */
+    default:
+    begin: tc
+      mat_conv_tc tc = new();
+    end // tc
   endcase // TC
 endgenerate
 
@@ -105,7 +105,7 @@ initial begin
   // startup sequence
   `uvm_info("tb_top", "Running testbench", UVM_NONE);
   #(MACCLK_PER+1ps);
-  //rst_n <= 1'b1;
+  rst_n <= 1'b1;
   `uvm_info("tb_top", "Completed startup", UVM_NONE);
   #(MACCLK_PER);
 
@@ -114,11 +114,11 @@ initial begin
 
   // reset sequence
   #(MACCLK_PER);
-  //rst_n <= 1'b0;
+  rst_n <= 1'b0;
   #(5*MACCLK_PER);
 
   `uvm_info("tb_top", "Exiting", UVM_NONE);
-  $finish(0);
+  $stop();
 end
 
 endmodule

@@ -15,7 +15,8 @@ interface cluster_if #(
   parameter SIGNED_LOWER_BOUND = 12'b100000000000
 ) (
   // clock and reset interface
-  input logic i_clk
+  input logic i_clk,
+  input logic i_rst_n
 );
 
   import uvm_pkg::*;
@@ -261,11 +262,8 @@ interface cluster_if #(
             @cb;
 
             `uvm_info("tb_top", "Kernel values successfully loaded", UVM_NONE);
-
         end
-
 
     endtask : load_kernel
 
-
-endinterface // input_fsm_if
+endinterface // cluster_if
