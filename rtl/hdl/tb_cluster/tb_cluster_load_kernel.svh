@@ -25,16 +25,8 @@ class tb_cluster_load_kernel extends mat_conv_tc;
 
     #(MACCLK_PER);
 
-    // send valid command
-    vif.send_cmd(
-      30'h3ABCDEF, '0, '1, // cmd
-      32'h00100055,        // size
-      32'hABCD0000,        // tx_addr
-      '0                   // trans_id
-    );
-
-    // spin one cycle
-    #(MACCLK_PER);
+    // Generate kernel and load it
+    vif.load_kernel(vif.kernel_gen());
 
     //`ASSERT_EQ(vif.addr, 3'b000, %3b);
 

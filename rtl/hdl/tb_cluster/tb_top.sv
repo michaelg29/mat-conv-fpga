@@ -25,9 +25,6 @@ bit [31:0] dummy = $urandom(SEED);
 //========================================
 // Constants
 //========================================
-parameter UNSIGNED_UPPER_BOUND = 12'b111111111111;
-parameter SIGNED_UPPER_BOUND = 12'b011111111111;
-parameter SIGNED_LOWER_BOUND = 12'b100000000000;
 
 
 //========================================
@@ -38,15 +35,7 @@ reg i_clk;
 time MACCLK_PER = `MACCLK_PER_PS * 1ps;
 
 //DUT signals
-logic i_newrow;
-logic i_is_kern;
-logic i_cmd_kern_signed;
-logic i_is_subj;
-logic i_new_pkt;
-logic i_discont;
-logic [FIFO_WIDTH-1:0][7:0] i_pkt; //input pixels from FIFO and/or buffered pixels
-logic [7:0] o_pixel;
-logic o_out_rdy;
+//IN INTERFACE
 
 
 //========================================
@@ -56,23 +45,22 @@ logic o_out_rdy;
 cluster_if #(
   .FIFO_WIDTH(8)
 ) intf (
-  .macclk(w_macclk_dut),
-  .rst_n(rst_n),
-  .por_n(por_n)
-);
+  .i_clk(i_clk)
+); 
 
 //DUT
 cluster DUT(
     .i_clk(i_clk),
-    .i_newrow(i_newrow),
-    .i_is_kern(i_is_kern),
-    .i_cmd_kern_signed(i_cmd_kern_signed),
-    .i_is_subj(i_is_subj),
-    .i_new_pkt(i_new_pkt),
-    .i_discont(i_discont),
-    .i_pkt(i_pkt),
-    .o_out_rdy(o_out_rdy), //TODO remove
-    .o_pixel(o_pixel)
+
+    .i_newrow(intf.i_newrow),
+    .i_is_kern(intf.i_is_kern),
+    .i_cmd_kern_signed(intf.i_cmd_kern_signed),
+    .i_is_subj(intf.i_is_subj),
+    .i_new_pkt(intf.i_new_pkt),
+    .i_discont(intf.i_discont),
+    .i_pkt(intf.i_pkt),
+    .o_out_rdy(intf.o_out_rdy), //TODO remove
+    .o_pixel(intf.o_pixel)
 );
 
 
@@ -99,14 +87,16 @@ generate
     begin: tc
       tb_cluster_load_kernel tc = new(intf, MACCLK_PER);
     end
+    /*
     "tb_cluster_load_kernel_block":
     begin: tc
-      //tb_cluster_load_kernel_block tc = new(intf, MACCLK_PER);
+      tb_cluster_load_kernel_block tc = new(intf, MACCLK_PER);
     end
     "tb_cluster_kernel_size_subject_no_pad":
     begin: tc
-      //tb_cluster_kernel_size_subject_no_pad tc = new(intf, MACCLK_PER);
+      tb_cluster_kernel_size_subject_no_pad tc = new(intf, MACCLK_PER);
     end // tc
+    */
   endcase // TC
 endgenerate
 
@@ -128,7 +118,7 @@ initial begin
   #(5*MACCLK_PER);
 
   `uvm_info("tb_top", "Exiting", UVM_NONE);
-  $stop();
+  $finish(0);
 end
 
 endmodule
