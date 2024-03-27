@@ -22,7 +22,7 @@ module tb_top
     //========================================
     reg i_clk;
     reg i_valid;
-    reg i_rst;
+    reg i_rst_n;
 
     logic [FIFO_WIDTH-1:0][7:0] i_kernels;
     logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] o_kernels; //[kernel row][kernel value in row][bit in kernel value]
@@ -49,7 +49,7 @@ module tb_top
     krf DUT(
         .i_clk      (i_clk),
         .i_valid    (i_valid),
-        .i_rst      (i_rst),
+        .i_rst_n      (i_rst_n),
 
         .i_data     (i_kernels),
         .o_kr_0     (o_kernels[0]),
@@ -88,34 +88,34 @@ module tb_top
                     `uvm_info("tb_top", $sformatf("Iteration %d", j), UVM_NONE);
 
                     `uvm_info("tb_top", "Resetting DUT", UVM_NONE);
-                    reset_dut(i_clk, i_rst, i_kernels);
+                    reset_dut(i_clk, i_rst_n, i_kernels);
 
                     case (i+1)
                         1 : begin      
                             test1(.i_clk(i_clk),
                                 .i_valid(i_valid),
-                                .i_rst(i_rst),
+                                .i_rst_n(i_rst_n),
                                 .i_kernels(i_kernels),
                                 .o_kernels(o_kernels));
                             end
                         2 : begin
                             test2(.i_clk(i_clk),
                                 .i_valid(i_valid),
-                                .i_rst(i_rst),
+                                .i_rst_n(i_rst_n),
                                 .i_kernels(i_kernels),
                                 .o_kernels(o_kernels));
                             end
                         3 : begin
                             test3(.i_clk(i_clk),
                                 .i_valid(i_valid),
-                                .i_rst(i_rst),
+                                .i_rst_n(i_rst_n),
                                 .i_kernels(i_kernels),
                                 .o_kernels(o_kernels));
                             end
                         4 : begin
                             test4(.i_clk(i_clk),
                                 .i_valid(i_valid),
-                                .i_rst(i_rst),
+                                .i_rst_n(i_rst_n),
                                 .i_kernels(i_kernels),
                                 .o_kernels(o_kernels));
                             end
@@ -147,15 +147,15 @@ module tb_top
 
         logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] krf_total_cvrt;
 
-        krf_total_cvrt[0] = i_krf_total[0][7:3];
+        krf_total_cvrt[0] = i_krf_total[0][4:0];
 
-        krf_total_cvrt[1] = {i_krf_total[0][2:0], i_krf_total[1][7:6]};
+        krf_total_cvrt[1] = {i_krf_total[1][1:0], i_krf_total[0][7:5]};
 
-        krf_total_cvrt[2] = i_krf_total[1][5:1];
+        krf_total_cvrt[2] = i_krf_total[1][6:2];
 
-        krf_total_cvrt[3] = {i_krf_total[1][0:0], i_krf_total[2][7:4]};
+        krf_total_cvrt[3] = {i_krf_total[2][3:0], i_krf_total[1][7:7]};
 
-        krf_total_cvrt[4] = {i_krf_total[2][3:0], i_krf_total[3][7:7]};
+        krf_total_cvrt[4] = {i_krf_total[3][0:0], i_krf_total[2][7:4]};
         
         
         if(VERBOSE) begin
@@ -177,21 +177,13 @@ module tb_top
 
     task automatic reset_dut;
         ref reg i_clk;    
-        ref reg i_rst;
+        ref reg i_rst_n;
         ref logic [FIFO_WIDTH-1:0][7:0] i_kernels;
         begin
-
-            //Load 0s
-            i_kernels = '{0};
-            i_valid = 1'b1;
-
             //Reset state machine and outputs
-            i_rst = 1'b1;
+            i_rst_n = 1'b0;
             @(negedge i_clk);
-
-            i_rst = 1'b0;
-            i_valid = 0'b0;
-            @(negedge i_clk);
+            i_rst_n = 1'b1;
         end
     endtask : reset_dut
 
@@ -203,12 +195,12 @@ module tb_top
 
 
     /*
-     tb_krf_io_no_pipeline : load kernel values from the FIFO with no pipelining (i_rst held, toggled i_valid)
+     tb_krf_io_no_pipeline : load kernel values from the FIFO with no pipelining (i_rst_n held, toggled i_valid)
      */
     task automatic test1;
         ref reg i_clk;
         ref reg i_valid;
-        ref reg i_rst;
+        ref reg i_rst_n;
         ref logic [FIFO_WIDTH-1:0][7:0] i_kernels;
         ref logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] o_kernels; //[kernel row][kernel value in row][bit in kernel value]
 
@@ -217,9 +209,6 @@ module tb_top
 
         begin
 
-            @(negedge i_clk);
-            i_rst = 1'b1; //reset state machine -> ready to program
-            
             //reset signals
             i_kernels = '{0};
             i_krf_total = '{0};
@@ -259,8 +248,6 @@ module tb_top
                 // check output
                 if(krf_total_cvrt != o_kernels) begin
                     `uvm_error("tb_top", $sformatf("Test failed at i = %d\no_kernels = 0x%X ; expected = 0x%X",i,o_kernels, krf_total_cvrt));
-                    @(negedge i_clk); // let data appear at output
-                    $finish(2);
                 end
             end
 
@@ -271,12 +258,12 @@ module tb_top
 
 
     /* 
-        tb_krf_io_pipeline : load kernel values from the FIFO with pipelining (i_rst and i_valid held)
+        tb_krf_io_pipeline : load kernel values from the FIFO with pipelining (i_rst_n and i_valid held)
     */
     task automatic test2;
         ref reg i_clk;
         ref reg i_valid;
-        ref reg i_rst;
+        ref reg i_rst_n;
         ref logic [FIFO_WIDTH-1:0][7:0] i_kernels;
         ref logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] o_kernels; //[kernel row][kernel value in row][bit in kernel value]
 
@@ -289,10 +276,9 @@ module tb_top
             i_kernels = '{0};
             i_krf_total = '{0};
             krf_total_cvrt = '{0};
+            i_rst_n = 1'b1;
 
             @(negedge i_clk);
-
-            i_rst = 1'b1; //reset state machine -> ready to program
             i_valid = 1'b1; //input valid
 
             for (int i = 0 ; i < NUM_STATES ; i++) begin
@@ -323,8 +309,6 @@ module tb_top
                 // check output
                 if(krf_total_cvrt != o_kernels) begin
                     `uvm_error("tb_top", $sformatf("Test failed at i = %d\no_kernels = 0x%X ; expected = 0x%X",i,o_kernels, krf_total_cvrt))
-                    @(negedge i_clk); // let data appear at output
-                    $finish(2);
                 end
 
             end
@@ -337,13 +321,13 @@ module tb_top
 
 
     /*
-     tb_krf_invalid_load : load kernel values under invalid conditions (i_rst=1 i_valid=0, i_rst=0 i_valid=1). 
+     tb_krf_invalid_load : load kernel values under invalid conditions (i_rst_n=1 i_valid=0, i_rst_n=0 i_valid=1). 
                            for all possible states. No pipelining.
      */
     task automatic test3;
         ref reg i_clk;
         ref reg i_valid;
-        ref reg i_rst;
+        ref reg i_rst_n;
         ref logic [FIFO_WIDTH-1:0][7:0] i_kernels;
         ref logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] o_kernels; //[kernel row][kernel value in row][bit in kernel value]
 
@@ -355,17 +339,16 @@ module tb_top
             //for each state: do it
 
             /*
-            Attempt loading kernel values when i_rst=0, i_valid=1
+            Attempt loading kernel values when i_rst_n=0, i_valid=1
             */
             i_kernels = 64'h45BEEF9CFECAC0FF;
             i_valid = 1'b1; 
+            i_rst_n = 1'b0;
             @(negedge i_clk);
 
             // check output
             if(o_kernels != 64'h0) begin
-                `uvm_error("tb_top", $sformatf("Test failed when i_rst=0, i_valid=1\no_kernels = 0x%X ; expected = 0x%X",o_kernels, 64'h0));
-                @(negedge i_clk); // let data appear at output
-                $finish(2);
+                `uvm_error("tb_top", $sformatf("Test failed when i_rst_n=1, i_valid=1\no_kernels = 0x%X ; expected = 0x%X",o_kernels, 64'h0));
             end
 
             i_valid = 1'b0; 
@@ -373,10 +356,11 @@ module tb_top
 
 
             /*
-            Attempt loading kernel values at each state when i_valid=0, i_rst=1
+            Attempt loading kernel values at each state when i_valid=0, i_rst_n=0
             */
+            i_rst_n = 1'b0; //reset state machine
             @(negedge i_clk);
-            i_rst = 1'b1; //reset state machine -> ready to program
+            i_rst_n = 1'b1; 
             
             //reset signals
             i_kernels = '{0};
@@ -423,8 +407,6 @@ module tb_top
                 // check output
                 if(krf_total_cvrt != o_kernels) begin
                     `uvm_error("tb_top", $sformatf("Test failed at i = %d\no_kernels = 0x%X ; expected = 0x%X",i,o_kernels, krf_total_cvrt));
-                    @(negedge i_clk); // let data appear at output
-                    $finish(2);
                 end
             end
                 
@@ -444,7 +426,7 @@ module tb_top
     task automatic test4;
         ref reg i_clk;
         ref reg i_valid;
-        ref reg i_rst;
+        ref reg i_rst_n;
         ref logic [FIFO_WIDTH-1:0][7:0] i_kernels;
         ref logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] o_kernels; //[kernel row][kernel value in row][bit in kernel value]
 
@@ -455,8 +437,9 @@ module tb_top
 
             //for each state: do it
 
+            i_rst_n = 1'b0; //reset state machine
             @(negedge i_clk);
-            i_rst = 1'b1; //reset state machine -> ready to program
+            i_rst_n = 1'b1; 
             
             //reset signals
             i_kernels = '{0};
