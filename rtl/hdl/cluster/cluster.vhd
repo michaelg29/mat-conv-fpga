@@ -17,7 +17,7 @@ use IEEE.numeric_std.all;
 entity cluster is
   port (i_clk, i_new_pkt, i_is_subj, i_is_kern, i_discont, i_newrow, i_cmd_kern_signed: in std_logic; 
         i_pkt : in std_logic_vector(63 downto 0);
-        --i_waddr : in std_logic_vector(7 downto 0);
+        i_waddr : in std_logic_vector(7 downto 0);
         o_out_rdy: out std_logic;
         o_pixel : out std_logic_vector(7 downto 0));
 end cluster;
@@ -110,8 +110,8 @@ architecture cluster_arch of cluster is
 begin
     krf_data <= i_pkt(63 downto 0);
 
-    krf_valid <= i_new_pkt and not i_is_subj;
-    valid_rx_pixels <= i_new_pkt and i_is_subj;
+    krf_valid <= i_new_pkt and i_is_kern and not(i_waddr(7));
+    valid_rx_pixels <= i_new_pkt and not(i_waddr(7)) and i_is_subj;
 
     o_out_rdy<= out_rdy(6);
 
@@ -212,7 +212,7 @@ begin
         out_rdy(6 downto 1) <= out_rdy(5 downto 0);
         core_en(2 downto 1) <= core_en(1 downto 0); 
 
-        if (valid_rx_pixels = '1') then
+        if ((i_new_pkt and not(i_waddr(7)) and i_is_subj) = '1') then
           out_rdy(0) <= '1';
           core_en(0) <= '1';   
           addr_counter <= std_logic_vector(unsigned(addr_counter) + 1);
