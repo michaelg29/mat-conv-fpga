@@ -105,7 +105,10 @@ initial begin
   // startup sequence
   `uvm_info("tb_top", "Running testbench", UVM_NONE);
   #(MACCLK_PER+1ps);
-  //rst_n <= 1'b1;
+  
+  //reset IP
+  intf.reset();
+
   `uvm_info("tb_top", "Completed startup", UVM_NONE);
   #(MACCLK_PER);
 

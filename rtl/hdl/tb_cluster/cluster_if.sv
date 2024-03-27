@@ -225,6 +225,20 @@ interface cluster_if #(
   endfunction
 
 
+    /*
+        Reset the cluster signals
+    */
+    task reset();
+        cb.i_newrow <= 0;
+        cb.i_is_kern <= 0;
+        cb.i_cmd_kern_signed <= 0;
+        cb.i_is_subj <= 0;
+        cb.i_new_pkt <= 0;
+        cb.i_discont <= 0;
+        cb.i_pkt <= 0;
+        @cb;
+
+    endtask;
 
     /*
         Load kernel values into KRF
@@ -232,21 +246,22 @@ interface cluster_if #(
     task load_kernel(
         input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0]  kernel //input kernel
     );
- 
-        automatic logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kernel_convert; // Convert kernel to load row by row
+
+        automatic logic [3:0][FIFO_WIDTH-1:0][7:0] kernel_convert; // Convert kernel to load row by row
 
 
         //Map kernel to load row by row
-        kernel_convert[0] = kernel[0][7:3];
-        kernel_convert[1] = {kernel[0][2:0], kernel[1][7:6]};
-        kernel_convert[2] = kernel[1][5:1];
-        kernel_convert[3] = {kernel[1][0:0], kernel[2][7:4]};
-        kernel_convert[4] = {kernel[2][3:0], kernel[3][7:7]};
+        kernel_convert[0] = {kernel[1][2:0], kernel[0]};
+        kernel_convert[1] = {kernel[3][0:0], kernel[2], kernel[1][4:3]};
+        kernel_convert[2] = {kernel[4][3:0], kernel[3][4:1]};
+        kernel_convert[3] = {{7{0}},kernel[4][4:4]};
+
 
         begin
             `uvm_info("tb_top", "Loading Kernel values into KRF", UVM_NONE);
 
             @cb;
+            cb.i_is_subj <= 1'b0; //not a subject
             cb.i_is_kern <= 1'b1; //reset state machine -> ready to program
             cb.i_new_pkt <= 1'b1; //input valid
 

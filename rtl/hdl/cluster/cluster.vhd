@@ -105,7 +105,7 @@ architecture cluster_arch of cluster is
 
     signal krf_data : std_logic_vector(63 downto 0);--input to krf
 
-    signal addr_counter : std_logic_vector(10 downto 0);--address counter for CMC
+    signal addr_counter : std_logic_vector(10 downto 0) := (others => '0');--address counter for CMC
 
 begin
     krf_data <= i_pkt(63 downto 0);
@@ -190,7 +190,7 @@ begin
     port map(i_clk => i_clk, i_sign => kernel_signed, i_val => pixel_unrounded, o_res => o_pixel);
 
     c_mem_c: cmc
-    generic map (ECC_EN => 1)
+    generic map (ECC_EN => 0)
     port map (i_addr => addr_counter,
           i_core_0 => c0_res, i_core_1 => c1_res, i_core_2 => c2_res, i_core_3 => c3_res, i_core_4 => c4_res,
           o_core_0 => c0_sub, o_core_1 => c1_sub, o_core_2 => c2_sub, o_core_3 => c3_sub, o_core_4 => c4_sub, 
@@ -216,7 +216,9 @@ begin
           out_rdy(0) <= '1';
           core_en(0) <= '1';   
           addr_counter <= std_logic_vector(unsigned(addr_counter) + 1);
-          
+        else
+          out_rdy(0) <= '0';
+          core_en(0) <= '1'; --always enabled  
         end if;
 
         if(i_newrow = '1') then
