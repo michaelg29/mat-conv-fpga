@@ -8,9 +8,15 @@ use ieee.numeric_std.all;
 ---------------------------------
 entity rx_buffer is
   generic (
+    -- FIFO capacity
+    NWORDS           : integer range 16 to 512 := 16;
+    AWIDTH           : integer range  4 to  10 := 4;
+    AEVAL            : integer range  3 to 510 := 4;
+    AFVAL            : integer range  3 to 510 := 14;
+
     -- packet widths
-    G_DATA_PKT_WIDTH      : integer := 64; -- width of an AXI data packet
-    G_ADDR_PKT_WIDTH      : integer := 8   -- required relative address size
+    G_DATA_PKT_WIDTH : integer := 64; -- width of an AXI data packet
+    G_ADDR_PKT_WIDTH : integer := 8   -- required relative address size
   );
   port (
 
@@ -18,6 +24,7 @@ entity rx_buffer is
     i_macclk              : in  std_logic;
     i_aclk                : in  std_logic;
     i_arst_n              : in  std_logic;
+    o_rst_n               : out std_logic;
 
     -- AXI write address channel
     i_rx_axi_awid         : in  std_logic_vector(3 downto 0);
@@ -98,6 +105,9 @@ architecture rtl of rx_buffer is
   signal rx_fifo_valid : std_logic;
   signal rx_fifo_data  : std_logic_vector(G_ADDR_PKT_WIDTH+G_DATA_PKT_WIDTH-1 downto 0);
   signal rx_fifo_e     : std_logic;
+
+  -- CDC signals
+  signal rst_n_cdc     : std_logic;
 
   ---------------------------------------------------------------------------------------------------
   -- Component declarations
@@ -207,6 +217,15 @@ architecture rtl of rx_buffer is
 
 begin
 
+  -- reset signal CDC
+  p_rst_n_cdc : process(i_macclk)
+  begin
+    if (i_macclk'event and i_macclk = '1') then
+      rst_n_cdc <= i_arst_n;
+      o_rst_n   <= rst_n_cdc;
+    end if;
+  end process p_rst_n_cdc;
+
   -- AXI Receiver
   u_axi_receiver : axi_receiver
     generic map (
@@ -267,11 +286,11 @@ begin
   -- Input FIFO
   u_rx_fifo : fifo_DWxNW
     generic map(
-      DWIDTH     => ( 72 ),
-      NWORDS     => ( 16 ),
-      AWIDTH     => ( 4 ),
-      AEVAL      => ( 4 ),
-      AFVAL      => ( 14 )
+      DWIDTH     => ( G_ADDR_PKT_WIDTH+G_DATA_PKT_WIDTH ),
+      NWORDS     => ( NWORDS ),
+      AWIDTH     => ( AWIDTH ),
+      AEVAL      => ( AEVAL ),
+      AFVAL      => ( AFVAL )
     )
     port map(
       -- Inputs

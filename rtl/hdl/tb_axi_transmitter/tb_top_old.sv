@@ -56,8 +56,8 @@ logic        tx_axi_bvalid = '0;
 wire         tx_axi_bready;
 
 tx_buffer #(
-  .NWORDS(16),
-  .AWIDTH(4),
+  .NWORDS(512),
+  .AWIDTH(10),
   .G_DATA_PKT_WIDTH(64)
 ) DUT (
   // clock and reset interface
@@ -154,7 +154,8 @@ initial begin
   #(MACCLK_PER);
   w1_wen   <= 1'b0;
   #(MACCLK_PER);
-  
+  accept_w <= 2'b0;
+
   w0_wdata <= 32'hABABABAB;
   w0_wen   <= 1'b1;
   #(MACCLK_PER);
@@ -163,6 +164,13 @@ initial begin
   #(MACCLK_PER);
   w0_wen   <= 1'b0;
   #(MACCLK_PER);
+
+  new_addr <= 1'b1;
+  base_addr <= 32'hBEEFCAFE;
+  #(MACCLK_PER);
+  new_addr <= 1'b0;
+  #(4*MACCLK_PER);
+  `ASSERT_EQ(tx_axi_awaddr, base_addr, %08x);
 
   #(5*MACCLK_PER);
   `uvm_info("tb_top", "Resetting", UVM_NONE);

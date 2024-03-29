@@ -9,11 +9,13 @@ use ieee.numeric_std.all;
 entity tx_buffer is
   generic (
     -- FIFO capacity
-    NWORDS              : integer range 16 to 512 := 512;
-    AWIDTH              : integer range  4 to  10 := 10;
+    NWORDS           : integer range 16 to 512 := 512;
+    AWIDTH           : integer range  4 to  10 := 10;
+    AEVAL            : integer range  3 to 510 := 4;
+    AFVAL            : integer range  3 to 510 := 500;
 
     -- packet widths
-    G_DATA_PKT_WIDTH    : integer := 64 -- width of an AXI data packet
+    G_DATA_PKT_WIDTH : integer := 64 -- width of an AXI data packet
   );
   port (
 
@@ -112,6 +114,7 @@ architecture rtl of tx_buffer is
     );
     port (
       -- clock and reset interface
+      i_macclk            : in  std_logic;
       i_aclk              : in  std_logic;
       i_arst_n            : in  std_logic;
 
@@ -252,11 +255,11 @@ begin
   -- Output FIFO
   u_tx_fifo : fifo_DWxNW
     generic map(
-      DWIDTH     => ( 64 ),
-      NWORDS     => ( 16 ),
-      AWIDTH     => ( 4 ),
-      AEVAL      => ( 4 ),
-      AFVAL      => ( 14 )
+      DWIDTH     => ( G_DATA_PKT_WIDTH ),
+      NWORDS     => ( NWORDS ),
+      AWIDTH     => ( AWIDTH ),
+      AEVAL      => ( AEVAL ),
+      AFVAL      => ( AFVAL )
     )
     port map(
       -- Inputs
@@ -281,21 +284,75 @@ begin
     );
 
   -- AXI Transmitter
-  -- u_axi_transmitter : axi_transmitter
-  o_tx_axi_awid       <= (others => '0');
-  o_tx_axi_awaddr     <= (others => '0');
-  o_tx_axi_awlen      <= (others => '0');
-  o_tx_axi_awsize     <= (others => '0');
-  o_tx_axi_awburst    <= (others => '0');
-  o_tx_axi_awlock     <= '0';
-  o_tx_axi_awcache    <= (others => '0');
-  o_tx_axi_awprot     <= (others => '0');
-  o_tx_axi_awvalid    <= '0';
-  o_tx_axi_wdata      <= (others => '0');
-  o_tx_axi_wstrb      <= (others => '0');
-  o_tx_axi_wlast      <= '0';
-  o_tx_axi_wvalid     <= '0';
-  o_tx_axi_bready     <= '0';
+  u_axi_transmitter : axi_transmitter
+    generic map (
+      -- FIFO capacity
+      NWORDS              => ( NWORDS ),
+      AWIDTH              => ( AWIDTH )
+    )
+    port map (
+      -- clock and reset interface
+      i_macclk            => i_macclk,
+      i_aclk              => i_aclk,
+      i_arst_n            => i_arst_n,
+
+      -- interface with internal controller
+      i_header_request    => i_accept_w(1), -- header is writer 1
+      i_payload_request   => i_accept_w(0), -- payload is writer 0
+      i_base_addr         => i_base_addr,
+      i_new_addr          => i_new_addr,
+
+      -- interface with output FIFO
+      i_pkt_cnt           => payload_fifo_count,
+      o_pkt_read          => payload_read,
+      i_pkt               => payload_data,
+
+      -- write address channel
+      o_tx_axi_awid       => o_tx_axi_awid,
+      o_tx_axi_awaddr     => o_tx_axi_awaddr,
+      o_tx_axi_awlen      => o_tx_axi_awlen,
+      o_tx_axi_awsize     => o_tx_axi_awsize,
+      o_tx_axi_awburst    => o_tx_axi_awburst,
+      o_tx_axi_awlock     => o_tx_axi_awlock,
+      o_tx_axi_awcache    => o_tx_axi_awcache,
+      o_tx_axi_awprot     => o_tx_axi_awprot,
+      o_tx_axi_awvalid    => o_tx_axi_awvalid,
+      i_tx_axi_awready    => i_tx_axi_awready,
+
+      -- write data channel
+      o_tx_axi_wdata      => o_tx_axi_wdata,
+      o_tx_axi_wstrb      => o_tx_axi_wstrb,
+      o_tx_axi_wlast      => o_tx_axi_wlast,
+      o_tx_axi_wvalid     => o_tx_axi_wvalid,
+      i_tx_axi_wready     => i_tx_axi_wready,
+
+      -- write response channel
+      i_tx_axi_bid        => i_tx_axi_bid,
+      i_tx_axi_bresp      => i_tx_axi_bresp,
+      i_tx_axi_bvalid     => i_tx_axi_bvalid,
+      o_tx_axi_bready     => o_tx_axi_bready,
+
+      -- read address channel (unused)
+      o_tx_axi_arid       => open,
+      o_tx_axi_araddr     => open,
+      o_tx_axi_arlen      => open,
+      o_tx_axi_arsize     => open,
+      o_tx_axi_arburst    => open,
+      o_tx_axi_arlock     => open,
+      o_tx_axi_arcache    => open,
+      o_tx_axi_arprot     => open,
+      o_tx_axi_arvalid    => open,
+      i_tx_axi_arready    => '0',
+
+      -- read data channel (unused)
+      i_tx_axi_rid        => (others => '0'),
+      i_tx_axi_rdata      => (others => '0'),
+      i_tx_axi_rresp      => (others => '0'),
+      i_tx_axi_rlast      => '0',
+      i_tx_axi_rvalid     => '0',
+      o_tx_axi_rready     => open
+    );
+
   o_tx_axi_arid       <= (others => '0');
   o_tx_axi_araddr     <= (others => '0');
   o_tx_axi_arlen      <= (others => '0');

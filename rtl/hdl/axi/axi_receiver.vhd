@@ -90,7 +90,9 @@ architecture rtl of axi_receiver is
   signal axi_awv_awr_flag : std_logic;
 
   -- registers for CDC
+  signal rx_drop_pkts     : std_logic;
   signal rx_drop_pkts_cdc : std_logic;
+  signal write_blank      : std_logic;
   signal write_blank_cdc  : std_logic;
 
   -- write blank logic
@@ -202,8 +204,10 @@ begin
         write_blank_en   <= '0';
       else
         -- perform CDC on control signals from Input FSM
-        rx_drop_pkts_cdc <= i_rx_drop_pkts;
-        write_blank_cdc  <= i_write_blank_en;
+        rx_drop_pkts     <= i_rx_drop_pkts;
+        rx_drop_pkts_cdc <= rx_drop_pkts;
+        write_blank      <= i_write_blank_en;
+        write_blank_cdc  <= write_blank;
 
         -- output write data
         if (write_blank_en = '1') then

@@ -16,6 +16,7 @@ entity axi_transmitter is
   );
   port (
     -- clock and reset interface
+    i_macclk            : in  std_logic;
     i_aclk              : in  std_logic;
     i_arst_n            : in  std_logic;
 
@@ -91,6 +92,14 @@ architecture rtl of axi_transmitter is
   );
   signal axi_tx_fsm_state  : TYPE_AXI_TX_FSM_STATE;
 
+  -- new address signals (CDC)
+  signal new_addr_mac      : std_logic_vector(1 downto 0);
+  signal new_addr          : std_logic;
+  signal new_addr_cdc      : std_logic;
+  signal base_addr_mac     : std_logic_vector(31 downto 0);
+  signal base_addr         : std_logic_vector(31 downto 0);
+  signal base_addr_cdc     : std_logic_vector(31 downto 0);
+
   -- payload status
   signal payload_size_rest : std_logic_vector(15 downto 0);
   signal payload_count     : integer range 0 to 15;
@@ -101,6 +110,7 @@ architecture rtl of axi_transmitter is
   -- AXI interface signals
   signal axi_awaddr        : std_logic_vector(31 downto 0);
   signal axi_awvalid       : std_logic;
+  signal axi_wdata_buf     : std_logic_vector(63 downto 0);
   signal axi_wdata         : std_logic_vector(63 downto 0);
   signal axi_wlast         : std_logic;
   signal axi_wvalid        : std_logic;
@@ -108,6 +118,23 @@ architecture rtl of axi_transmitter is
   signal axi_bready        : std_logic;
 
 begin
+
+  -- new address CDC (hold high for two clock cycles with pulse)
+  p_new_addr: process(i_macclk)
+  begin
+    if (i_macclk'event and i_macclk = '1') then
+      if (i_new_addr = '1') then
+        new_addr_mac <= "11";
+        base_addr_mac <= i_base_addr;
+      elsif (new_addr_mac = "11") then
+        new_addr_mac <= "10";
+      elsif (new_addr_mac = "10") then
+        new_addr_mac <= "01";
+      else
+        new_addr_mac <= "00";
+      end if;
+    end if;
+  end process p_new_addr;
 
   -- main AXI FSM process
   p_main: process (i_aclk)
@@ -128,11 +155,20 @@ begin
         axi_wlast         <= '0';
         axi_bready        <= '0';
 
+        new_addr          <= '0';
+        new_addr_cdc      <= '0';
+
       else
+        -- CDC input signals
+        new_addr      <= new_addr_mac(1);
+        new_addr_cdc  <= new_addr;
+        base_addr     <= base_addr_mac;
+        base_addr_cdc <= base_addr;
+
         -- update output address
-        if (i_new_addr = '1') then
+        if (new_addr_cdc = '1') then
           -- new base address
-          axi_awaddr <= i_base_addr;
+          axi_awaddr <= base_addr_cdc;
         elsif ((axi_wvalid and i_tx_axi_wready) = '1') then
           -- successful write, increment address
           axi_awaddr <= axi_awaddr + x"8";
@@ -152,13 +188,14 @@ begin
             -- start transaction
             if (i_pkt_cnt >= payload_count + 1) then
               axi_tx_fsm_state  <= SEND_ADDRESS;
+              axi_awvalid       <= '1';
               request_payload   <= '1';
               request_payload_p <= '1';
               o_pkt_read        <= '1'; -- read first packet
             end if;
 
             -- header is 4 packets
-            axi_awlen(1 downto 0) <= x"3";
+            axi_awlen(1 downto 0) <= "11";
             if (i_payload_request = '1') then
               -- payload burst is 16 packets
               axi_awlen(3 downto 2) <= "11";
@@ -188,54 +225,67 @@ begin
           end if;
 
           -- read from FIFO when current wdata accepted
-          -- next data is available next CC
+          -- next data is available in 2 CC
+          if ((request_payload and axi_wvalid and i_tx_axi_arready) = '1') then
+            axi_wdata     <= axi_wdata_buf;
+            axi_wdata_buf <= i_pkt;
+          end if ;
           o_pkt_read <= request_payload and axi_wvalid and i_tx_axi_wready;
 
+          -- counter
           if (payload_count = 0) then
-            -- determine how many more to send
-            if (payload_size_rest = 0 ) then
-              axi_tx_fsm_state   <= CHECK_PAYLOAD;
-
-              request_payload        <= '0';
-            else
-              if (payload_size_rest > 16) then
-                payload_size_rest      <= payload_size_rest - x"10";
-                axi_awlen              <= x"F";
-                payload_count          <= 15;
-              else
-                payload_size_rest      <= (others=>'0');
-                if (only_one_payload = '1') then
-                  axi_awlen              <= x"0";
-                  payload_count          <= 0;
-                else
-                  axi_awlen              <= payload_size_rest(3 downto 0) - '1'; -- payload size (minus 1)
-                  payload_count          <= conv_integer(payload_size_rest - '1');
-                end if;
-              end if;
-
-              axi_tx_fsm_state <= CHECK_PAYLOAD;
-              axi_awaddr       <= axi_awaddr + x"80";
-
-            end if;
-
+            axi_tx_fsm_state   <= CHECK_PAYLOAD;
+            request_payload    <= '0';
           elsif (i_tx_axi_wready = '1') then
             -- decrement counter
             payload_count <= payload_count - 1;
           end if;
 
-          -- wlast generation
-          if ((payload_count = 1) and (i_tx_axi_wready = '1')) then
-            axi_wlast     <= '1';
-          else
-            axi_wlast     <= '0';
-          end if;
-          
+          -- if (payload_count = 0) then
+            -- -- determine how many more to send
+            -- if (payload_size_rest = 0 ) then
+              -- axi_tx_fsm_state   <= CHECK_PAYLOAD;
+
+              -- request_payload        <= '0';
+            -- else
+              -- if (payload_size_rest > 16) then
+                -- payload_size_rest      <= payload_size_rest - x"10";
+                -- axi_awlen              <= x"F";
+                -- payload_count          <= 15;
+              -- else
+                -- payload_size_rest      <= (others=>'0');
+                -- if (only_one_payload = '1') then
+                  -- axi_awlen              <= x"0";
+                  -- payload_count          <= 0;
+                -- else
+                  -- axi_awlen              <= payload_size_rest(3 downto 0) - '1'; -- payload size (minus 1)
+                  -- payload_count          <= conv_integer(payload_size_rest - '1');
+                -- end if;
+              -- end if;
+
+              -- axi_tx_fsm_state <= CHECK_PAYLOAD;
+              -- axi_awaddr       <= axi_awaddr + x"80";
+
+            -- end if;
+
+          -- elsif (i_tx_axi_wready = '1') then
+            -- -- decrement counter
+            -- payload_count <= payload_count - 1;
+          -- end if;
+
+          -- -- wlast generation
+          -- if ((payload_count = 1) and (i_tx_axi_wready = '1')) then
+            -- axi_wlast     <= '1';
+          -- else
+            -- axi_wlast     <= '0';
+          -- end if;
+
         -- check write response channel
         when ACK_BRESP =>
           if ((axi_bready and i_tx_axi_bvalid) = '1') then
             -- transition to send new packet
             axi_bready <= '0';
-            
+
           end if;
 
         when others =>
