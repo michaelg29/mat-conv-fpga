@@ -30,8 +30,9 @@ bit [31:0] dummy = $urandom(SEED);
 //========================================
 // Signals
 //========================================
-//clock
+//clock and reset
 reg i_clk;
+reg i_rst_n;
 time MACCLK_PER = `MACCLK_PER_PS * 1ps;
 
 //DUT signals
@@ -51,6 +52,7 @@ cluster_if #(
 //DUT
 cluster DUT(
     .i_clk(i_clk),
+    .i_rst_n(i_rst_n),
 
     .i_newrow(intf.i_newrow),
     .i_is_kern(intf.i_is_kern),
@@ -59,6 +61,7 @@ cluster DUT(
     .i_new_pkt(intf.i_new_pkt),
     .i_discont(intf.i_discont),
     .i_pkt(intf.i_pkt),
+    .i_waddr(intf.i_waddr),
     .o_out_rdy(intf.o_out_rdy), //TODO remove
     .o_pixel(intf.o_pixel)
 );
@@ -107,7 +110,10 @@ initial begin
   #(MACCLK_PER+1ps);
   
   //reset IP
+  i_rst_n <= 0;
   intf.reset();
+  #(MACCLK_PER);
+  i_rst_n <= 1;
 
   `uvm_info("tb_top", "Completed startup", UVM_NONE);
   #(MACCLK_PER);

@@ -15,7 +15,8 @@ interface cluster_if #(
   parameter SIGNED_LOWER_BOUND = 12'b100000000000
 ) (
   // clock and reset interface
-  input logic i_clk
+  input logic i_clk,
+  input logic i_rst_n
 );
 
   import uvm_pkg::*;
@@ -27,6 +28,7 @@ interface cluster_if #(
   logic i_new_pkt;
   logic i_discont;
   logic [FIFO_WIDTH-1:0][7:0] i_pkt; //input pixels from FIFO and/or buffered pixels
+  logic [7:0] i_waddr;
 
   wire [7:0] o_pixel;
   wire o_out_rdy;
@@ -41,7 +43,7 @@ interface cluster_if #(
   //========================================
   clocking cb @(posedge i_clk);
     input #0 o_pixel, o_out_rdy;
-    output i_newrow, i_is_kern, i_cmd_kern_signed, i_is_subj, i_new_pkt, i_discont, i_pkt;
+    output i_newrow, i_is_kern, i_cmd_kern_signed, i_is_subj, i_new_pkt, i_discont, i_pkt, i_waddr;
   endclocking;
 
 
@@ -236,8 +238,8 @@ interface cluster_if #(
         cb.i_new_pkt <= 0;
         cb.i_discont <= 0;
         cb.i_pkt <= 0;
+        cb.i_waddr <= 0;
         @cb;
-
     endtask;
 
     /*
@@ -262,7 +264,7 @@ interface cluster_if #(
 
             @cb;
             cb.i_is_subj <= 1'b0; //not a subject
-            cb.i_is_kern <= 1'b1; //reset state machine -> ready to program
+            cb.i_is_kern <= 1'b1; //is the kernel
             cb.i_new_pkt <= 1'b1; //input valid
 
             for (int i = 0 ; i < NUM_STATES ; i++) begin

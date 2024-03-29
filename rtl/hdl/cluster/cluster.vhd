@@ -15,7 +15,7 @@ use IEEE.numeric_std.all;
 --o_pixel: output total result
 
 entity cluster is
-  port (i_clk, i_new_pkt, i_is_subj, i_is_kern, i_discont, i_newrow, i_cmd_kern_signed: in std_logic; 
+  port (i_clk, i_rst_n, i_new_pkt, i_is_subj, i_is_kern, i_discont, i_newrow, i_cmd_kern_signed: in std_logic; 
         i_pkt : in std_logic_vector(63 downto 0);
         i_waddr : in std_logic_vector(7 downto 0);
         o_out_rdy: out std_logic;
@@ -43,7 +43,7 @@ architecture cluster_arch of cluster is
   end component; 
 
 
-  component krf is port ( i_clk, i_rst, i_valid : in std_logic;
+  component krf is port ( i_clk, i_rst_n, i_valid : in std_logic;
     i_data: in std_logic_vector(63 downto 0);
     o_kr_0, o_kr_1, o_kr_2, o_kr_3, o_kr_4 : out std_logic_vector(39 downto 0)); 
   end component; 
@@ -110,8 +110,8 @@ architecture cluster_arch of cluster is
 begin
     krf_data <= i_pkt(63 downto 0);
 
-    krf_valid <= i_new_pkt and i_is_kern and not(i_waddr(7));
-    valid_rx_pixels <= i_new_pkt and not(i_waddr(7)) and i_is_subj;
+    krf_valid       <= i_new_pkt and i_is_kern and not(i_waddr(7)) and not i_is_subj;
+    valid_rx_pixels <= i_new_pkt and i_is_subj and not(i_waddr(7));
 
     o_out_rdy<= out_rdy(6);
 
@@ -184,7 +184,7 @@ begin
                 o_pixel_0 => feed_0(7 downto 0), o_pixel_1 => feed_1(7 downto 0), o_pixel_2 => feed_2(7 downto 0), o_pixel_3 => feed_3(7 downto 0), o_pixel_4 => feed_4(7 downto 0));
 
     kernel_rf: krf 
-    port map(i_clk => i_clk, i_rst => i_is_kern, i_valid => krf_valid, i_data => krf_data, o_kr_0 => k_row0, o_kr_1 => k_row1, o_kr_2 => k_row2, o_kr_3 => k_row3, o_kr_4 => k_row4);
+    port map(i_clk => i_clk, i_rst_n => i_rst_n, i_valid => krf_valid, i_data => krf_data, o_kr_0 => k_row0, o_kr_1 => k_row1, o_kr_2 => k_row2, o_kr_3 => k_row3, o_kr_4 => k_row4);
 
     sat: saturator
     port map(i_clk => i_clk, i_sign => kernel_signed, i_val => pixel_unrounded, o_res => o_pixel);
