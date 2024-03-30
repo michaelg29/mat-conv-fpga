@@ -108,7 +108,7 @@ interface cluster_if #(
   endfunction 
 
 
-  //Generate image
+  //Generate image with padding
   function logic [NUM_ROWS+2*PADDING-1:0][NUM_COLS+2*PADDING-1:0][7:0] image_gen;
 
       logic [NUM_ROWS+2*PADDING-1:0][NUM_COLS+2*PADDING-1:0][7:0] imgen;
@@ -143,10 +143,63 @@ interface cluster_if #(
   endfunction
 
 
+
+  //Generate image without padding
+  function logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] image_gen_nopad;
+
+      logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imgen;
+
+      for (int row = 0 ; row < NUM_ROWS ; row++) begin //for rows
+          for (int col = 0 ; col < NUM_COLS+2 ; col++) begin //for columns 
+                imgen[row][col] = unsigned'(row+col+col*col);
+          end
+      end
+
+      return imgen;
+  endfunction
+
+
   //Calculate resulting image
   function logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] image_conv;
 
       input logic [NUM_ROWS+2*PADDING-1:0][NUM_COLS+2*PADDING-1:0][7:0] imgen;
+      input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kgen;
+      input logic sign;
+
+      logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imconv;
+      static int res = 0;
+      static int subres = 0;
+
+      for (int row = 0 ; row < NUM_ROWS ; row++) begin
+          for (int col = 0 ; col < NUM_COLS ; col++) begin
+
+              //Reset result
+              res = 0;
+
+              //Calculate pixel
+              for (int krow = 0 ; krow < KERNEL_SIZE ; krow++) begin //for rows
+                  subres = signed'(res) + ROUNDING;
+                  for (int kcol = 0 ; kcol < KERNEL_SIZE ; kcol++) begin //for columns
+                      subres += signed'(kgen[krow][kcol]) * signed'({1'b0 , imgen[row+krow][col+kcol]});
+                  end
+                  res = signed'(subres[20:3]);
+              end
+
+              //Apply saturation
+              imconv[row][col] = signed'(saturate(res, sign));
+          end
+      end
+
+      return imconv;
+
+  endfunction
+
+
+
+  //Calculate resulting image
+  function logic [NUM_ROWS-PADDING-1:0][NUM_COLS-PADDING-1:0][7:0] image_conv_nopad;
+
+      input logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imgen;
       input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kgen;
       input logic sign;
 
@@ -262,14 +315,18 @@ interface cluster_if #(
         begin
             `uvm_info("tb_top", "Loading Kernel values into KRF", UVM_NONE);
 
-            @cb;
             cb.i_is_subj <= 1'b0; //not a subject
             cb.i_is_kern <= 1'b1; //is the kernel
-            cb.i_new_pkt <= 1'b1; //input valid
+            @cb;
 
             for (int i = 0 ; i < NUM_STATES ; i++) begin
+                cb.i_new_pkt <= 1'b1; //input valid
                 cb.i_pkt <= kernel_convert[i];                
                 @cb; //input new data / let data appear at output (1 clock cycle)
+
+                cb.i_new_pkt <= 1'b0; //input invalid
+                for (int j = 0 ; j < 3 ; j++) @cb;
+                
             end
 
             cb.i_is_kern <= 1'b0; //done programming

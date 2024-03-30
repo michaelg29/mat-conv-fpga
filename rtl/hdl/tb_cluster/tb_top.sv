@@ -7,6 +7,8 @@
 module tb_top #(
   parameter string TC="tb_cluster_kernel_size_subject_no_pad", // Name of test case to run
   parameter KERNEL_SIZE = 5,
+  parameter NUM_ROWS = 5, //subject image row range
+  parameter NUM_COLS = 10, //subject image column range
   parameter FIFO_WIDTH = 8,
   parameter int NUM_REPS = 3, //Number of times each test shall be reapeated with different values
   parameter int SEED = 0, //Seed for the random input generation
@@ -90,16 +92,14 @@ generate
     begin: tc
       tb_cluster_load_kernel tc = new(intf, MACCLK_PER);
     end
-    /*
     "tb_cluster_load_kernel_block":
     begin: tc
       tb_cluster_load_kernel_block tc = new(intf, MACCLK_PER);
     end
     "tb_cluster_kernel_size_subject_no_pad":
     begin: tc
-      tb_cluster_kernel_size_subject_no_pad tc = new(intf, MACCLK_PER);
+      tb_cluster_kernel_size_subject_no_pad #(.KERNEL_SIZE(KERNEL_SIZE)) tc = new(intf, MACCLK_PER);
     end // tc
-    */
   endcase // TC
 endgenerate
 
