@@ -46,7 +46,10 @@ time MACCLK_PER = `MACCLK_PER_PS * 1ps;
 //========================================
 // interface to DUT instantiation
 cluster_if #(
-  .FIFO_WIDTH(8)
+  .FIFO_WIDTH(FIFO_WIDTH),
+  .NUM_COLS(NUM_COLS),
+  .NUM_ROWS(NUM_ROWS),
+  .KERNEL_SIZE(KERNEL_SIZE)
 ) intf (
   .i_clk(i_clk)
 ); 
@@ -72,7 +75,7 @@ cluster DUT(
 //========================================
 // Clocks
 //========================================
-const int clk_period = 200; //ns (5MHz)
+const int clk_period = MACCLK_PER; //ns (5MHz)
 
 initial begin
     i_clk = 0;
@@ -98,7 +101,12 @@ generate
     end
     "tb_cluster_kernel_size_subject_no_pad":
     begin: tc
-      tb_cluster_kernel_size_subject_no_pad #(.KERNEL_SIZE(KERNEL_SIZE)) tc = new(intf, MACCLK_PER);
+      tb_cluster_kernel_size_subject_no_pad #(
+        .KERNEL_SIZE(KERNEL_SIZE),
+        .FIFO_WIDTH(FIFO_WIDTH),
+        .NUM_ROWS(NUM_ROWS),
+        .NUM_COLS(NUM_COLS)
+        ) tc = new(intf, MACCLK_PER);
     end // tc
   endcase // TC
 endgenerate

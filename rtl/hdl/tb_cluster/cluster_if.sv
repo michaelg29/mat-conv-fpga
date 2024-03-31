@@ -150,7 +150,7 @@ interface cluster_if #(
       logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imgen;
 
       for (int row = 0 ; row < NUM_ROWS ; row++) begin //for rows
-          for (int col = 0 ; col < NUM_COLS+2 ; col++) begin //for columns 
+          for (int col = 0 ; col < NUM_COLS ; col++) begin //for columns 
                 imgen[row][col] = unsigned'(row+col+col*col);
           end
       end
@@ -160,12 +160,11 @@ interface cluster_if #(
 
 
   //Calculate resulting image
-  function logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] image_conv;
-
-      input logic [NUM_ROWS+2*PADDING-1:0][NUM_COLS+2*PADDING-1:0][7:0] imgen;
-      input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kgen;
-      input logic sign;
-
+  function logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] image_conv(
+      input logic [NUM_ROWS+2*PADDING-1:0][NUM_COLS+2*PADDING-1:0][7:0] imgen,
+      input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kgen,
+      input logic sign
+  );
       logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imconv;
       static int res = 0;
       static int subres = 0;
@@ -197,18 +196,17 @@ interface cluster_if #(
 
 
   //Calculate resulting image
-  function logic [NUM_ROWS-PADDING-1:0][NUM_COLS-PADDING-1:0][7:0] image_conv_nopad;
-
-      input logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imgen;
-      input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kgen;
-      input logic sign;
-
-      logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imconv;
+  function logic [NUM_ROWS-2*PADDING-1:0][NUM_COLS-2*PADDING-1:0][7:0] image_conv_nopad(
+      input logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imgen,
+      input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kgen,
+      input logic sign
+  );
+      logic [NUM_ROWS-2*PADDING-1:0][NUM_COLS-2*PADDING-1:0][7:0] imconv;
       static int res = 0;
       static int subres = 0;
 
-      for (int row = 0 ; row < NUM_ROWS ; row++) begin
-          for (int col = 0 ; col < NUM_COLS ; col++) begin
+      for (int row = 0 ; row < NUM_ROWS-2*PADDING ; row++) begin
+          for (int col = 0 ; col < NUM_COLS-2*PADDING ; col++) begin
 
               //Reset result
               res = 0;
@@ -233,10 +231,11 @@ interface cluster_if #(
 
 
   //Display matrix convolution (only kernel dim)
-  function display_conv;
-      input logic [NUM_ROWS+2*PADDING-1:0][NUM_COLS+2*PADDING-1:0][7:0] imgen;
-      input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kgen;
-      input logic [NUM_ROWS-1:0][NUM_COLS-1:0][17:0] imconv;
+  function display_conv(
+      input logic [NUM_ROWS+2*PADDING-1:0][NUM_COLS+2*PADDING-1:0][7:0] imgen,
+      input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kgen,
+      input logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imconv
+  );
 
       static string s = "";
 
@@ -280,6 +279,58 @@ interface cluster_if #(
   endfunction
 
 
+
+  //Display matrix convolution (only kernel dim)
+  function display_conv_nopad(
+      input logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imgen,
+      input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kgen,
+      input logic [NUM_ROWS-2*PADDING-1:0][NUM_COLS-2*PADDING-1:0][7:0] imconv
+  );
+
+      static string s = "";
+
+      //Display kernel
+      $display("Kernel");
+      for (int row = 0 ; row < KERNEL_SIZE ; row++) begin //for rows
+
+          s = $sformatf("Row %d: ", row);
+          for (int col = 0 ; col < KERNEL_SIZE ; col++) begin //for columns
+              s = $sformatf("%s %d ", s, signed'(kgen[row][col]));
+          end
+
+          $display("%s",s);
+      end
+
+      //Display input image
+      $display("Input Image");
+      for (int row = 0 ; row < NUM_ROWS ; row++) begin //for rows
+
+          s = $sformatf("Row %d: ", row);
+          for (int col = 0 ; col < NUM_COLS ; col++) begin //for columns
+              s = $sformatf("%s %d ", s, imgen[row][col]);
+          end
+
+          $display("%s",s);
+      end
+
+
+      //Display output image
+      $display("Output Image");
+      for (int row = 0 ; row < NUM_ROWS-2*PADDING ; row++) begin //for rows
+
+          s = $sformatf("Row %d: ", row);
+          for (int col = 0 ; col < NUM_COLS-2*PADDING ; col++) begin //for columns
+              s = $sformatf("%s %d ", s, signed'(imconv[row][col]));
+          end
+
+          $display("%s",s);
+      end
+
+  endfunction
+
+
+
+
     /*
         Reset the cluster signals
     */
@@ -298,8 +349,9 @@ interface cluster_if #(
     /*
         Load kernel values into KRF
     */
-    task load_kernel(
-        input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0]  kernel //input kernel
+    task automatic load_kernel(
+        input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0]  kernel, //input kernel
+        input logic sign = 1'b1
     );
 
         automatic logic [3:0][FIFO_WIDTH-1:0][7:0] kernel_convert; // Convert kernel to load row by row
@@ -317,6 +369,7 @@ interface cluster_if #(
 
             cb.i_is_subj <= 1'b0; //not a subject
             cb.i_is_kern <= 1'b1; //is the kernel
+            cb.i_cmd_kern_signed <= sign;
             @cb;
 
             for (int i = 0 ; i < NUM_STATES ; i++) begin
