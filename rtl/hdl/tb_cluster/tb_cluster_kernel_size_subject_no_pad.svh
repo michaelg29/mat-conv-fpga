@@ -11,13 +11,16 @@ class tb_cluster_kernel_size_subject_no_pad
     int NUM_COLS = 5) 
     extends mat_conv_tc;
 
-  // virtual interface
+  // virtual interfacepixel
   virtual cluster_if vif;
 
   // clock period definition
   time MACCLK_PER;
 
   int num_additional_cycles_shifts;
+
+   // local params
+  localparam PADDING = (KERNEL_SIZE-1)/2;
 
   // constructor
   function new(virtual cluster_if vif, time MACCLK_PER);
@@ -30,8 +33,8 @@ class tb_cluster_kernel_size_subject_no_pad
     //logic [vif.KERNEL_SIZE-1:0][vif.KERNEL_SIZE-1:0][7:0] kernel;
     //logic [vif.KERNEL_SIZE-1:0][vif.KERNEL_SIZE-1:0][7:0] image;
     logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kernel;
-    logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] image;
-    logic [7:0] pixel;
+    logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] image;
+    logic [NUM_ROWS-2*PADDING-1:0][NUM_COLS-2*PADDING-1:0][7:0] imconv;
 
     `uvm_info("tb_cluster_kernel_size_subject_no_pad", "Executing testcase", UVM_NONE);
 
@@ -45,26 +48,25 @@ class tb_cluster_kernel_size_subject_no_pad
     image = vif.image_gen_nopad();
 
     //Calculate convolution result (unsigned)
-    pixel = vif.image_conv_nopad(image, kernel, 1'b1);
+    imconv = vif.image_conv_nopad(image, kernel, 1'b1);
 
-    vif.display_conv_nopad(image, kernel, pixel);
+    vif.display_conv_nopad(image, kernel, imconv);
 
 
     #(MACCLK_PER);
 
-    vif.i_discont <= 0;
+    vif.i_discont <= 1;
     vif.i_waddr <= 0;
 
-    #(MACCLK_PER);
+    //Change values on falling edge (problems when doing rising edge)
+    #(MACCLK_PER/2);
 
     vif.i_is_subj <= 1;
     for (int row = 0 ; row < NUM_ROWS ; row++) begin
       vif.i_newrow <= 1;
       for (int col = 0 ; col < NUM_COLS ; col+=FIFO_WIDTH) begin
         vif.i_new_pkt <= 1;
-
-        //vif.i_pkt <= image[row][col :+ FIFO_WIDTH];
-        vif.i_pkt <= image[row][KERNEL_SIZE-1:0]; //ONLY FOR THIS
+        vif.i_pkt <= image[row][col +: FIFO_WIDTH]; //args must be multiple of FIFO_WIDTH
         
         #(MACCLK_PER);
         vif.i_newrow <= 0;
@@ -72,7 +74,7 @@ class tb_cluster_kernel_size_subject_no_pad
         // Max of FIFO_WIFTH-KERNEL_SIZE additional shifts
         if(NUM_COLS - col*FIFO_WIDTH < FIFO_WIDTH) begin
           // Minimum number of pixels is 5 for a transfer (kernel size), max is FIFO_WIDTH (8)
-          num_additional_cycles_shifts = (NUM_COLS - col*FIFO_WIDTH) - KERNEL_SIZE;
+          num_additional_cycles_shifts = (NUM_COLS - col*FIFO_WIDTH) - KERNEL_SIZE; 
         end else begin
           num_additional_cycles_shifts = FIFO_WIDTH-KERNEL_SIZE;
         end
@@ -88,7 +90,7 @@ class tb_cluster_kernel_size_subject_no_pad
 
 
     for (int i = 0 ; i < 10 ; i++) begin
-      $display("%i", vif.o_pixel);
+      $display("%d", signed'{vif.o_pixel});
       #(MACCLK_PER);
     end
 

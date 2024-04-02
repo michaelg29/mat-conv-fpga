@@ -7,7 +7,7 @@
 interface cluster_if #(
   parameter FIFO_WIDTH=8,
   parameter KERNEL_SIZE = 5,
-  parameter NUM_ROWS = 5, //subject image row range
+  parameter NUM_ROWS = 10, //subject image row range
   parameter NUM_COLS = 10, //subject image column range
   parameter ROUNDING=3'b100,
   parameter UNSIGNED_UPPER_BOUND = 12'b111111111111,

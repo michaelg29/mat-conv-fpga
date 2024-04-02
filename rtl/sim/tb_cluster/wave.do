@@ -1,9 +1,25 @@
 onerror {resume}
 quietly WaveActivateNextPane {} 0
 add wave -noupdate /tb_top/i_clk
-add wave -noupdate /tb_top/i_pixels_cores
-add wave -noupdate /tb_top/i_kernels
 add wave -noupdate /tb_top/*
+add wave -noupdate /tb_top/DUT/i_new_pkt
+add wave -noupdate /tb_top/DUT/i_newrow
+add wave -noupdate /tb_top/DUT/i_is_subj
+add wave -noupdate /tb_top/DUT/i_is_kern
+add wave -noupdate /tb_top/DUT/i_discont
+add wave -noupdate /tb_top/DUT/i_cmd_kern_signed
+add wave -noupdate /tb_top/DUT/i_pkt
+add wave -noupdate /tb_top/DUT/o_pixel
+add wave -noupdate /tb_top/DUT/cluster_feed/i_sel
+add wave -noupdate /tb_top/DUT/cluster_feed/i_new
+add wave -noupdate /tb_top/DUT/cluster_feed/i_pixel*
+add wave -noupdate /tb_top/DUT/cluster_feed/o_pixel*
+add wave -noupdate /tb_top/DUT/core0/i_s*
+add wave -noupdate /tb_top/DUT/core0/o_res
+add wave -noupdate /tb_top/DUT/c_mem_c/i_addr
+add wave -noupdate /tb_top/DUT/c_mem_c/i_core*
+add wave -noupdate /tb_top/DUT/c_mem_c/o_core*
+
 TreeUpdate [SetDefaultTree]
 WaveRestoreCursors {{Cursor 1} {52468 ps} 0}
 quietly wave cursor active 1
