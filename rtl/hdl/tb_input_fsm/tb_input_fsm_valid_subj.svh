@@ -83,8 +83,8 @@ class tb_input_fsm_valid_subj extends mat_conv_tc;
       if ((r == 1081)) `ASSERT_EQ(vif.prepad_done, 1'b1, %b);
 
       // ensure write_blank_ensignal is de-asserted
-      `ASSERT_EQ(vif.write_blank_en, 1'b0, %b);
       #(MACCLK_PER);
+      `ASSERT_EQ(vif.write_blank_en, 1'b0, %b);
     end
 
     // check global status output

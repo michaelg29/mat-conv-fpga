@@ -88,6 +88,7 @@ architecture rtl of input_fsm is
 
   -- CDC signals
   signal write_blank_ack     : std_logic;
+  signal write_blank_ack_cdc : std_logic;
 
   ----------------------
   -- PAYLOAD COUNTERS --
@@ -180,9 +181,11 @@ begin
         cur_pkts            <= (others => '0');
         prepad_cnt          <= (others => '0');
         write_blank_ack     <= '0';
+        write_blank_ack_cdc <= '0';
       else
         -- CDC signals
-        write_blank_ack <= i_write_blank_ack;
+        write_blank_ack     <= i_write_blank_ack;
+        write_blank_ack_cdc <= write_blank_ack;
 
         -- apply checksum changes
         if (input_fsm_state = FSM_RESTART) then
@@ -391,7 +394,7 @@ begin
             end if;
 
             -- write blank logic
-            if (write_blank_ack = '1') then
+            if (write_blank_ack_cdc = '1') then
               o_write_blank_en <= '0';
             elsif (cur_cols < burst_size) then
               o_write_blank_en <= cur_cmd_subj;
