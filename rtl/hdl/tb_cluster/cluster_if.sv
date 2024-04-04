@@ -100,7 +100,8 @@ interface cluster_if #(
           
       for (int row = 0 ; row < KERNEL_SIZE ; row++) begin //for rows
           for (int col = 0 ; col < KERNEL_SIZE ; col++) begin //for columns
-              kgen[row][col] = signed'(row+col-col*col);
+              //kgen[row][col] = signed'(row+col-col*col);
+              kgen[row][col] = signed'(64);
           end
       end
 
@@ -151,7 +152,8 @@ interface cluster_if #(
 
       for (int row = 0 ; row < NUM_ROWS ; row++) begin //for rows
           for (int col = 0 ; col < NUM_COLS ; col++) begin //for columns 
-                imgen[row][col] = unsigned'(row+col+col*col);
+                //imgen[row][col] = unsigned'(row+col+col*col);
+                imgen[row][col] = unsigned'(col);
           end
       end
 

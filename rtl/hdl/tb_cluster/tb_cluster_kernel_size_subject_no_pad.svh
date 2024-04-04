@@ -36,30 +36,32 @@ class tb_cluster_kernel_size_subject_no_pad
     logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] image;
     logic [NUM_ROWS-2*PADDING-1:0][NUM_COLS-2*PADDING-1:0][7:0] imconv;
 
+    logic sign = 1'b0;
+
     `uvm_info("tb_cluster_kernel_size_subject_no_pad", "Executing testcase", UVM_NONE);
 
-    #(MACCLK_PER);
+    @(posedge vif.i_clk);
 
     // Generate kernel and load it
     kernel = vif.kernel_gen();
-    vif.load_kernel(kernel, 1'b1);
+    vif.load_kernel(kernel, sign);
 
     // Generate image
     image = vif.image_gen_nopad();
 
     //Calculate convolution result (unsigned)
-    imconv = vif.image_conv_nopad(image, kernel, 1'b1);
+    imconv = vif.image_conv_nopad(image, kernel, sign);
 
     vif.display_conv_nopad(image, kernel, imconv);
 
 
-    #(MACCLK_PER);
+    @(posedge vif.i_clk);
 
     vif.i_discont <= 1;
     vif.i_waddr <= 0;
 
     //Change values on falling edge (problems when doing rising edge)
-    #(MACCLK_PER/2);
+    @(negedge vif.i_clk);
 
     vif.i_is_subj <= 1;
     for (int row = 0 ; row < NUM_ROWS ; row++) begin
@@ -68,20 +70,16 @@ class tb_cluster_kernel_size_subject_no_pad
         vif.i_new_pkt <= 1;
         vif.i_pkt <= image[row][col +: FIFO_WIDTH]; //args must be multiple of FIFO_WIDTH
         
-        #(MACCLK_PER);
+        @(negedge vif.i_clk);
         vif.i_newrow <= 0;
 
-        // Max of FIFO_WIFTH-KERNEL_SIZE additional shifts
-        if(NUM_COLS - col*FIFO_WIDTH < FIFO_WIDTH) begin
-          // Minimum number of pixels is 5 for a transfer (kernel size), max is FIFO_WIDTH (8)
-          num_additional_cycles_shifts = (NUM_COLS - col*FIFO_WIDTH) - KERNEL_SIZE; 
-        end else begin
-          num_additional_cycles_shifts = FIFO_WIDTH-KERNEL_SIZE;
-        end
+        //Image size is assumed to be a multiple of 128 (FIFO_WIDTH aligned). Always an additional 3 clock cycles delay
+        num_additional_cycles_shifts = FIFO_WIDTH-KERNEL_SIZE;
+
 
         for (int i = 0; i <  num_additional_cycles_shifts; i++) begin
           vif.i_new_pkt <= 0;
-          #(MACCLK_PER);
+          @(negedge vif.i_clk);
         end
 
       end
@@ -90,17 +88,14 @@ class tb_cluster_kernel_size_subject_no_pad
 
 
     for (int i = 0 ; i < 10 ; i++) begin
-      $display("%d", signed'{vif.o_pixel});
-      #(MACCLK_PER);
+      $display("%d", vif.o_pixel);
+      @(negedge vif.i_clk);
     end
 
 
     //`ASSERT_EQ(vif.addr, 3'b000, %3b);
-
     //`ASSERT_EQ(vif.payload_done, 1'b0, %b);
-    #(MACCLK_PER);
-
-    #(3*MACCLK_PER);
+    @(negedge vif.i_clk);
 
   endtask // run
 

@@ -14,8 +14,9 @@ add wave -noupdate /tb_top/DUT/cluster_feed/i_sel
 add wave -noupdate /tb_top/DUT/cluster_feed/i_new
 add wave -noupdate /tb_top/DUT/cluster_feed/i_pixel*
 add wave -noupdate /tb_top/DUT/cluster_feed/o_pixel*
-add wave -noupdate /tb_top/DUT/core0/i_s*
-add wave -noupdate /tb_top/DUT/core0/o_res
+add wave -noupdate /tb_top/DUT/core1/i_s*
+add wave -noupdate /tb_top/DUT/core1/o_res
+add wave -noupdate /tb_top/DUT/c_mem_c/i_val*
 add wave -noupdate /tb_top/DUT/c_mem_c/i_addr
 add wave -noupdate /tb_top/DUT/c_mem_c/i_core*
 add wave -noupdate /tb_top/DUT/c_mem_c/o_core*

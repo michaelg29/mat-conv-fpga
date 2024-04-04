@@ -87,7 +87,7 @@ architecture cluster_arch of cluster is
     signal core_en : std_logic_vector(2 downto 0); --enables core, with 2 cc delay
     signal out_rdy : std_logic_vector(6 downto 0); --indicates output pixel is valid, with 6 cc delay (5 originally + 1 for saturator)
 
-    signal feed_0, feed_1, feed_2, feed_3, feed_4 : std_logic_vector(15 downto 0); -- connects cluster feeder and cores, delayed by 1 clock cycle (8 bit times 2)
+    signal feed_0, feed_1, feed_2, feed_3, feed_4 : std_logic_vector(23 downto 0); -- connects cluster feeder and cores, delayed by 1 clock cycle (8 bit times 2)
 
 
     signal k_row0, k_row1, k_row2, k_row3, k_row4 : std_logic_vector(39 downto 0); --output of KRF
@@ -107,11 +107,25 @@ architecture cluster_arch of cluster is
 
     signal addr_counter, cmc_addr : std_logic_vector(10 downto 0) := (others => '0');--address counter for CMC
 
+    signal valid_counter : std_logic_vector(2 downto 0) := (others => '0'); --Hold internal valid pixels counter
+
 begin
     krf_data <= i_pkt(63 downto 0);
 
     krf_valid       <= i_new_pkt and i_is_kern and not(i_waddr(7)) and not i_is_subj;
-    valid_rx_pixels <= i_new_pkt and i_is_subj and not(i_waddr(7));
+    valid_rx_pixels <= (i_new_pkt and i_is_subj and not(i_waddr(7))) or (valid_counter(0) or valid_counter(1) or valid_counter(2));
+
+    --This process holds the valid_rx_pixels to hold the CMC i_val as long as the cluster feeder is shifting pixels
+    valid_rx_hold : process(i_clk)
+    begin
+      if(rising_edge(i_clk)) then
+        if((i_new_pkt and i_is_subj and not(i_waddr(7))) = '1') then --internal signal valid state counter is reset
+          valid_counter <= (others => '1');
+        else --internal signal is 
+          valid_counter(2 downto 1) <= valid_counter(1) & '0';
+        end if;
+      end if;
+    end process valid_rx_hold;
 
     cmc_addr <= addr_counter when (i_newrow = '0') else (others => '0');
 
@@ -150,25 +164,25 @@ begin
     core0: core 
     port map (i_clk => i_clk, i_en => core_en(2),
                 i_k0 => c0_k0, i_k1 => c0_k1, i_k2 => c0_k2, i_k3 => c0_k3, i_k4 => c0_k4, 
-                i_s0 => feed_0(15 downto 8), i_s1 => feed_1(15 downto 8), i_s2 => feed_2(15 downto 8), i_s3 => feed_3(15 downto 8), i_s4 => feed_4(15 downto 8), 
+                i_s0 => feed_0(23 downto 16), i_s1 => feed_1(23 downto 16), i_s2 => feed_2(23 downto 16), i_s3 => feed_3(23 downto 16), i_s4 => feed_4(23 downto 16), 
                 i_sub => c0_sub, o_res => c0_res);
 
     core1: core 
     port map (i_clk => i_clk, i_en => core_en(2),
                 i_k0 => c1_k0, i_k1 => c1_k1, i_k2 => c1_k2, i_k3 => c1_k3, i_k4 => c1_k4, 
-                i_s0 => feed_0(15 downto 8), i_s1 => feed_1(15 downto 8), i_s2 => feed_2(15 downto 8), i_s3 => feed_3(15 downto 8), i_s4 => feed_4(15 downto 8), 
+                i_s0 => feed_0(23 downto 16), i_s1 => feed_1(23 downto 16), i_s2 => feed_2(23 downto 16), i_s3 => feed_3(23 downto 16), i_s4 => feed_4(23 downto 16), 
                 i_sub => c1_sub, o_res => c1_res);
 
     core2: core 
     port map (i_clk => i_clk, i_en => core_en(2),
                 i_k0 => c2_k0, i_k1 => c2_k1, i_k2 => c2_k2, i_k3 => c2_k3, i_k4 => c2_k4, 
-                i_s0 => feed_0(15 downto 8), i_s1 => feed_1(15 downto 8), i_s2 => feed_2(15 downto 8), i_s3 => feed_3(15 downto 8), i_s4 => feed_4(15 downto 8), 
+                i_s0 => feed_0(23 downto 16), i_s1 => feed_1(23 downto 16), i_s2 => feed_2(23 downto 16), i_s3 => feed_3(23 downto 16), i_s4 => feed_4(23 downto 16), 
                 i_sub => c2_sub, o_res => c2_res);
 
     core3: core 
     port map (i_clk => i_clk, i_en => core_en(2),
                 i_k0 => c3_k0, i_k1 => c3_k1, i_k2 => c3_k2, i_k3 => c3_k3, i_k4 => c3_k4, 
-                i_s0 => feed_0(15 downto 8), i_s1 => feed_1(15 downto 8), i_s2 => feed_2(15 downto 8), i_s3 => feed_3(15 downto 8), i_s4 => feed_4(15 downto 8), 
+                i_s0 => feed_0(23 downto 16), i_s1 => feed_1(23 downto 16), i_s2 => feed_2(23 downto 16), i_s3 => feed_3(23 downto 16), i_s4 => feed_4(23 downto 16), 
                 i_sub => c3_sub, o_res => c3_res);
 
 
@@ -176,7 +190,7 @@ begin
     generic map (i_round => (7 => '1', others => '0'))
     port map (i_clk => i_clk, i_en => core_en(2),
                 i_k0 => c4_k0, i_k1 => c4_k1, i_k2 => c4_k2, i_k3 => c4_k3, i_k4 => c4_k4, 
-                i_s0 => feed_0(15 downto 8), i_s1 => feed_1(15 downto 8), i_s2 => feed_2(15 downto 8), i_s3 => feed_3(15 downto 8), i_s4 => feed_4(15 downto 8), 
+                i_s0 => feed_0(23 downto 16), i_s1 => feed_1(23 downto 16), i_s2 => feed_2(23 downto 16), i_s3 => feed_3(23 downto 16), i_s4 => feed_4(23 downto 16), 
                 i_sub => c4_sub, o_res => c4_res);
 
     cluster_feed: cluster_feeder
@@ -205,11 +219,12 @@ begin
     begin
       if(rising_edge(i_clk)) then
 
-        feed_0(15 downto 8) <= feed_0(7 downto 0);
-        feed_1(15 downto 8) <= feed_1(7 downto 0);
-        feed_2(15 downto 8) <= feed_2(7 downto 0);
-        feed_3(15 downto 8) <= feed_3(7 downto 0);
-        feed_4(15 downto 8) <= feed_4(7 downto 0);
+        --Delays
+        feed_0(23 downto 8) <= feed_0(15 downto 0);
+        feed_1(23 downto 8) <= feed_1(15 downto 0);
+        feed_2(23 downto 8) <= feed_2(15 downto 0);
+        feed_3(23 downto 8) <= feed_3(15 downto 0);
+        feed_4(23 downto 8) <= feed_4(15 downto 0);
 
         out_rdy(6 downto 1) <= out_rdy(5 downto 0);
         core_en(2 downto 1) <= core_en(1 downto 0); 

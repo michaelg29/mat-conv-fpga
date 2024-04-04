@@ -51,7 +51,8 @@ cluster_if #(
   .NUM_ROWS(NUM_ROWS),
   .KERNEL_SIZE(KERNEL_SIZE)
 ) intf (
-  .i_clk(i_clk)
+  .i_clk(i_clk),
+  .i_rst_n(i_rst_n)
 ); 
 
 //DUT
