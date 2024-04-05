@@ -40,39 +40,36 @@ SC_MODULE(mat_mult) {
 
         // execute
         LOGF("[%s] writing to %08x, matrix is %dx%d", this->name(), OUT_ADDR, MAT_ROWS, MAT_COLS);
-        POS_PROC(); // r = 0
         for (r = 0; r < MAT_ROWS; r++) {
             POS_PROC(); // r < MAT_ROWS
 
-            POS_PROC(); // c = 0
             for (c = 0; c < MAT_COLS; c++) {
                 POS_PROC(); // c < MAT_COLS
 
                 // accumulate result
                 res = 0;
-                POS_PROC(); // res = 0
 
                 // compute kernel dot product with neighborhood
                 kerneli = 0;
-                POS_PROC(); // kerneli = 0
                 for (i = r - hf_kernel_dim; i <= r + hf_kernel_dim; i++) {
                     for (j = c - hf_kernel_dim; j <= c + hf_kernel_dim; j++) {
                         if (i >= 0 && i < MAT_ROWS && j >= 0 && j < MAT_COLS) {
+                            POS_PROC(); // subj_mem[...]
+                            POS_PROC(); // kern_mem[...]
+                            POS_PROC(); // res += subj * kern
                             res += (uint32_t)subj_mem[i*MAT_COLS + j] // matrix value is unsigned byte
                                 * (uint32_t)kern_mem[kerneli]; // kernel value is signed byte
                         }
+
                         kerneli++;
                     }
                 }
 
                 // write result and increment cursor
                 *out_mem = (uint8_t)res;
+                POS_PROC(); // memory store
                 out_mem++;
-
-                POS_PROC(); // c++
             }
-
-            POS_PROC(); // r++
         }
 
         LOGF("[%s] Done multiplying", this->name());
