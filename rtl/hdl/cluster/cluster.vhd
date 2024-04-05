@@ -233,7 +233,11 @@ begin
           addr_counter <= std_logic_vector(unsigned(addr_counter) + 1);
         else
           out_rdy(0) <= '0';
-          core_en(0) <= '1'; --always enabled  
+          core_en(0) <= '1'; --always enabled 
+          
+          if (valid_counter(0) or valid_counter(1) or valid_counter(2)) = '1' then          
+            addr_counter <= std_logic_vector(unsigned(addr_counter) + 1);
+          end if;
         end if;
 
         if(i_end_of_row = '1') then
