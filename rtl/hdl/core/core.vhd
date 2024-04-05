@@ -52,7 +52,7 @@ signal MAC2_P : signed(43 downto 0);
   MAC0_B1 <= signed('0' & i_s0);
   MAC0_A2 <= i_k1(7) & signed(i_k1);
   MAC0_B2 <= signed('0' & i_s1);
-  MAC0_C <= resize(signed(i_sub), 44);
+  MAC0_C <= resize(signed(i_sub), 41) & "000";
   
   MAC1_A1 <= i_k2(7) & signed(i_k2);
   MAC1_B1 <= signed('0' & i_s2);
