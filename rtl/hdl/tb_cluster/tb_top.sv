@@ -60,7 +60,7 @@ cluster DUT(
     .i_clk(i_clk),
     .i_rst_n(i_rst_n),
 
-    .i_newrow(intf.i_newrow),
+    .i_end_of_row(intf.i_end_of_row),
     .i_is_kern(intf.i_is_kern),
     .i_cmd_kern_signed(intf.i_cmd_kern_signed),
     .i_is_subj(intf.i_is_subj),

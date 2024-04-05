@@ -32,7 +32,7 @@ module tb_top
     KRF signals
     */
     reg i_valid;
-    reg i_rst;
+    reg i_rst_n;
     logic [FIFO_WIDTH-1:0][7:0] i_kernels;
     logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] o_kernels; //[kernel row][kernel value in row][bit in kernel value]
     const int NUM_STATES = (KERNEL_SIZE*KERNEL_SIZE - 1)/FIFO_WIDTH + 1; //round up trick
@@ -96,7 +96,7 @@ module tb_top
     krf krf_dut(
         .i_clk      (i_clk),
         .i_valid    (i_valid),
-        .i_rst      (i_rst),
+        .i_rst_n      (i_rst_n),
 
         .i_data     (i_kernels),
         .o_kr_0     (o_kernels[0]),
@@ -199,7 +199,7 @@ module tb_top
                     `uvm_info("tb_top", "Resetting DUT", UVM_NONE);
                     reset_dut(
                         .i_clk(i_clk), 
-                        .i_rst(i_rst), 
+                        .i_rst_n(i_rst_n), 
                         .i_kernels(i_kernels)
                         );
 
@@ -210,7 +210,7 @@ module tb_top
 
                                 //KRF signals
                                 .i_valid(i_valid),
-                                .i_rst(i_rst),
+                                .i_rst_n(i_rst_n),
                                 .i_kernels(i_kernels),
                                 .o_kernels(o_kernels)
 
@@ -280,7 +280,7 @@ module tb_top
     */
     task automatic reset_dut;
         ref reg i_clk;    
-        ref reg i_rst;
+        ref reg i_rst_n;
         ref logic [FIFO_WIDTH-1:0][7:0] i_kernels;
         begin
 
@@ -291,10 +291,10 @@ module tb_top
             i_valid = 1'b1;
 
             //Reset state machine and outputs
-            i_rst = 1'b1;
+            i_rst_n = 1'b0;
             @(negedge i_clk);
 
-            i_rst = 1'b0;
+            i_rst_n = 1'b1;
             i_valid = 0'b0;
             @(negedge i_clk);
         end
@@ -309,7 +309,7 @@ module tb_top
         //KRF inputs/outputs
         ref reg i_clk;       
         ref reg i_valid;
-        ref reg i_rst;
+        ref reg i_rst_n;
         ref logic [FIFO_WIDTH-1:0][7:0] i_kernels;
         ref logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] o_kernels; //[kernel row][kernel value in row][bit in kernel value]
 
@@ -332,7 +332,7 @@ module tb_top
             // Enable the core
             i_en = 1;
 
-            i_rst = 1'b1; //reset state machine -> ready to program
+            i_rst_n = 1'b0; //reset state machine -> ready to program
             i_valid = 1'b1; //input valid
 
             for (int i = 0 ; i < NUM_STATES ; i++) begin
@@ -368,7 +368,7 @@ module tb_top
                 end
             end
 
-            i_rst = 1'b0; //done programming
+            i_rst_n = 1'b1; //done programming
             i_valid = 1'b0; //input invalid
 
             `uvm_info("tb_top", "Kernel values successfully loaded", UVM_NONE);
@@ -395,7 +395,7 @@ module tb_top
 
         //KRF inputs/outputs       
         ref reg i_valid;
-        ref reg i_rst;
+        ref reg i_rst_n;
         ref logic [FIFO_WIDTH-1:0][7:0] i_kernels;
         ref logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] o_kernels; //[kernel row][kernel value in row][bit in kernel value]
 
@@ -428,7 +428,7 @@ module tb_top
             load_kernel_values(
                 .i_clk(i_clk),
                 .i_valid(i_valid),
-                .i_rst(i_rst),
+                .i_rst_n(i_rst_n),
                 .i_kernels(i_kernels),
                 .o_kernels(o_kernels)
                 );

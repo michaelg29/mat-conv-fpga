@@ -56,8 +56,6 @@ class tb_cluster_kernel_size_subject_no_pad
 
 
     @(posedge vif.i_clk);
-
-    vif.i_discont <= 1;
     vif.i_waddr <= 0;
 
     //Change values on falling edge (problems when doing rising edge)
@@ -65,24 +63,37 @@ class tb_cluster_kernel_size_subject_no_pad
 
     vif.i_is_subj <= 1;
     for (int row = 0 ; row < NUM_ROWS ; row++) begin
-      vif.i_newrow <= 1;
       for (int col = 0 ; col < NUM_COLS ; col+=FIFO_WIDTH) begin
+
         vif.i_new_pkt <= 1;
+        if(col == 0) begin //first groups: load in parallel
+          vif.i_discont <= 1;
+
+          //Image size is assumed to be a multiple of 128 (FIFO_WIDTH aligned). Always an additional 3 clock cycles delay
+          num_additional_cycles_shifts = FIFO_WIDTH-KERNEL_SIZE-1;
+
+        end else begin //other groups: load serially
+          vif.i_discont <= 0;
+          
+          //Shift until all pixels have been seen
+          num_additional_cycles_shifts = FIFO_WIDTH;
+        end
+
         vif.i_pkt <= image[row][col +: FIFO_WIDTH]; //args must be multiple of FIFO_WIDTH
         
         @(negedge vif.i_clk);
-        vif.i_newrow <= 0;
-
-        //Image size is assumed to be a multiple of 128 (FIFO_WIDTH aligned). Always an additional 3 clock cycles delay
-        num_additional_cycles_shifts = FIFO_WIDTH-KERNEL_SIZE;
 
 
         for (int i = 0; i <  num_additional_cycles_shifts; i++) begin
           vif.i_new_pkt <= 0;
           @(negedge vif.i_clk);
         end
-
       end
+
+      vif.i_end_of_row <= 1;
+      @(negedge vif.i_clk);
+      vif.i_end_of_row <= 0;
+
     end
     vif.i_new_pkt <= 0;
 

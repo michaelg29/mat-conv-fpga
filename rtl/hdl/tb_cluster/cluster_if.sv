@@ -21,7 +21,7 @@ interface cluster_if #(
 
   import uvm_pkg::*;
 
-  logic i_newrow;
+  logic i_end_of_row;
   logic i_is_kern;
   logic i_cmd_kern_signed;
   logic i_is_subj;
@@ -43,7 +43,7 @@ interface cluster_if #(
   //========================================
   clocking cb @(posedge i_clk);
     input #0 o_pixel, o_out_rdy;
-    output i_newrow, i_is_kern, i_cmd_kern_signed, i_is_subj, i_new_pkt, i_discont, i_pkt, i_waddr;
+    output i_end_of_row, i_is_kern, i_cmd_kern_signed, i_is_subj, i_new_pkt, i_discont, i_pkt, i_waddr;
   endclocking;
 
 
@@ -179,7 +179,7 @@ interface cluster_if #(
 
               //Calculate pixel
               for (int krow = 0 ; krow < KERNEL_SIZE ; krow++) begin //for rows
-                  subres = signed'(res) + ROUNDING;
+                  subres = signed'(res*8) + ROUNDING;
                   for (int kcol = 0 ; kcol < KERNEL_SIZE ; kcol++) begin //for columns
                       subres += signed'(kgen[krow][kcol]) * signed'({1'b0 , imgen[row+krow][col+kcol]});
                   end
@@ -215,7 +215,7 @@ interface cluster_if #(
 
               //Calculate pixel
               for (int krow = 0 ; krow < KERNEL_SIZE ; krow++) begin //for rows
-                  subres = signed'(res) + ROUNDING;
+                  subres = signed'(res*8) + ROUNDING;
                   for (int kcol = 0 ; kcol < KERNEL_SIZE ; kcol++) begin //for columns
                       subres += signed'(kgen[krow][kcol]) * signed'({1'b0 , imgen[row+krow][col+kcol]});
                   end
@@ -337,7 +337,7 @@ interface cluster_if #(
         Reset the cluster signals
     */
     task reset();
-        cb.i_newrow <= 0;
+        cb.i_end_of_row <= 0;
         cb.i_is_kern <= 0;
         cb.i_cmd_kern_signed <= 0;
         cb.i_is_subj <= 0;

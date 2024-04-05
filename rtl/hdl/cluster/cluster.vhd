@@ -82,7 +82,7 @@ architecture cluster_arch of cluster is
     --krf_valid: valid kernel data
     --valid_rx_pixels: valid subject data 
     --kernel_signed: 1->kernel values are signed, 0->kernel values are unsigned
-    signal krf_valid, valid_rx_pixels, kernel_signed: std_logic;
+    signal krf_valid, valid_rx_pixels, kernel_signed, cluster_feeder_load: std_logic;
 
     signal core_en : std_logic_vector(2 downto 0); --enables core, with 2 cc delay
     signal out_rdy : std_logic_vector(6 downto 0); --indicates output pixel is valid, with 6 cc delay (5 originally + 1 for saturator)
@@ -114,6 +114,7 @@ begin
 
     krf_valid       <= i_new_pkt and i_is_kern and not(i_waddr(7)) and not i_is_subj;
     valid_rx_pixels <= (i_new_pkt and i_is_subj and not(i_waddr(7))) or (valid_counter(0) or valid_counter(1) or valid_counter(2));
+    cluster_feeder_load <= (i_new_pkt and i_is_subj and not(i_waddr(7)));
 
     --This process holds the valid_rx_pixels to hold the CMC i_val as long as the cluster feeder is shifting pixels
     valid_rx_hold : process(i_clk)
@@ -192,7 +193,7 @@ begin
                 i_sub => c4_sub, o_res => c4_res);
 
     cluster_feed: cluster_feeder
-    port map(i_clk => i_clk, i_sel => i_discont, i_new => valid_rx_pixels, i_pixel_0 => i_pkt(7 downto 0), 
+    port map(i_clk => i_clk, i_sel => i_discont, i_new => cluster_feeder_load, i_pixel_0 => i_pkt(7 downto 0), 
                 i_pixel_1 => i_pkt(15 downto 8), i_pixel_2 => i_pkt(23 downto 16), i_pixel_3 => i_pkt(31 downto 24), i_pixel_4 => i_pkt(39 downto 32), 
                 i_pixel_5 => i_pkt(47 downto 40), i_pixel_6 => i_pkt(55 downto 48), i_pixel_7 => i_pkt(63 downto 56), 
                 o_pixel_0 => feed_0(7 downto 0), o_pixel_1 => feed_1(7 downto 0), o_pixel_2 => feed_2(7 downto 0), o_pixel_3 => feed_3(7 downto 0), o_pixel_4 => feed_4(7 downto 0));

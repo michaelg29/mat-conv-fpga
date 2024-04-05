@@ -284,7 +284,7 @@ module tb_top
 
                 //Calculate pixel
                 for (int krow = 0 ; krow < KERNEL_SIZE ; krow++) begin //for rows
-                    subres = signed'(res) + ROUNDING;
+                    subres = signed'(res*8) + ROUNDING;
                     for (int kcol = 0 ; kcol < KERNEL_SIZE ; kcol++) begin //for columns
                         subres += signed'(kgen[krow][kcol]) * signed'({1'b0 , imgen[row+krow][col+kcol]});
                     end
