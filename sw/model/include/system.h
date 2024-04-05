@@ -50,6 +50,7 @@
 #define CC_CORE_NS 4.0    // compute core clock 250 MHz => 4ns
 #define CC_MAIN_NS 15.625 // AXI bus clock 64 MHz => 15.625ns
 #define CC_PROC_NS 10.0   // process host clock 100 MHz => 10ns
+#define CC_PROC_PS 10000  // process host clock 100 MHz => 10000ps
 
 // clock cycle calculations
 #define CC_CORE(n) (n * CC_CORE_NS)

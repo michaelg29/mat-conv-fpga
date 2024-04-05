@@ -49,7 +49,7 @@ LFLAGS ?= -lsystemc -lm -L$(SYSTEMC_LIB_DIR)
 
 # file lists
 DEPS   = $(wildcard *.h) $(wildcard ../include/*.h) $(wildcard *.hpp) $(wildcard ../include/*.hpp)
-SRCS   = $(wildcard *.cpp) $(wildcard ../src/*.cpp)
+SRCS   ?= $(wildcard *.cpp) $(wildcard ../src/*.cpp)
 
 ifneq (,$(EXTRA_SRC_FILES))
 	SRCS += $(EXTRA_SRC_FILES)
