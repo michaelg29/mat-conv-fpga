@@ -7,7 +7,7 @@ use IEEE.numeric_std.all;
 --i_is_subj : asserted when receiving subject data
 --i_is_kern : asserted when receiving kernel data
 --i_discont : asserted when received pixels are not contiguous with the ones received before
---i_newrow : pulsed when the data is from a new row
+--i_end_of_row : pulsed when the data is from at the end of a row
 --i_cmd_kern_signed : determines the sign of the kernel
 
 --i_pkt: port to receive data
@@ -15,7 +15,7 @@ use IEEE.numeric_std.all;
 --o_pixel: output total result
 
 entity cluster is
-  port (i_clk, i_rst_n, i_new_pkt, i_is_subj, i_is_kern, i_discont, i_newrow, i_cmd_kern_signed: in std_logic; 
+  port (i_clk, i_rst_n, i_new_pkt, i_is_subj, i_is_kern, i_discont, i_end_of_row, i_cmd_kern_signed: in std_logic; 
         i_pkt : in std_logic_vector(63 downto 0);
         i_waddr : in std_logic_vector(7 downto 0);
         o_out_rdy: out std_logic;
@@ -105,7 +105,7 @@ architecture cluster_arch of cluster is
 
     signal krf_data : std_logic_vector(63 downto 0);--input to krf
 
-    signal addr_counter, cmc_addr : std_logic_vector(10 downto 0) := (others => '0');--address counter for CMC
+    signal addr_counter : std_logic_vector(10 downto 0) := (others => '0');--address counter for CMC
 
     signal valid_counter : std_logic_vector(2 downto 0) := (others => '0'); --Hold internal valid pixels counter
 
@@ -126,8 +126,6 @@ begin
         end if;
       end if;
     end process valid_rx_hold;
-
-    cmc_addr <= addr_counter when (i_newrow = '0') else (others => '0');
 
     o_out_rdy<= out_rdy(6);
 
@@ -207,7 +205,7 @@ begin
 
     c_mem_c: cmc
     generic map (ECC_EN => 0)
-    port map (i_addr => cmc_addr,
+    port map (i_addr => addr_counter,
           i_core_0 => c0_res, i_core_1 => c1_res, i_core_2 => c2_res, i_core_3 => c3_res, i_core_4 => c4_res,
           o_core_0 => c0_sub, o_core_1 => c1_sub, o_core_2 => c2_sub, o_core_3 => c3_sub, o_core_4 => c4_sub, 
           o_pixel=> pixel_unrounded,
@@ -238,8 +236,8 @@ begin
           core_en(0) <= '1'; --always enabled  
         end if;
 
-        if(i_newrow = '1') then
-          addr_counter <= (0 => '1', others => '0');
+        if(i_end_of_row = '1') then
+          addr_counter <= (others => '0');
         end if;
 
         if (i_is_kern = '1') then
