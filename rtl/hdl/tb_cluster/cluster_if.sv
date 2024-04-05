@@ -12,7 +12,8 @@ interface cluster_if #(
   parameter ROUNDING=3'b100,
   parameter UNSIGNED_UPPER_BOUND = 12'b111111111111,
   parameter SIGNED_UPPER_BOUND = 12'b011111111111,
-  parameter SIGNED_LOWER_BOUND = 12'b100000000000
+  parameter SIGNED_LOWER_BOUND = 12'b100000000000,
+  parameter COMPUTE_LATENCY = 6
 ) (
   // clock and reset interface
   input logic i_clk,
@@ -179,7 +180,14 @@ interface cluster_if #(
 
               //Calculate pixel
               for (int krow = 0 ; krow < KERNEL_SIZE ; krow++) begin //for rows
-                  subres = signed'(res*8) + ROUNDING;
+                  subres = signed'(res*8);
+
+                  if (krow == KERNEL_SIZE-1) begin
+                    subres += 128; //first rounding
+                  end else begin
+                    subres += ROUNDING; //second rounding
+                  end  
+
                   for (int kcol = 0 ; kcol < KERNEL_SIZE ; kcol++) begin //for columns
                       subres += signed'(kgen[krow][kcol]) * signed'({1'b0 , imgen[row+krow][col+kcol]});
                   end
@@ -215,7 +223,14 @@ interface cluster_if #(
 
               //Calculate pixel
               for (int krow = 0 ; krow < KERNEL_SIZE ; krow++) begin //for rows
-                  subres = signed'(res*8) + ROUNDING;
+                  subres = signed'(res*8);
+
+                  if (krow == KERNEL_SIZE-1) begin
+                    subres += 128; //first rounding
+                  end else begin
+                    subres += ROUNDING; //second rounding
+                  end  
+
                   for (int kcol = 0 ; kcol < KERNEL_SIZE ; kcol++) begin //for columns
                       subres += signed'(kgen[krow][kcol]) * signed'({1'b0 , imgen[row+krow][col+kcol]});
                   end
@@ -395,6 +410,65 @@ interface cluster_if #(
 
 
     endtask : load_kernel
+
+
+
+    function check_output(
+        input int row,
+        input int col,
+        input logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imconv
+    );
+
+        automatic int res_row = 0;
+        automatic int res_col = 0;
+
+        if((row*NUM_COLS+col) >= ((KERNEL_SIZE-1)*NUM_COLS+COMPUTE_LATENCY)) begin
+          if(col < COMPUTE_LATENCY) begin
+            res_col = NUM_COLS - COMPUTE_LATENCY + col;
+            res_row = row - (KERNEL_SIZE - 1) - 1; //previous row than actual
+          end else begin
+            res_col = col - COMPUTE_LATENCY;
+            res_row = row - (KERNEL_SIZE - 1);
+          end
+
+          if(res_col <  NUM_COLS) begin
+            if(unsigned'(imconv[res_row][res_col]) != unsigned'(cb.o_pixel)) begin
+                `uvm_error("tb_top", $sformatf("Test failed at row %d, col %d\noutput = %d ; expected = %d",res_row,res_col,unsigned'(cb.o_pixel),unsigned'(imconv[res_row][res_col])));
+            end
+          end
+
+        end
+
+    endfunction : check_output
+
+
+    function check_output_nopad(
+        input int row,
+        input int col,
+        input logic [NUM_ROWS-2*PADDING-1:0][NUM_COLS-2*PADDING-1:0][7:0] imconv
+    );
+
+        automatic int res_row = 0;
+        automatic int res_col = 0;
+
+        if((row*NUM_COLS+col) >= ((KERNEL_SIZE-1)*NUM_COLS+COMPUTE_LATENCY)) begin
+          if(col < COMPUTE_LATENCY) begin
+            res_col = NUM_COLS - (2*PADDING - 1) - COMPUTE_LATENCY + col;
+            res_row = row - (KERNEL_SIZE - 1) - 1; //previous row than actual
+          end else begin
+            res_col = col - COMPUTE_LATENCY;
+            res_row = row - (KERNEL_SIZE - 1);
+          end
+
+          if(res_col <  (NUM_COLS-2*PADDING)) begin
+            if(unsigned'(imconv[res_row][res_col]) != unsigned'(cb.o_pixel)) begin
+                `uvm_error("tb_top", $sformatf("Test failed at row %d, col %d\noutput = %d ; expected = %d",res_row,res_col,unsigned'(cb.o_pixel),unsigned'(imconv[res_row][res_col])));
+            end
+          end
+
+        end
+
+    endfunction : check_output_nopad
 
 
 endinterface // input_fsm_if

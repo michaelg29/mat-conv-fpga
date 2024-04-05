@@ -8,7 +8,8 @@ class tb_cluster_kernel_size_subject_no_pad
   #(int KERNEL_SIZE = 5, 
     int FIFO_WIDTH = 8,
     int NUM_ROWS = 5,
-    int NUM_COLS = 5) 
+    int NUM_COLS = 5,
+    parameter COMPUTE_LATENCY = 6) 
     extends mat_conv_tc;
 
   // virtual interfacepixel
@@ -37,6 +38,7 @@ class tb_cluster_kernel_size_subject_no_pad
     logic [NUM_ROWS-2*PADDING-1:0][NUM_COLS-2*PADDING-1:0][7:0] imconv;
 
     logic sign = 1'b0;
+    int track_col = 0;
 
     `uvm_info("tb_cluster_kernel_size_subject_no_pad", "Executing testcase", UVM_NONE);
 
@@ -63,6 +65,7 @@ class tb_cluster_kernel_size_subject_no_pad
 
     vif.i_is_subj <= 1;
     for (int row = 0 ; row < NUM_ROWS ; row++) begin
+      track_col = 0;
       for (int col = 0 ; col < NUM_COLS ; col+=FIFO_WIDTH) begin
 
         vif.i_new_pkt <= 1;
@@ -71,7 +74,6 @@ class tb_cluster_kernel_size_subject_no_pad
 
           //Image size is assumed to be a multiple of 128 (FIFO_WIDTH aligned). Always an additional 3 clock cycles delay
           num_additional_cycles_shifts = FIFO_WIDTH-KERNEL_SIZE-1;
-
         end else begin //other groups: load serially
           vif.i_discont <= 0;
           
@@ -82,25 +84,35 @@ class tb_cluster_kernel_size_subject_no_pad
         vif.i_pkt <= image[row][col +: FIFO_WIDTH]; //args must be multiple of FIFO_WIDTH
         
         @(negedge vif.i_clk);
-
+        vif.check_output_nopad(row, track_col, imconv);
+        track_col += 1;
+        vif.i_new_pkt <= 0;
 
         for (int i = 0; i <  num_additional_cycles_shifts; i++) begin
-          vif.i_new_pkt <= 0;
+
+          //Check output. Results start appearing at 4th row
+          //Also a compute latency of COMPUTE_LATENCY cycles
           @(negedge vif.i_clk);
+          vif.check_output_nopad(row, track_col, imconv);
+          track_col += 1;
         end
       end
 
+
       vif.i_end_of_row <= 1;
       @(negedge vif.i_clk);
+      vif.check_output_nopad(row, track_col, imconv);
+      track_col += 1;
       vif.i_end_of_row <= 0;
 
     end
     vif.i_new_pkt <= 0;
 
 
-    for (int i = 0 ; i < 10 ; i++) begin
-      $display("%d", vif.o_pixel);
+    for (int i = 0 ; i < COMPUTE_LATENCY ; i++) begin
       @(negedge vif.i_clk);
+      vif.check_output_nopad(NUM_ROWS-1, track_col, imconv);
+      track_col += 1;
     end
 
 
