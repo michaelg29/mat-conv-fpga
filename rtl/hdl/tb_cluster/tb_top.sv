@@ -5,10 +5,11 @@
 `include "uvm_macros.svh"
 
 module tb_top #(
-  parameter string TC="tb_cluster_kernel_size_subject_no_pad", // Name of test case to run
+  parameter string TC="tb_cluster_conv", // Name of test case to run
   parameter KERNEL_SIZE = 5,
   parameter NUM_ROWS = 5, //subject image row range
   parameter NUM_COLS = 10, //subject image column range
+  parameter PADDING_EN = 1,
   parameter FIFO_WIDTH = 8,
   parameter int NUM_REPS = 3, //Number of times each test shall be reapeated with different values
   parameter int SEED = 0, //Seed for the random input generation
@@ -49,6 +50,7 @@ cluster_if #(
   .FIFO_WIDTH(FIFO_WIDTH),
   .NUM_COLS(NUM_COLS),
   .NUM_ROWS(NUM_ROWS),
+  .PADDING_EN(PADDING_EN),
   .KERNEL_SIZE(KERNEL_SIZE)
 ) intf (
   .i_clk(i_clk),
@@ -94,19 +96,22 @@ generate
   case (TC)
     "tb_cluster_load_kernel":
     begin: tc
-      tb_cluster_load_kernel tc = new(intf, MACCLK_PER);
+      tb_cluster_load_kernel #(
+        .KERNEL_SIZE(KERNEL_SIZE)
+        ) tc = new(intf, MACCLK_PER);
     end
     "tb_cluster_load_kernel_block":
     begin: tc
       tb_cluster_load_kernel_block tc = new(intf, MACCLK_PER);
     end
-    "tb_cluster_kernel_size_subject_no_pad":
+    "tb_cluster_conv":
     begin: tc
-      tb_cluster_kernel_size_subject_no_pad #(
+      tb_cluster_conv #(
         .KERNEL_SIZE(KERNEL_SIZE),
         .FIFO_WIDTH(FIFO_WIDTH),
         .NUM_ROWS(NUM_ROWS),
-        .NUM_COLS(NUM_COLS)
+        .NUM_COLS(NUM_COLS),
+        .PADDING_EN(PADDING_EN)
         ) tc = new(intf, MACCLK_PER);
     end // tc
   endcase // TC

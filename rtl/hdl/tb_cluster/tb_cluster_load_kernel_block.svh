@@ -4,7 +4,9 @@
 import uvm_pkg::*;
 
 // testcase exercising valid kernel command and payload
-class tb_cluster_load_kernel_block extends mat_conv_tc;
+class tb_cluster_load_kernel_block
+  #(int KERNEL_SIZE = 5) 
+    extends mat_conv_tc;
 
   // virtual interface
   virtual cluster_if vif;

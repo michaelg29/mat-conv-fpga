@@ -4,7 +4,9 @@
 import uvm_pkg::*;
 
 // testcase exercising valid kernel command and payload
-class tb_cluster_load_kernel extends mat_conv_tc;
+class tb_cluster_load_kernel
+  #(int KERNEL_SIZE = 5) 
+    extends mat_conv_tc;
 
   // virtual interface
   virtual cluster_if vif;
@@ -19,21 +21,19 @@ class tb_cluster_load_kernel extends mat_conv_tc;
   endfunction // new
 
   task automatic run;
-    int unsigned addr;
+    logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kernel;
+
+    logic sign = 1'b0;
 
     `uvm_info("tb_cluster_load_kernel", "Executing testcase", UVM_NONE);
 
-    #(MACCLK_PER);
+    @(posedge vif.i_clk);
 
     // Generate kernel and load it
-    vif.load_kernel(vif.kernel_gen());
+    kernel = vif.kernel_gen();
+    vif.load_kernel(kernel, sign);
 
-    //`ASSERT_EQ(vif.addr, 3'b000, %3b);
-
-    //`ASSERT_EQ(vif.payload_done, 1'b0, %b);
-    #(MACCLK_PER);
-
-    #(3*MACCLK_PER);
+    @(posedge vif.i_clk);
 
   endtask // run
 

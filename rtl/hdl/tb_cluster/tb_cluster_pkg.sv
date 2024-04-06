@@ -13,6 +13,6 @@ package tb_cluster_pkg;
   // testcases
   `include "tb_cluster_load_kernel.svh"
   `include "tb_cluster_load_kernel_block.svh"
-  `include "tb_cluster_kernel_size_subject_no_pad.svh"
+  `include "tb_cluster_conv.svh"
 
 endpackage // tb_cluster_pkg

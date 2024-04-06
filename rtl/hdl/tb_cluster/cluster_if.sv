@@ -9,6 +9,7 @@ interface cluster_if #(
   parameter KERNEL_SIZE = 5,
   parameter NUM_ROWS = 10, //subject image row range
   parameter NUM_COLS = 10, //subject image column range
+  parameter PADDING_EN = 1,
   parameter ROUNDING=3'b100,
   parameter UNSIGNED_UPPER_BOUND = 12'b111111111111,
   parameter SIGNED_UPPER_BOUND = 12'b011111111111,
@@ -35,7 +36,8 @@ interface cluster_if #(
   wire o_out_rdy;
 
   // local params
-  localparam PADDING = (KERNEL_SIZE-1)/2;
+  localparam PADDING = (KERNEL_SIZE-1)/2 * PADDING_EN;
+  localparam PADDING_N = (KERNEL_SIZE-1)/2 * !PADDING_EN;
   localparam NUM_STATES = (KERNEL_SIZE*KERNEL_SIZE - 1)/FIFO_WIDTH + 1; //round up trick
 
 
@@ -121,21 +123,13 @@ interface cluster_if #(
           imgen[NUM_ROWS+2*PADDING-row-1] = 0;
       end 
 
-      for (int row = PADDING ; row < NUM_ROWS+PADDING ; row++) begin //for rows (no padding)
+      for (int row = PADDING ; row < NUM_ROWS+PADDING ; row++) begin //for rows + padding
           for (int col = 0 ; col < NUM_COLS+2*PADDING ; col++) begin //for columns + padding
-
-              /*
-              if((col >= NUM_COLS)) begin //last columns are padding columns (equivalent to padding beginning + end of rows)
-                  imgen[row][col] = 0;
-              end else begin
-                  imgen[row][col] = row+col+2; //+2 to get same matrix as below
-              end
-              */
 
               if((col >= NUM_COLS+PADDING) || (col < PADDING)) begin //first and last columns are padding columns
                   imgen[row][col] = 0;
               end else begin
-                  imgen[row][col] = unsigned'(row+col+col*col);
+                  imgen[row][col] = unsigned'(col);
               end
 
           end
@@ -145,35 +139,18 @@ interface cluster_if #(
   endfunction
 
 
-
-  //Generate image without padding
-  function logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] image_gen_nopad;
-
-      logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imgen;
-
-      for (int row = 0 ; row < NUM_ROWS ; row++) begin //for rows
-          for (int col = 0 ; col < NUM_COLS ; col++) begin //for columns 
-                //imgen[row][col] = unsigned'(row+col+col*col);
-                imgen[row][col] = unsigned'(col);
-          end
-      end
-
-      return imgen;
-  endfunction
-
-
   //Calculate resulting image
-  function logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] image_conv(
+  function logic [NUM_ROWS-2*PADDING_N-1:0][NUM_COLS-2*PADDING_N-1:0][7:0] image_conv(
       input logic [NUM_ROWS+2*PADDING-1:0][NUM_COLS+2*PADDING-1:0][7:0] imgen,
       input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kgen,
       input logic sign
   );
-      logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imconv;
+      logic [NUM_ROWS-2*PADDING_N-1:0][NUM_COLS-2*PADDING_N-1:0][7:0] imconv;
       static int res = 0;
       static int subres = 0;
 
-      for (int row = 0 ; row < NUM_ROWS ; row++) begin
-          for (int col = 0 ; col < NUM_COLS ; col++) begin
+      for (int row = 0 ; row < NUM_ROWS-2*PADDING_N ; row++) begin
+          for (int col = 0 ; col < NUM_COLS-2*PADDING_N ; col++) begin
 
               //Reset result
               res = 0;
@@ -183,52 +160,9 @@ interface cluster_if #(
                   subres = signed'(res*8);
 
                   if (krow == KERNEL_SIZE-1) begin
-                    subres += 128; //first rounding
+                    subres += 128; //last rounding
                   end else begin
-                    subres += ROUNDING; //second rounding
-                  end  
-
-                  for (int kcol = 0 ; kcol < KERNEL_SIZE ; kcol++) begin //for columns
-                      subres += signed'(kgen[krow][kcol]) * signed'({1'b0 , imgen[row+krow][col+kcol]});
-                  end
-                  res = signed'(subres[20:3]);
-              end
-
-              //Apply saturation
-              imconv[row][col] = signed'(saturate(res, sign));
-          end
-      end
-
-      return imconv;
-
-  endfunction
-
-
-
-  //Calculate resulting image
-  function logic [NUM_ROWS-2*PADDING-1:0][NUM_COLS-2*PADDING-1:0][7:0] image_conv_nopad(
-      input logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imgen,
-      input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kgen,
-      input logic sign
-  );
-      logic [NUM_ROWS-2*PADDING-1:0][NUM_COLS-2*PADDING-1:0][7:0] imconv;
-      static int res = 0;
-      static int subres = 0;
-
-      for (int row = 0 ; row < NUM_ROWS-2*PADDING ; row++) begin
-          for (int col = 0 ; col < NUM_COLS-2*PADDING ; col++) begin
-
-              //Reset result
-              res = 0;
-
-              //Calculate pixel
-              for (int krow = 0 ; krow < KERNEL_SIZE ; krow++) begin //for rows
-                  subres = signed'(res*8);
-
-                  if (krow == KERNEL_SIZE-1) begin
-                    subres += 128; //first rounding
-                  end else begin
-                    subres += ROUNDING; //second rounding
+                    subres += ROUNDING; //firsts rounding
                   end  
 
                   for (int kcol = 0 ; kcol < KERNEL_SIZE ; kcol++) begin //for columns
@@ -251,7 +185,7 @@ interface cluster_if #(
   function display_conv(
       input logic [NUM_ROWS+2*PADDING-1:0][NUM_COLS+2*PADDING-1:0][7:0] imgen,
       input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kgen,
-      input logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imconv
+      input logic [NUM_ROWS-2*PADDING_N-1:0][NUM_COLS-2*PADDING_N-1:0][7:0] imconv
   );
 
       static string s = "";
@@ -283,60 +217,10 @@ interface cluster_if #(
 
       //Display output image
       $display("Output Image");
-      for (int row = 0 ; row < NUM_ROWS ; row++) begin //for rows
+      for (int row = 0 ; row < NUM_ROWS-2*PADDING_N ; row++) begin //for rows
 
           s = $sformatf("Row %d: ", row);
-          for (int col = 0 ; col < NUM_COLS ; col++) begin //for columns
-              s = $sformatf("%s %d ", s, signed'(imconv[row][col]));
-          end
-
-          $display("%s",s);
-      end
-
-  endfunction
-
-
-
-  //Display matrix convolution (only kernel dim)
-  function display_conv_nopad(
-      input logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imgen,
-      input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kgen,
-      input logic [NUM_ROWS-2*PADDING-1:0][NUM_COLS-2*PADDING-1:0][7:0] imconv
-  );
-
-      static string s = "";
-
-      //Display kernel
-      $display("Kernel");
-      for (int row = 0 ; row < KERNEL_SIZE ; row++) begin //for rows
-
-          s = $sformatf("Row %d: ", row);
-          for (int col = 0 ; col < KERNEL_SIZE ; col++) begin //for columns
-              s = $sformatf("%s %d ", s, signed'(kgen[row][col]));
-          end
-
-          $display("%s",s);
-      end
-
-      //Display input image
-      $display("Input Image");
-      for (int row = 0 ; row < NUM_ROWS ; row++) begin //for rows
-
-          s = $sformatf("Row %d: ", row);
-          for (int col = 0 ; col < NUM_COLS ; col++) begin //for columns
-              s = $sformatf("%s %d ", s, imgen[row][col]);
-          end
-
-          $display("%s",s);
-      end
-
-
-      //Display output image
-      $display("Output Image");
-      for (int row = 0 ; row < NUM_ROWS-2*PADDING ; row++) begin //for rows
-
-          s = $sformatf("Row %d: ", row);
-          for (int col = 0 ; col < NUM_COLS-2*PADDING ; col++) begin //for columns
+          for (int col = 0 ; col < NUM_COLS-2*PADDING_N ; col++) begin //for columns
               s = $sformatf("%s %d ", s, signed'(imconv[row][col]));
           end
 
@@ -412,63 +296,29 @@ interface cluster_if #(
     endtask : load_kernel
 
 
-
     function check_output(
         input int row,
         input int col,
-        input logic [NUM_ROWS-1:0][NUM_COLS-1:0][7:0] imconv
+        input logic [NUM_ROWS-2*PADDING_N-1:0][NUM_COLS-2*PADDING_N-1:0][7:0] imconv
     );
 
         automatic int res_row = 0;
         automatic int res_col = 0;
 
         if((row*NUM_COLS+col) >= ((KERNEL_SIZE-1)*NUM_COLS+COMPUTE_LATENCY)) begin
-          if(col < COMPUTE_LATENCY) begin
-            res_col = NUM_COLS - COMPUTE_LATENCY + col;
-            res_row = row - (KERNEL_SIZE - 1) - 1; //previous row than actual
-          end else begin
-            res_col = col - COMPUTE_LATENCY;
-            res_row = row - (KERNEL_SIZE - 1);
-          end
 
-          if(res_col <  NUM_COLS) begin
-            if(unsigned'(imconv[res_row][res_col]) != unsigned'(cb.o_pixel)) begin
-                `uvm_error("tb_top", $sformatf("Test failed at row %d, col %d\noutput = %d ; expected = %d",res_row,res_col,unsigned'(cb.o_pixel),unsigned'(imconv[res_row][res_col])));
+            // only check if post compute latency
+            if(col >= COMPUTE_LATENCY) begin
+                res_col = col - COMPUTE_LATENCY;
+                res_row = row;
+
+                if(unsigned'(imconv[res_row][res_col]) != unsigned'(cb.o_pixel)) begin
+                    `uvm_error("tb_top", $sformatf("Test failed at row %d, col %d\noutput = %d ; expected = %d",res_row,res_col,unsigned'(cb.o_pixel),unsigned'(imconv[res_row][res_col])));
+                end
             end
-          end
-
         end
 
     endfunction : check_output
-
-
-    function check_output_nopad(
-        input int row,
-        input int col,
-        input logic [NUM_ROWS-2*PADDING-1:0][NUM_COLS-2*PADDING-1:0][7:0] imconv
-    );
-
-        automatic int res_row = 0;
-        automatic int res_col = 0;
-
-        if((row*NUM_COLS+col) >= ((KERNEL_SIZE-1)*NUM_COLS+COMPUTE_LATENCY)) begin
-          if(col < COMPUTE_LATENCY) begin
-            res_col = NUM_COLS - (2*PADDING - 1) - COMPUTE_LATENCY + col;
-            res_row = row - (KERNEL_SIZE - 1) - 1; //previous row than actual
-          end else begin
-            res_col = col - COMPUTE_LATENCY;
-            res_row = row - (KERNEL_SIZE - 1);
-          end
-
-          if(res_col <  (NUM_COLS-2*PADDING)) begin
-            if(unsigned'(imconv[res_row][res_col]) != unsigned'(cb.o_pixel)) begin
-                `uvm_error("tb_top", $sformatf("Test failed at row %d, col %d\noutput = %d ; expected = %d",res_row,res_col,unsigned'(cb.o_pixel),unsigned'(imconv[res_row][res_col])));
-            end
-          end
-
-        end
-
-    endfunction : check_output_nopad
 
 
 endinterface // input_fsm_if
