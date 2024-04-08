@@ -104,7 +104,9 @@ generate
     end
     "tb_cluster_load_kernel_block":
     begin: tc
-      tb_cluster_load_kernel_block tc = new(intf, MACCLK_PER);
+      tb_cluster_load_kernel_block #(
+        .KERNEL_SIZE(KERNEL_SIZE)
+        ) tc = new(intf, MACCLK_PER);
     end
     "tb_cluster_conv":
     begin: tc

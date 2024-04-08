@@ -21,15 +21,16 @@ class tb_cluster_load_kernel_block
   endfunction // new
 
   task automatic run;
-    int unsigned addr;
+    logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kernel;
 
     `uvm_info("tb_cluster_load_kernel_block", "Executing testcase", UVM_NONE);
 
     #(MACCLK_PER);
 
     // Generate kernel and load it
-    vif.load_kernel(vif.kernel_gen());
-
+    kernel = vif.kernel_gen();
+    vif.load_kernel(kernel);
+    
     //`ASSERT_EQ(vif.addr, 3'b000, %3b);
 
     //`ASSERT_EQ(vif.payload_done, 1'b0, %b);

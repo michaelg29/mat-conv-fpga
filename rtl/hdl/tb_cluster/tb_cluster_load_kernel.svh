@@ -23,15 +23,13 @@ class tb_cluster_load_kernel
   task automatic run;
     logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kernel;
 
-    logic sign = 1'b0;
-
     `uvm_info("tb_cluster_load_kernel", "Executing testcase", UVM_NONE);
 
     @(posedge vif.i_clk);
 
     // Generate kernel and load it
     kernel = vif.kernel_gen();
-    vif.load_kernel(kernel, sign);
+    vif.load_kernel(kernel);
 
     @(posedge vif.i_clk);
 

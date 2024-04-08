@@ -103,12 +103,12 @@ interface cluster_if #(
           
       for (int row = 0 ; row < KERNEL_SIZE ; row++) begin //for rows
           for (int col = 0 ; col < KERNEL_SIZE ; col++) begin //for columns
-            if(SIGN == 1) begin
-              //kgen[row][col] = signed'(row+col-col*col);
-              kgen[row][col] = signed'(64);
-            end else begin
-              //kgen[row][col] = unsigned'(row+col-col*col);
-              kgen[row][col] = unsigned'(64);
+           kgen[row][col] = signed'(row+col-col*col+row*row);
+           //kgen[row][col] = signed'(64);
+            if(SIGN == 0) begin //saturate to 0 if no signed kernel value
+              if(signed'(kgen[row][col]) < 0) begin
+                kgen[row][col] = 0;
+              end
             end
           end
       end
@@ -134,7 +134,7 @@ interface cluster_if #(
               if((col >= NUM_COLS+PADDING) || (col < PADDING)) begin //first and last columns are padding columns
                   imgen[row][col] = 0;
               end else begin
-                  imgen[row][col] = unsigned'(col);
+                  imgen[row][col] = unsigned'(col+row*row);
               end
 
           end
