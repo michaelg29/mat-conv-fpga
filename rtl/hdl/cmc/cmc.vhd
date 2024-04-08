@@ -109,14 +109,11 @@ architecture rtl of cmc is
 
         -- if ECC enabled, simply connect
         g_ECC: if ECC_EN = 1 generate
-            p_ECC: process
-            begin
-                --DON'T DELAY OUTPUT
-                o_core_1 <= o_core_s1;
-                o_core_2 <= o_core_s2;
-                o_core_3 <= o_core_s3;
-                o_core_4 <= o_core_s4;
-            end process;
+            --DON'T DELAY OUTPUT
+            o_core_1 <= o_core_s1;
+            o_core_2 <= o_core_s2;
+            o_core_3 <= o_core_s3;
+            o_core_4 <= o_core_s4;
         end generate g_ECC;
 
         --if-else generate not supported. Need to add all if statements

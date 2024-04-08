@@ -233,7 +233,7 @@ module tb_top
                     @(negedge i_clk); //o_res has correct value (output ready)
 
                     // Calculate value that should be obtained
-                    oreg = signed'(k[17:0]);
+                    oreg = signed'(k[17:0]*8);
                     oreg += ROUNDING;
                     for (int s = 0 ; s < KERNEL_SIZE ; s++) begin
                         // Use variable part-select with fixed width
@@ -323,7 +323,7 @@ module tb_top
                     if(count > 1) data_ready = 1;
 
                     // Calculate value that shoutb_core_io_no_pipeline: -gNUM_REPS=1 -gVERBOSE=1 -gTC="tb_core_io_no_pipeline" -gMIN_PIXEL_VAL="40'h0" -gMAX_PIXEL_VAL="40'hFF_FFFF_FFFF" -gMIN_KERNEL_VAL="40'h0" -gMAX_KERNEL_VAL="40'hFF_FFFF_FFFF" -gMIN_SUB_VAL="18'h0" -gMAX_SUB_VAL="18'h3FFFF" -gROUNDING="3'b100"
-                    oreg = signed'(k1[17:0]);
+                    oreg = signed'(k1[17:0]*8);
                     oreg += ROUNDING;
                     for (int s = 0 ; s < KERNEL_SIZE ; s++) begin
                         // Use variable part-select with fixed width

@@ -37,26 +37,22 @@ signal MAC1_P : signed(43 downto 0);
 signal MAC2_A2, MAC2_B2 : signed(8 downto 0); 
 signal MAC2_P : signed(43 downto 0);
 
-signal en_clk: std_logic;
-
   begin 
 
-  en_clk <= i_clk AND i_en;
-
   MAC0 : math_block port map ( i_a1 => MAC0_A1, i_b1 => MAC0_B1, i_a2 => MAC0_A2, i_b2 => MAC0_B2, 
-                               i_c => MAC0_C, i_d => (others => '0'), i_clk => en_clk, o_p => MAC0_P);
+                               i_c => MAC0_C, i_d => (others => '0'), i_clk => i_clk, o_p => MAC0_P);
 
   MAC1 : math_block port map ( i_a1 => MAC1_A1, i_b1 => MAC1_B1, i_a2 => MAC1_A2, i_b2 => MAC1_B2, 
-                               i_c => i_round, i_d => (others => '0'), i_clk => en_clk, o_p => MAC1_P);
+                               i_c => i_round, i_d => (others => '0'), i_clk => i_clk, o_p => MAC1_P);
 
   MAC2 : math_block port map ( i_a1 => (others => '0'), i_b1=> (others => '0'), i_a2 => MAC2_A2, i_b2 => MAC2_B2, 
-                               i_c => MAC0_P, i_d => MAC1_P, i_clk => en_clk, o_p => MAC2_P);
+                               i_c => MAC0_P, i_d => MAC1_P, i_clk => i_clk, o_p => MAC2_P);
 
   MAC0_A1 <= i_k0(7) & signed(i_k0);
   MAC0_B1 <= signed('0' & i_s0);
   MAC0_A2 <= i_k1(7) & signed(i_k1);
   MAC0_B2 <= signed('0' & i_s1);
-  MAC0_C <= resize(signed(i_sub), 44);
+  MAC0_C <= resize(signed(i_sub), 41) & "000";
   
   MAC1_A1 <= i_k2(7) & signed(i_k2);
   MAC1_B1 <= signed('0' & i_s2);
@@ -68,11 +64,13 @@ signal en_clk: std_logic;
 
   o_res <= std_logic_vector(MAC2_P(20 downto 3)); --(28 down to 11) should be the real result since math blocks in DOTP mode output on the upper 36 bits
 
-  process(en_clk)
+  process(i_clk)
   begin
-    if(rising_edge(en_clk)) then
-      k4_p_reg <= i_k4(7) & signed(i_k4);
-      s4_p_reg <= '0' & signed(i_s4);
+    if(rising_edge(i_clk)) then
+      --if(i_en = '1') then
+        k4_p_reg <= i_k4(7) & signed(i_k4);
+        s4_p_reg <= '0' & signed(i_s4);
+      --end if;
     end if;
 end process;
 
