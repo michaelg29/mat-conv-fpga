@@ -10,6 +10,7 @@ interface cluster_if #(
   parameter NUM_ROWS = 10, //subject image row range
   parameter NUM_COLS = 10, //subject image column range
   parameter PADDING_EN = 1,
+  parameter SIGN = 1,
   parameter ROUNDING=3'b100,
   parameter UNSIGNED_UPPER_BOUND = 12'b111111111111,
   parameter SIGNED_UPPER_BOUND = 12'b011111111111,
@@ -57,12 +58,11 @@ interface cluster_if #(
   //software implementation of saturator 
   function logic [7:0] saturate;
       input logic [17:0] o_pixel;
-      input logic sign;
 
       logic [7:0] o_pixel_saturate;
 
       //if signed operation
-      if(sign == 1'b1) begin
+      if(SIGN == 1) begin
 
           // Calculate valid result
           if(signed'(o_pixel) < 0) begin //negative input
@@ -83,7 +83,7 @@ interface cluster_if #(
       end else begin
 
           // Calculate valid result
-          if (o_pixel <= UNSIGNED_UPPER_BOUND) begin
+          if (unsigned'(o_pixel) <= UNSIGNED_UPPER_BOUND) begin
               o_pixel_saturate = o_pixel[11:4];
           end else begin
               o_pixel_saturate = UNSIGNED_UPPER_BOUND[11:4];
@@ -103,8 +103,13 @@ interface cluster_if #(
           
       for (int row = 0 ; row < KERNEL_SIZE ; row++) begin //for rows
           for (int col = 0 ; col < KERNEL_SIZE ; col++) begin //for columns
+            if(SIGN == 1) begin
               //kgen[row][col] = signed'(row+col-col*col);
               kgen[row][col] = signed'(64);
+            end else begin
+              //kgen[row][col] = unsigned'(row+col-col*col);
+              kgen[row][col] = unsigned'(64);
+            end
           end
       end
 
@@ -142,8 +147,7 @@ interface cluster_if #(
   //Calculate resulting image
   function logic [NUM_ROWS-2*PADDING_N-1:0][NUM_COLS-2*PADDING_N-1:0][7:0] image_conv(
       input logic [NUM_ROWS+2*PADDING-1:0][NUM_COLS+2*PADDING-1:0][7:0] imgen,
-      input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kgen,
-      input logic sign
+      input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0] kgen
   );
       logic [NUM_ROWS-2*PADDING_N-1:0][NUM_COLS-2*PADDING_N-1:0][7:0] imconv;
       static int res = 0;
@@ -152,27 +156,54 @@ interface cluster_if #(
       for (int row = 0 ; row < NUM_ROWS-2*PADDING_N ; row++) begin
           for (int col = 0 ; col < NUM_COLS-2*PADDING_N ; col++) begin
 
-              //Reset result
-              res = 0;
+            //Reset result
+            res = 0;
 
-              //Calculate pixel
-              for (int krow = 0 ; krow < KERNEL_SIZE ; krow++) begin //for rows
-                  subres = signed'(res*8);
 
-                  if (krow == KERNEL_SIZE-1) begin
-                    subres += 128; //last rounding
-                  end else begin
-                    subres += ROUNDING; //firsts rounding
-                  end  
+            if(SIGN == 0) begin
+                //Calculate pixel
+                for (int krow = 0 ; krow < KERNEL_SIZE ; krow++) begin //for rows
 
-                  for (int kcol = 0 ; kcol < KERNEL_SIZE ; kcol++) begin //for columns
-                      subres += signed'(kgen[krow][kcol]) * signed'({1'b0 , imgen[row+krow][col+kcol]});
-                  end
-                  res = signed'(subres[20:3]);
-              end
+                        subres = 8*unsigned'(res);
 
-              //Apply saturation
-              imconv[row][col] = signed'(saturate(res, sign));
+                        if (krow == KERNEL_SIZE-1) begin
+                            subres += 128; //last rounding
+                        end else begin
+                            subres += ROUNDING; //firsts rounding
+                        end  
+
+                        for (int kcol = 0 ; kcol < KERNEL_SIZE ; kcol++) begin //for columns
+                            subres += unsigned'(kgen[krow][kcol]) * unsigned'({1'b0 , imgen[row+krow][col+kcol]});
+                        end
+                        res = unsigned'(subres[20:3]);
+                end
+
+                //Apply saturation
+                imconv[row][col] = unsigned'(saturate(res));
+
+            end else begin
+
+                //Calculate pixel
+                for (int krow = 0 ; krow < KERNEL_SIZE ; krow++) begin //for rows
+
+                        subres = 8*signed'(res);
+
+                        if (krow == KERNEL_SIZE-1) begin
+                            subres += 128; //last rounding
+                        end else begin
+                            subres += ROUNDING; //firsts rounding
+                        end  
+
+                        for (int kcol = 0 ; kcol < KERNEL_SIZE ; kcol++) begin //for columns
+                            subres += signed'(kgen[krow][kcol]) * signed'({1'b0 , imgen[row+krow][col+kcol]});
+                        end
+                        res = signed'(subres[20:3]);
+                end
+
+                //Apply saturation
+                imconv[row][col] = signed'(saturate(res));
+            end
+
           end
       end
 
@@ -196,7 +227,12 @@ interface cluster_if #(
 
           s = $sformatf("Row %d: ", row);
           for (int col = 0 ; col < KERNEL_SIZE ; col++) begin //for columns
-              s = $sformatf("%s %d ", s, signed'(kgen[row][col]));
+
+            if(SIGN == 1) begin
+                s = $sformatf("%s %d ", s, signed'(kgen[row][col]));
+            end else begin
+                s = $sformatf("%s %d ", s, unsigned'(kgen[row][col]));
+            end
           end
 
           $display("%s",s);
@@ -221,7 +257,11 @@ interface cluster_if #(
 
           s = $sformatf("Row %d: ", row);
           for (int col = 0 ; col < NUM_COLS-2*PADDING_N ; col++) begin //for columns
-              s = $sformatf("%s %d ", s, signed'(imconv[row][col]));
+              if(SIGN == 1) begin
+                s = $sformatf("%s %d ", s, signed'(imconv[row][col]));
+              end else begin
+                s = $sformatf("%s %d ", s, unsigned'(imconv[row][col]));
+              end
           end
 
           $display("%s",s);
@@ -251,8 +291,7 @@ interface cluster_if #(
         Load kernel values into KRF
     */
     task automatic load_kernel(
-        input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0]  kernel, //input kernel
-        input logic sign = 1'b1
+        input logic [KERNEL_SIZE-1:0][KERNEL_SIZE-1:0][7:0]  kernel //input kernel
     );
 
         automatic logic [3:0][FIFO_WIDTH-1:0][7:0] kernel_convert; // Convert kernel to load row by row
@@ -270,7 +309,7 @@ interface cluster_if #(
 
             cb.i_is_subj <= 1'b0; //not a subject
             cb.i_is_kern <= 1'b1; //is the kernel
-            cb.i_cmd_kern_signed <= sign;
+            cb.i_cmd_kern_signed <= SIGN;
             @cb;
 
             for (int i = 0 ; i < NUM_STATES ; i++) begin
@@ -305,15 +344,23 @@ interface cluster_if #(
         automatic int res_row = 0;
         automatic int res_col = 0;
 
-        if((row*NUM_COLS+col) >= ((KERNEL_SIZE-1)*NUM_COLS+COMPUTE_LATENCY)) begin
+        if((row*(NUM_COLS+2*PADDING)+col) >= ((KERNEL_SIZE-1)*(NUM_COLS+2*PADDING)+COMPUTE_LATENCY)) begin
 
-            // only check if post compute latency
+            // only check if post compute latency, but not when column is passed the range
             if(col >= COMPUTE_LATENCY) begin
                 res_col = col - COMPUTE_LATENCY;
-                res_row = row;
+                res_row = row - (KERNEL_SIZE-1);
 
-                if(unsigned'(imconv[res_row][res_col]) != unsigned'(cb.o_pixel)) begin
-                    `uvm_error("tb_top", $sformatf("Test failed at row %d, col %d\noutput = %d ; expected = %d",res_row,res_col,unsigned'(cb.o_pixel),unsigned'(imconv[res_row][res_col])));
+                if((res_col < (NUM_COLS-2*PADDING_N)) && (res_row < (NUM_ROWS-2*PADDING_N))) begin//only check when in range
+                    if(SIGN == 0) begin
+                        if(unsigned'(imconv[res_row][res_col]) != unsigned'(cb.o_pixel)) begin
+                            `uvm_error("tb_top", $sformatf("Test failed at row %d, col %d\noutput = %d ; expected = %d",res_row,res_col,unsigned'(cb.o_pixel),unsigned'(imconv[res_row][res_col])));
+                        end
+                    end else begin
+                        if(signed'(imconv[res_row][res_col]) != signed'(cb.o_pixel)) begin
+                            `uvm_error("tb_top", $sformatf("Test failed at row %d, col %d\noutput = %d ; expected = %d",res_row,res_col,signed'(cb.o_pixel),signed'(imconv[res_row][res_col])));
+                        end
+                    end
                 end
             end
         end

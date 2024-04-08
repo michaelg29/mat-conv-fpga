@@ -10,6 +10,7 @@ module tb_top #(
   parameter NUM_ROWS = 5, //subject image row range
   parameter NUM_COLS = 10, //subject image column range
   parameter PADDING_EN = 1,
+  parameter SIGN = 1,
   parameter FIFO_WIDTH = 8,
   parameter int NUM_REPS = 3, //Number of times each test shall be reapeated with different values
   parameter int SEED = 0, //Seed for the random input generation
@@ -51,6 +52,7 @@ cluster_if #(
   .NUM_COLS(NUM_COLS),
   .NUM_ROWS(NUM_ROWS),
   .PADDING_EN(PADDING_EN),
+  .SIGN(SIGN),
   .KERNEL_SIZE(KERNEL_SIZE)
 ) intf (
   .i_clk(i_clk),
@@ -111,7 +113,8 @@ generate
         .FIFO_WIDTH(FIFO_WIDTH),
         .NUM_ROWS(NUM_ROWS),
         .NUM_COLS(NUM_COLS),
-        .PADDING_EN(PADDING_EN)
+        .PADDING_EN(PADDING_EN),
+        .SIGN(SIGN)
         ) tc = new(intf, MACCLK_PER);
     end // tc
   endcase // TC

@@ -10,6 +10,7 @@ class tb_cluster_conv
     int NUM_ROWS = 5,
     int NUM_COLS = 5,
     int PADDING_EN = 1,
+    int SIGN = 1,
     parameter COMPUTE_LATENCY = 6) 
     extends mat_conv_tc;
 
@@ -39,7 +40,6 @@ class tb_cluster_conv
     logic [NUM_ROWS+2*PADDING-1:0][NUM_COLS+2*PADDING-1:0][7:0] image;
     logic [NUM_ROWS-2*PADDING_N-1:0][NUM_COLS-2*PADDING_N-1:0][7:0] imconv;
 
-    logic sign = 1'b0;
     int track_col = 0;
 
     `uvm_info("tb_cluster_conv", "Executing testcase", UVM_NONE);
@@ -48,13 +48,13 @@ class tb_cluster_conv
 
     // Generate kernel and load it
     kernel = vif.kernel_gen();
-    vif.load_kernel(kernel, sign);
+    vif.load_kernel(kernel);
 
     // Generate image
     image = vif.image_gen();
 
-    //Calculate convolution result (unsigned)
-    imconv = vif.image_conv(image, kernel, sign);
+    //Calculate convolution result
+    imconv = vif.image_conv(image, kernel);
 
     vif.display_conv(image, kernel, imconv);
 
@@ -80,7 +80,7 @@ class tb_cluster_conv
           vif.i_discont <= 0;
           
           //Shift until all pixels have been seen
-          num_additional_cycles_shifts = FIFO_WIDTH;
+          num_additional_cycles_shifts = FIFO_WIDTH-1;
         end
 
         vif.i_pkt <= image[row][col +: FIFO_WIDTH]; //args must be multiple of FIFO_WIDTH
@@ -111,6 +111,8 @@ class tb_cluster_conv
       //Signal end of row
       vif.i_end_of_row <= 1;
       @(negedge vif.i_clk);
+      vif.check_output(row, track_col, imconv);
+      track_col += 1;
       vif.i_end_of_row <= 0;
 
     end
