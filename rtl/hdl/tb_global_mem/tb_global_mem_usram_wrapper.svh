@@ -52,6 +52,6 @@ static task automatic run_task(
   A_REN = 1'b0;
   #(2*ACLK_PER);
 
-endtask
+endtask // run_task
 
-endclass
+endclass // tb_global_mem_usram_wrapper

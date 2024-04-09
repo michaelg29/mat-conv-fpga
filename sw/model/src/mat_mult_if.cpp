@@ -12,9 +12,9 @@
 
 // generate size field
 #define GEN_KERN_SIZE(rows, cols) \
-    ((((rows * cols) & 0x1ffff) << 15) | ((rows & 0x7ff) << 4) | (cols & 0xf))
+    ((((rows * cols) & 0x7fff) << 15) | ((rows & 0x7ff) << 4) | (cols & 0xf))
 #define GEN_SUBJ_SIZE(rows, cols) \
-    ((((rows * (cols >> 7)) & 0x1ffff) << 15) | ((rows & 0x7ff) << 4)  | ((cols >> 7) & 0xf))
+    ((((rows * (cols >> 7)) & 0x7fff) << 15) | ((rows & 0x7ff) << 4)  | ((cols >> 7) & 0xf))
 
 
 mat_mult_if::mat_mult_if()

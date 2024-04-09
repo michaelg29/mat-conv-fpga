@@ -29,7 +29,7 @@
 
 // size field values
 #define GET_CMD_SIZE_COLS(cmd) ((cmd.size >>  0) & 0xF)
-#define GET_CMD_SIZE_NELS(cmd) ((cmd.size >> 15) & 0x1FFFF)
+#define GET_CMD_SIZE_NELS(cmd) ((cmd.size >> 15) & 0x7FFF)
 #define GET_CMD_SIZE_ROWS(cmd) ((cmd.size >>  4) & 0x7FF)
 #define GET_CMD_SIZE_SUBJ_COLS(cmd) ((GET_CMD_SIZE_COLS(cmd)) << 7)
 #define GET_CMD_SIZE_SUBJ_NELS(cmd) ((GET_CMD_SIZE_NELS(cmd)) << 7)
