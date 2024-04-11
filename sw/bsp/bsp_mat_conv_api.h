@@ -47,7 +47,7 @@ extern "C" {
 #define AXI3_DATA_OFFSET   0x00000000
 #define AXI3_CMD_OFFSET    0x00000080
 #define APB_REGSTAT_OFFSET 0x00000000
-#define APB_REGCTRL_OFFSET 0x
+#define APB_REGCTRL_OFFSET 0x00000000
 
 typedef void (*rx_callback_t)(void);
 
@@ -141,7 +141,7 @@ void module_config(apb_ctrl_registers_t regs);
 apb_state_registers_t get_module_state(void);
 
 /**
- * @brief Synchronously send the kernel to the module.
+ * @brief  Synchronously send the kernel to the module.
  * @note   This function assumes that the module has been initialized with "moduleConfig". This function abstracts
  *         the header information for the transaction.
  *
@@ -155,14 +155,63 @@ apb_state_registers_t get_module_state(void);
  */
 uint32_t send_kernel(uint8_t kern_signed, uint32_t kern_addr, uint32_t kern_dim, uint32_t n_kern_pkts);
 
-uint32_t sendKernel(uint32_t addr, uint32_t dimension);
-uint32_t sendKernelAsync(uint32_t addr, uint32_t dimension);
-uint32_t sendImage(uint32_t addr, uint32_t size);
-uint32_t sendImageAsync(uint32_t addr, uint32_t rows, uint32_t cols, uint32_t outAddr);
-int8_t sendCommand(command_type_e com);
-rx_callback_t registerCallback(rx_callback_t cb);
+/**
+ * @brief  Asynchronously send the kernel to the module using DMA.
+ * @note   This function assumes that the module has been initialized with "moduleConfig". This function abstracts
+ *         the header information for the transaction.
+ *
+ * @param  kern_signed Whether the kernel is signed (1) or unsigned (0).
+ * @param  kern_addr   Address of the kernel to be sent.
+ * @param  kern_dim    The dimension (in pixels) of the row or column of the kernel sent
+ *                     (assumed to be a square matrix).
+ * @param  n_kern_pkts Number of 64-bit packets to send for the whole kernel.
+ * @param  ack_ptr     Pointer to the location for receiving the acknowledge packet.
+ *
+ * @retval The function returns an error code from status_e.
+ */
+uint32_t send_kernel_async(uint8_t kern_signed, uint32_t kern_addr, uint32_t kern_dim, uint32_t n_kern_pkts, header_t *ack_ptr);
 
+/**
+ * @brief  Synchronously send the subject to the module.
+ * @note   This function assumes that the module has been initialized with "moduleConfig". This function abstracts
+ *         the header information for the transaction.
+ *
+ * @param  subj_addr   Address of the subject to be sent.
+ * @param  subj_rows   Number of rows in the subject.
+ * @param  subj_cols   Number of columns in the subject.
+ * @param  n_subj_pkts Number of 64-bit packets to send for the whole subject.
+ *
+ * @retval The function returns an error code from status_e.
+ */
+uint32_t send_subject(uint32_t subj_addr, uint32_t subj_rows, uint32_t subj_cols, uint32_t n_subj_pkts);
 
+/**
+ * @brief  Asynchronously send the subject to the module using DMA.
+ * @note   This function assumes that the module has been initialized with "moduleConfig". This function abstracts
+ *         the header information for the transaction.
+ *
+ * @param  subj_addr   Address of the subject to be sent.
+ * @param  subj_rows   Number of rows in the subject.
+ * @param  subj_cols   Number of columns in the subject.
+ * @param  n_subj_pkts Number of 64-bit packets to send for the whole subject.
+ * @param  out_addr    Output address for the result matrix.
+ * @param  ack_ptr     Pointer to the location for receiving the acknowledge packet.
+ *
+ * @retval The function returns an error code from status_e.
+ */
+uint32_t send_subject_async(uint32_t subj_addr, uint32_t subj_rows, uint32_t subj_cols, uint32_t n_subj_pkts, uint32_t out_addr, header_t *ack_ptr);
+
+/**
+ * @brief  Register the callback for the reception of data.
+ * @note   This function assumes that the module has been initialized with "moduleConfig".
+ *     If a NULL callback is registered, a dummy function is provided instead (but NULL
+ *     is returned if the dummy function was the previous callback).
+ *
+ * @param  cb  The callback funtion.
+ *
+ * @retval The function returns the previous callback that was assigned.
+ */
+rx_callback_t register_callback(rx_callback_t cb);
 
 #ifdef __cplusplus
 }
