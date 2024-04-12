@@ -1,0 +1,86 @@
+// python3 -m pip install peakrdl
+// python3 -m peakrdl html mat_conv.rdl -o html/
+// python3 -m peakrdl uvm mat_conv.rdl -o mat_mult_uvm_pkg.sv
+
+addrmap mat_conv {
+
+  default accesswidth = 32;
+  default regwidth = 32;
+
+  name = "Matrix multiplier";
+  desc = "Module to convolve a matrix (max 2^11-1 * 2^11-1) with a square kernel matrix (max 5x5).";
+
+  reg {
+    name = "Module ID";
+    desc = "ID for the module";
+
+    default sw = r;
+    default hw = r;
+
+    field {
+      desc = "Major ID";
+    } major[31:16] = 0;
+
+    field {
+      desc = "Minor ID";
+    } minor[15:0] = 0;
+
+  } module_id;
+
+  reg {
+    name = "Configuration register";
+    desc = "General module configuration";
+
+    default sw = rw;
+    default hw = r;
+
+    field {
+      desc = "Whether to enable the single event transient filter.";
+    } setf_en[0] = 0;
+  } config_reg;
+
+  reg {
+    name = "Status register";
+    desc = "Status of the module to be read. If all zeros, the module can accept a new command and payload.";
+
+    default sw = r;
+    default hw = rw;
+
+    field {
+      desc = "Number of 64-bit packets left in the current payload.";
+    } cur_pkts[31:13] = 0;
+
+    field {
+      desc = "Number of 64-bit packets left in the current payload row.";
+    } cur_cols[12:5] = 0;
+
+    field {
+      desc = "Status code.\n0x00 - OKAY\n0x01 - ERR_PROC\n0x02 - ERR_KEY\n0x04 - ERR_SIZE\n0x08 - ERR_CKSM\n0x10 - ERR_OTHER";
+    } status[4:0] = 0;
+  } state_reg;
+
+  reg {
+    name = "Result matrix address";
+    desc = "Address to which to write the resultant matrix.";
+
+    default sw = null;
+    default hw = rw;
+
+    field {
+      desc = "Address.";
+    } addr[31:0] = 0;
+  } out_addr_reg;
+
+  reg {
+    name = "Acknowledge packet address";
+    desc = "Address to which to write the acknowledge packet.";
+
+    default sw = null;
+    default hw = rw;
+
+    field {
+      desc = "Address.";
+    } addr[31:0] = 0;
+  } tx_addr_reg;
+
+};
