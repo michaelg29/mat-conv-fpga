@@ -1,1 +1,4 @@
+../../hdl/mat_conv_pkg
+../../hdl/axi
+../../hdl/input_fsm
 ../../hdl/mat_conv_top
