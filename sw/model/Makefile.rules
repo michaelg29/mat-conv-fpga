@@ -43,7 +43,7 @@ ifeq (,$(wildcard $(SYSTEMC_LIB_DIR)/libsystemc*))
 endif
 
 # compiler flags
-CFLAGS ?= -g3
+CFLAGS ?= -std=c++17 -D SC_ALLOW_DEPRECATED_IEEE_API
 IFLAGS ?= -I../include -isystem $(SYSTEMC_INC_DIR)
 LFLAGS ?= -lsystemc -lm -L$(SYSTEMC_LIB_DIR)
 

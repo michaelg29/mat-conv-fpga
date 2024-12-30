@@ -30,7 +30,7 @@ class memory_if : virtual public sc_interface {
             }
         }
 
-        ~memory_if() {
+        virtual ~memory_if() noexcept {
             if (_mem_size) {
                 delete _reads;
                 delete _writes;

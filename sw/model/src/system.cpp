@@ -42,7 +42,7 @@ bool parseCmdLine(int argc, char **argv, unsigned char *mem, int *kernelsize) {
         std::cerr << "*** ERROR in main: invalid KERNEL_SIZE, max is " << MAX_KERN_ROWS << std::endl;
         return false;
     }
-    if (*kernelsize & 1 != 1) {
+    if (!(*kernelsize & 1)) {
         std::cerr << "*** ERROR in main: KERNEL_SIZE is not odd" << std::endl;
         return false;
     }
